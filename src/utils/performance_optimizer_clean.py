@@ -1,0 +1,682 @@
+ÿþ#!/usr/bin/env python3
+"""
+Performance Optimization Module for API Security Scanner
+Enhances efficiency, speed, and accuracy of security scans
+"""
+
+import asyncio
+import aiohttp
+import concurrent.futures
+import time
+import json
+import hashlib
+import threading
+from typing import Dict, List, Optional, Any, Union, Set
+from dataclasses import dataclass, field
+from collections import defaultdict, deque
+import logging
+from datetime import datetime, timedelta
+import pickle
+import os
+from urllib.parse import urlparse
+import statistics
+
+# Import existing debug framework
+from debug_config import debug_log, info_log, error_log, debug_decorator, debug_method
+
+@dataclass
+class ScanMetrics:
+    """Track scan performance metrics"""
+    start_time: datetime = field(default_factory=datetime.now)
+    end_time: Optional[datetime] = None
+    total_requests: int = 0
+    successful_requests: int = 0
+    failed_requests: int = 0
+    total_response_time: float = 0.0
+    response_times: List[float] = field(default_factory=list)
+    rate_limit_hits: int = 0
+    cache_hits: int = 0
+    cache_misses: int = 0
+    vulnerabilities_found: int = 0
+    false_positives: int = 0
+    
+    def add_response_time(self, response_time: float):
+        """Add response time to metrics"""
+        self.response_times.append(response_time)
+        self.total_response_time += response_time
+    
+    def get_avg_response_time(self) -> float:
+        """Get average response time"""
+        return statistics.mean(self.response_times) if self.response_times else 0.0
+    
+    def get_percentile_response_time(self, percentile: float) -> float:
+        """Get percentile response time"""
+        if not self.response_times:
+            return 0.0
+        sorted_times = sorted(self.response_times)
+        index = int(len(sorted_times) * percentile / 100)
+        return sorted_times[index]
+    
+    def finalize(self):
+        """Mark scan as completed"""
+        self.end_time = datetime.now()
+    
+    def get_summary(self) -> Dict[str, Any]:
+        """Get performance summary"""
+        duration = (self.end_time or datetime.now()) - self.start_time
+        return {
+            'duration_seconds': duration.total_seconds(),
+            'total_requests': self.total_requests,
+            'successful_requests': self.successful_requests,
+            'failed_requests': self.failed_requests,
+            'success_rate': (self.successful_requests / self.total_requests * 100) if self.total_requests > 0 else 0,
+            'avg_response_time': self.get_avg_response_time(),
+            'p95_response_time': self.get_percentile_response_time(95),
+            'p99_response_time': self.get_percentile_response_time(99),
+            'rate_limit_hits': self.rate_limit_hits,
+            'cache_hit_rate': (self.cache_hits / (self.cache_hits + self.cache_misses) * 100) if (self.cache_hits + self.cache_misses) > 0 else 0,
+            'vulnerabilities_found': self.vulnerabilities_found,
+            'requests_per_second': self.total_requests / duration.total_seconds() if duration.total_seconds() > 0 else 0
+        }
+
+class ResponseCache:
+    """Intelligent response caching for repeated requests"""
+    
+    def __init__(self, max_size: int = 1000, ttl_seconds: int = 3600):
+        self.max_size = max_size
+        self.ttl_seconds = ttl_seconds
+        self.cache: Dict[str, Dict[str, Any]] = {}
+        self.access_times: Dict[str, datetime] = {}
+        self.lock = threading.RLock()
+    
+    def _generate_cache_key(self, url: str, method: str, headers: Dict, params: Dict, data: Any) -> str:
+        """Generate cache key for request"""
+        # Normalize headers (remove dynamic ones)
+        normalized_headers = {k: v for k, v in headers.items() 
+                            if k.lower() not in ['user-agent', 'date', 'authorization']}
+        
+        cache_data = {
+            'url': url,
+            'method': method.upper(),
+            'headers': normalized_headers,
+            'params': params,
+            'data': data
+        }
+        
+        cache_str = json.dumps(cache_data, sort_keys=True)
+        return hashlib.sha256(cache_str.encode()).hexdigest()
+    
+    def get(self, url: str, method: str, headers: Dict, params: Dict, data: Any) -> Optional[Dict[str, Any]]:
+        """Get cached response if available and not expired"""
+        with self.lock:
+            cache_key = self._generate_cache_key(url, method, headers, params, data)
+            
+            if cache_key in self.cache:
+                cached_item = self.cache[cache_key]
+                cached_time = self.access_times[cache_key]
+                
+                # Check if cache is still valid
+                if (datetime.now() - cached_time).total_seconds() < self.ttl_seconds:
+                    # Update access time
+                    self.access_times[cache_key] = datetime.now()
+                    return cached_item
+            
+            return None
+    
+    def set(self, url: str, method: str, headers: Dict, params: Dict, data: Any, response: Dict[str, Any]):
+        """Cache response"""
+        with self.lock:
+            cache_key = self._generate_cache_key(url, method, headers, params, data)
+            
+            # Evict oldest entries if cache is full
+            if len(self.cache) >= self.max_size:
+                self._evict_oldest()
+            
+            self.cache[cache_key] = response
+            self.access_times[cache_key] = datetime.now()
+    
+    def _evict_oldest(self):
+        """Evict oldest cache entries"""
+        if not self.access_times:
+            return
+        
+        # Find oldest entry
+        oldest_key = min(self.access_times.keys(), key=lambda k: self.access_times[k])
+        
+        # Remove oldest entry
+        del self.cache[oldest_key]
+        del self.access_times[oldest_key]
+    
+    def clear(self):
+        """Clear all cached data"""
+        with self.lock:
+            self.cache.clear()
+            self.access_times.clear()
+
+class RateLimiter:
+    """Intelligent rate limiting with adaptive backoff"""
+    
+    def __init__(self, max_requests_per_second: int = 10, burst_limit: int = 20):
+        self.max_requests_per_second = max_requests_per_second
+        self.burst_limit = burst_limit
+        self.request_times: deque = deque()
+        self.lock = threading.RLock()
+        self.backoff_multiplier = 1.0
+        self.last_rate_limit_hit = None
+    
+    def wait_if_needed(self) -> float:
+        """Wait if rate limit would be exceeded, return wait time"""
+        with self.lock:
+            now = time.time()
+            
+            # Remove old requests outside the time window
+            while self.request_times and now - self.request_times[0] > 1.0:
+                self.request_times.popleft()
+            
+            # Check if we're at the limit
+            if len(self.request_times) >= self.burst_limit:
+                # Calculate wait time
+                wait_time = 1.0 - (now - self.request_times[0])
+                if wait_time > 0:
+                    time.sleep(wait_time)
+                    self.last_rate_limit_hit = now
+                    self.backoff_multiplier = min(self.backoff_multiplier * 1.5, 5.0)
+                    return wait_time
+            
+            # Add current request
+            self.request_times.append(now)
+            
+            # Reset backoff if no recent rate limit hits
+            if self.last_rate_limit_hit and now - self.last_rate_limit_hit > 60:
+                self.backoff_multiplier = max(self.backoff_multiplier * 0.9, 1.0)
+            
+            return 0.0
+    
+    def adjust_rate(self, response_time: float, status_code: int):
+        """Adjust rate limiting based on response characteristics"""
+        with self.lock:
+            # Slow down if responses are slow
+            if response_time > 5.0:
+                self.max_requests_per_second = max(self.max_requests_per_second * 0.8, 1)
+            
+            # Slow down if getting 429 (Too Many Requests)
+            if status_code == 429:
+                self.max_requests_per_second = max(self.max_requests_per_second * 0.5, 1)
+                self.backoff_multiplier = min(self.backoff_multiplier * 2.0, 10.0)
+            
+            # Speed up if responses are fast and no errors
+            elif response_time < 1.0 and status_code < 400:
+                self.max_requests_per_second = min(self.max_requests_per_second * 1.1, 50)
+
+class IntelligentTestSelector:
+    """Intelligent test selection based on endpoint characteristics"""
+    
+    def __init__(self):
+        self.endpoint_patterns = self._load_endpoint_patterns()
+        self.test_effectiveness = defaultdict(lambda: {'success': 0, 'total': 0})
+        self.lock = threading.RLock()
+    
+    def _load_endpoint_patterns(self) -> Dict[str, List[str]]:
+        """Load patterns for different endpoint types"""
+        return {
+            'authentication': [
+                '/auth', '/login', '/token', '/oauth', '/sso', '/signin', '/signout',
+                '/register', '/signup', '/password', '/reset', '/verify'
+            ],
+            'user_management': [
+                '/users', '/user', '/profile', '/account', '/settings', '/preferences',
+                '/admin', '/administrator', '/moderator'
+            ],
+            'data_operations': [
+                '/api', '/data', '/records', '/items', '/products', '/orders',
+                '/transactions', '/payments', '/invoices'
+            ],
+            'file_operations': [
+                '/files', '/upload', '/download', '/images', '/documents',
+                '/media', '/assets', '/static'
+            ],
+            'search_operations': [
+                '/search', '/query', '/filter', '/find', '/lookup'
+            ]
+        }
+    
+    def select_tests_for_endpoint(self, endpoint: Dict[str, Any], available_tests: Dict[str, Any]) -> Dict[str, Any]:
+        """Select most relevant tests for an endpoint"""
+        path = endpoint.get('path', '').lower()
+        method = endpoint.get('method', 'GET').upper()
+        
+        # Determine endpoint type
+        endpoint_type = self._classify_endpoint(path)
+        
+        # Select tests based on endpoint type and method
+        selected_tests = {}
+        
+        for test_category, test_config in available_tests.items():
+            relevance_score = self._calculate_relevance(test_category, endpoint_type, method)
+            
+            if relevance_score > 0.3:  # Only include relevant tests
+                selected_tests[test_category] = {
+                    **test_config,
+                    'relevance_score': relevance_score
+                }
+        
+        # Sort by relevance
+        sorted_tests = dict(sorted(selected_tests.items(), 
+                                  key=lambda x: x[1]['relevance_score'], 
+                                  reverse=True))
+        
+        return sorted_tests
+    
+    def _classify_endpoint(self, path: str) -> str:
+        """Classify endpoint based on path patterns"""
+        for endpoint_type, patterns in self.endpoint_patterns.items():
+            for pattern in patterns:
+                if pattern in path:
+                    return endpoint_type
+        return 'generic'
+    
+    def _calculate_relevance(self, test_category: str, endpoint_type: str, method: str) -> float:
+        """Calculate relevance score for a test category"""
+        base_score = 0.5
+        
+        # Method-specific adjustments
+        if method in ['POST', 'PUT', 'PATCH'] and 'injection' in test_category.lower():
+            base_score += 0.3
+        elif method == 'GET' and 'information_disclosure' in test_category.lower():
+            base_score += 0.3
+        elif method in ['DELETE'] and 'authorization' in test_category.lower():
+            base_score += 0.3
+        
+        # Endpoint type adjustments
+        if endpoint_type == 'authentication' and 'authentication' in test_category.lower():
+            base_score += 0.4
+        elif endpoint_type == 'user_management' and 'authorization' in test_category.lower():
+            base_score += 0.4
+        elif endpoint_type == 'data_operations' and 'injection' in test_category.lower():
+            base_score += 0.3
+        elif endpoint_type == 'file_operations' and 'file_upload' in test_category.lower():
+            base_score += 0.4
+        
+        return min(base_score, 1.0)
+    
+    def update_effectiveness(self, test_category: str, found_vulnerability: bool):
+        """Update test effectiveness metrics"""
+        with self.lock:
+            self.test_effectiveness[test_category]['total'] += 1
+            if found_vulnerability:
+                self.test_effectiveness[test_category]['success'] += 1
+    
+    def get_effectiveness_stats(self) -> Dict[str, float]:
+        """Get effectiveness statistics for all tests"""
+        with self.lock:
+            stats = {}
+            for category, data in self.test_effectiveness.items():
+                if data['total'] > 0:
+                    stats[category] = data['success'] / data['total']
+            return stats
+
+class ParallelRequestExecutor:
+    """Parallel request execution with connection pooling"""
+    
+    def __init__(self, max_workers: int = 10, max_connections: int = 100):
+        self.max_workers = max_workers
+        self.max_connections = max_connections
+        self.session = None
+        self.connector = None
+        self.semaphore = asyncio.Semaphore(max_workers)
+    
+    async def __aenter__(self):
+        """Async context manager entry"""
+        self.connector = aiohttp.TCPConnector(
+            limit=self.max_connections,
+            limit_per_host=20,
+            ttl_dns_cache=300,
+            use_dns_cache=True
+        )
+        self.session = aiohttp.ClientSession(
+            connector=self.connector,
+            timeout=aiohttp.ClientTimeout(total=30, connect=10)
+        )
+        return self
+    
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit"""
+        if self.session:
+            await self.session.close()
+        if self.connector:
+            await self.connector.close()
+    
+    async def execute_requests(self, requests: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Execute multiple requests in parallel"""
+        tasks = []
+        for request in requests:
+            task = asyncio.create_task(self._execute_single_request(request))
+            tasks.append(task)
+        
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Filter out exceptions
+        valid_results = []
+        for result in results:
+            if isinstance(result, Exception):
+                error_log(f"Request failed", exception=result)
+            else:
+                valid_results.append(result)
+        
+        return valid_results
+    
+    async def _execute_single_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute a single request with semaphore limiting"""
+        async with self.semaphore:
+            method = request['method']
+            url = request['url']
+            headers = request.get('headers', {})
+            params = request.get('params', {})
+            data = request.get('data')
+            json_data = request.get('json')
+            
+            start_time = time.time()
+            
+            try:
+                async with self.session.request(
+                    method=method,
+                    url=url,
+                    headers=headers,
+                    params=params,
+                    data=data,
+                    json=json_data
+                ) as response:
+                    response_time = time.time() - start_time
+                    
+                    content = await response.text()
+                    
+                    return {
+                        'status_code': response.status,
+                        'headers': dict(response.headers),
+                        'content': content[:10000],  # Limit content size
+                        'response_time': response_time,
+                        'url': url,
+                        'method': method,
+                        'success': response.status < 400
+                    }
+            
+            except Exception as e:
+                response_time = time.time() - start_time
+                return {
+                    'error': str(e),
+                    'response_time': response_time,
+                    'url': url,
+                    'method': method,
+                    'success': False
+                }
+
+class PerformanceOptimizer:
+    """Main performance optimization orchestrator"""
+    
+    def __init__(self, 
+                 max_workers: int = 10,
+                 max_connections: int = 100,
+                 cache_size: int = 1000,
+                 cache_ttl: int = 3600,
+                 max_requests_per_second: int = 10):
+        
+        self.metrics = ScanMetrics()
+        self.cache = ResponseCache(cache_size, cache_ttl)
+        self.rate_limiter = RateLimiter(max_requests_per_second)
+        self.test_selector = IntelligentTestSelector()
+        self.max_workers = max_workers
+        self.max_connections = max_connections
+        
+        # Performance tuning parameters
+        self.adaptive_timeout = 30
+        self.retry_attempts = 3
+        self.retry_delay = 1.0
+        
+        info_log("PerformanceOptimizer initialized", 
+                max_workers=max_workers,
+                max_connections=max_connections,
+                cache_size=cache_size)
+    
+    async def optimize_scan(self, endpoints: List[Dict[str, Any]], 
+                          available_tests: Dict[str, Any]) -> Dict[str, Any]:
+        """Optimize and execute security scan"""
+        debug_log("Starting optimized scan", endpoint_count=len(endpoints))
+        
+        # Phase 1: Intelligent test selection
+        optimized_endpoints = []
+        for endpoint in endpoints:
+            selected_tests = self.test_selector.select_tests_for_endpoint(endpoint, available_tests)
+            optimized_endpoints.append({
+                'endpoint': endpoint,
+                'selected_tests': selected_tests
+            })
+        
+        # Phase 2: Parallel execution
+        async with ParallelRequestExecutor(self.max_workers, self.max_connections) as executor:
+            all_requests = []
+            
+            for opt_endpoint in optimized_endpoints:
+                endpoint = opt_endpoint['endpoint']
+                selected_tests = opt_endpoint['selected_tests']
+                
+                for test_category, test_config in selected_tests.items():
+                    tests = test_config.get('tests', [])
+                    
+                    for test in tests:
+                        # Check cache first
+                        cache_key = self._create_cache_key(endpoint, test)
+                        cached_response = self.cache.get(
+                            endpoint['url'], test['method'], 
+                            test.get('headers', {}), test.get('params', {}), 
+                            test.get('data')
+                        )
+                        
+                        if cached_response:
+                            self.metrics.cache_hits += 1
+                            continue
+                        
+                        # Create request for parallel execution
+                        request = self._create_request(endpoint, test)
+                        all_requests.append({
+                            'request': request,
+                            'endpoint': endpoint,
+                            'test': test,
+                            'test_category': test_category
+                        })
+            
+            # Execute requests in parallel
+            if all_requests:
+                results = await executor.execute_requests([r['request'] for r in all_requests])
+                
+                # Process results
+                scan_results = self._process_results(all_requests, results)
+            else:
+                scan_results = {'vulnerabilities': [], 'test_results': {}}
+        
+        # Finalize metrics
+        self.metrics.finalize()
+        
+        debug_log("Optimized scan completed", 
+                 metrics=self.metrics.get_summary())
+        
+        return {
+            'scan_results': scan_results,
+            'performance_metrics': self.metrics.get_summary(),
+            'cache_stats': {
+                'hits': self.metrics.cache_hits,
+                'misses': self.metrics.cache_misses,
+                'hit_rate': self.metrics.get_summary()['cache_hit_rate']
+            },
+            'test_effectiveness': self.test_selector.get_effectiveness_stats()
+        }
+    
+    def _create_cache_key(self, endpoint: Dict[str, Any], test: Dict[str, Any]) -> str:
+        """Create cache key for request"""
+        return f"{endpoint['url']}:{test['method']}:{hash(json.dumps(test, sort_keys=True))}"
+    
+    def _create_request(self, endpoint: Dict[str, Any], test: Dict[str, Any]) -> Dict[str, Any]:
+        """Create request object for parallel execution"""
+        return {
+            'method': test['method'],
+            'url': endpoint['url'],
+            'headers': test.get('headers', {}),
+            'params': test.get('params', {}),
+            'data': test.get('data'),
+            'json': test.get('json')
+        }
+    
+    def _process_results(self, requests: List[Dict[str, Any]], 
+                        results: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Process parallel execution results"""
+        scan_results = {
+            'vulnerabilities': [],
+            'test_results': defaultdict(list)
+        }
+        
+        for request_info, result in zip(requests, results):
+            endpoint = request_info['endpoint']
+            test = request_info['test']
+            test_category = request_info['test_category']
+            
+            # Update metrics
+            self.metrics.total_requests += 1
+            if result.get('success'):
+                self.metrics.successful_requests += 1
+            else:
+                self.metrics.failed_requests += 1
+            
+            if 'response_time' in result:
+                self.metrics.add_response_time(result['response_time'])
+            
+            # Cache successful responses
+            if result.get('success'):
+                self.cache.set(
+                    endpoint['url'], test['method'],
+                    test.get('headers', {}), test.get('params', {}),
+                    test.get('data'), result
+                )
+            
+            # Analyze for vulnerabilities
+            vulnerabilities = self._analyze_result_for_vulnerabilities(result, test_category, test)
+            if vulnerabilities:
+                scan_results['vulnerabilities'].extend(vulnerabilities)
+                self.metrics.vulnerabilities_found += len(vulnerabilities)
+                
+                # Update test effectiveness
+                self.test_selector.update_effectiveness(test_category, True)
+            
+            # Store test result
+            scan_results['test_results'][test_category].append({
+                'endpoint': endpoint,
+                'test': test,
+                'result': result,
+                'vulnerabilities': vulnerabilities
+            })
+        
+        return scan_results
+    
+    def _analyze_result_for_vulnerabilities(self, result: Dict[str, Any], 
+                                          test_category: str, 
+                                          test: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Analyze result for vulnerabilities (simplified version)"""
+        vulnerabilities = []
+        
+        if not result.get('success'):
+            return vulnerabilities
+        
+        status_code = result.get('status_code', 0)
+        content = result.get('content', '').lower()
+        
+        # Basic vulnerability detection
+        if status_code == 200 and any(pattern in content for pattern in ['error', 'exception', 'stack trace']):
+            vulnerabilities.append({
+                'type': 'information_disclosure',
+                'severity': 'medium',
+                'description': 'Potential information disclosure in response',
+                'test_category': test_category
+            })
+        
+        if status_code in [401, 403] and 'injection' in test_category.lower():
+            vulnerabilities.append({
+                'type': 'authentication_bypass',
+                'severity': 'high',
+                'description': 'Potential authentication bypass',
+                'test_category': test_category
+            })
+        
+        return vulnerabilities
+    
+    def get_performance_report(self) -> Dict[str, Any]:
+        """Generate comprehensive performance report"""
+        return {
+            'metrics': self.metrics.get_summary(),
+            'cache_performance': {
+                'hit_rate': self.metrics.get_summary()['cache_hit_rate'],
+                'total_hits': self.metrics.cache_hits,
+                'total_misses': self.metrics.cache_misses
+            },
+            'rate_limiting': {
+                'current_rate': self.rate_limiter.max_requests_per_second,
+                'backoff_multiplier': self.rate_limiter.backoff_multiplier
+            },
+            'test_effectiveness': self.test_selector.get_effectiveness_stats(),
+            'recommendations': self._generate_recommendations()
+        }
+    
+    def _generate_recommendations(self) -> List[str]:
+        """Generate performance improvement recommendations"""
+        recommendations = []
+        metrics = self.metrics.get_summary()
+        
+        if metrics['success_rate'] < 80:
+            recommendations.append("Consider reducing request rate or increasing timeouts")
+        
+        if metrics['avg_response_time'] > 5:
+            recommendations.append("Target API appears slow, consider reducing parallel workers")
+        
+        if metrics['cache_hit_rate'] < 20:
+            recommendations.append("Low cache hit rate, consider adjusting cache TTL or size")
+        
+        if metrics['requests_per_second'] < 5:
+            recommendations.append("Low throughput, consider increasing max_workers")
+        
+        return recommendations
+
+# Utility functions for integration with existing scanner
+def create_optimized_scanner(max_workers: int = 10, 
+                           max_connections: int = 100,
+                           cache_size: int = 1000,
+                           max_requests_per_second: int = 10) -> PerformanceOptimizer:
+    """Create an optimized scanner instance"""
+    return PerformanceOptimizer(
+        max_workers=max_workers,
+        max_connections=max_connections,
+        cache_size=cache_size,
+        max_requests_per_second=max_requests_per_second
+    )
+
+def benchmark_scanner_performance(scanner: PerformanceOptimizer, 
+                                test_endpoints: List[Dict[str, Any]],
+                                test_configs: Dict[str, Any]) -> Dict[str, Any]:
+    """Benchmark scanner performance"""
+    import time
+    
+    start_time = time.time()
+    
+    # Run scan
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        results = loop.run_until_complete(
+            scanner.optimize_scan(test_endpoints, test_configs)
+        )
+    finally:
+        loop.close()
+    
+    end_time = time.time()
+    
+    return {
+        'total_time': end_time - start_time,
+        'results': results,
+        'performance_report': scanner.get_performance_report()
+    }

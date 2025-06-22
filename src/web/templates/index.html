@@ -1,0 +1,1619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Security Scanner - OWASP Top 10</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --info-color: #17a2b8;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .main-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin: 20px auto;
+            max-width: 1200px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 30px;
+            border-radius: 15px 15px 0 0;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .nav-tabs {
+            border-bottom: 2px solid #e9ecef;
+            margin-bottom: 30px;
+        }
+
+        .nav-tabs .nav-link {
+            border: none;
+            color: #6c757d;
+            font-weight: 600;
+            padding: 15px 25px;
+            border-radius: 0;
+        }
+
+        .nav-tabs .nav-link.active {
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--primary-color);
+            background: none;
+        }
+
+        .form-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+
+        .form-section h3 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 8px;
+        }
+
+        .form-control, .form-select {
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 12px 15px;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border: none;
+            border-radius: 8px;
+            padding: 12px 30px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            border: none;
+            border-radius: 8px;
+            padding: 12px 30px;
+            font-weight: 600;
+        }
+
+        .btn-warning {
+            background: var(--warning-color);
+            border: none;
+            border-radius: 8px;
+            padding: 12px 30px;
+            font-weight: 600;
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+            border: none;
+            border-radius: 8px;
+            padding: 12px 30px;
+            font-weight: 600;
+        }
+
+        .status-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .status-running {
+            border-left-color: var(--warning-color);
+        }
+
+        .status-completed {
+            border-left-color: var(--success-color);
+        }
+
+        .status-failed {
+            border-left-color: var(--danger-color);
+        }
+
+        .progress {
+            height: 10px;
+            border-radius: 5px;
+            background-color: #e9ecef;
+        }
+
+        .progress-bar {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border-radius: 5px;
+        }
+
+        .alert {
+            border-radius: 8px;
+            border: none;
+            padding: 15px 20px;
+        }
+
+        .upload-area {
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary-color);
+            background-color: #f8f9fa;
+        }
+
+        .upload-area.dragover {
+            border-color: var(--primary-color);
+            background-color: rgba(102, 126, 234, 0.1);
+        }
+
+        .auth-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .scan-history {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .history-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+        }
+
+        .badge {
+            font-size: 0.8rem;
+            padding: 5px 10px;
+            border-radius: 15px;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .stats-card {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .stats-number {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .stats-label {
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-radius: 0 0 15px 15px;
+            color: #6c757d;
+        }
+
+        /* Override any Bootstrap modal backdrop */
+        .modal-backdrop {
+            display: none !important;
+        }
+        
+        /* Completely prevent Bootstrap modal styling on our modal */
+        #endpointModal[class*="modal"],
+        #endpointModal[class*="fade"] {
+            display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }
+        
+        /* Hide any Bootstrap modal backdrop that might be created */
+        .modal-backdrop.show,
+        .modal-backdrop.fade {
+            display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+        }
+        
+        /* Ensure body doesn't get Bootstrap modal classes */
+        body.modal-open {
+            overflow: auto !important;
+            padding-right: 0 !important;
+        }
+
+        /* Progress Bar Styles */
+        .progress-container { 
+            margin: 20px 0; 
+            background: #f8f9fa; 
+            border-radius: 5px; 
+            padding: 20px; 
+            border: 1px solid #dee2e6; 
+        }
+        .progress-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 15px; 
+        }
+        .progress-title { 
+            font-weight: bold; 
+            color: #495057; 
+        }
+        .progress-percentage { 
+            font-weight: bold; 
+            color: #007bff; 
+            font-size: 1.1em; 
+        }
+        .progress-bar { 
+            width: 100%; 
+            height: 25px; 
+            background: #e9ecef; 
+            border-radius: 12px; 
+            overflow: hidden; 
+            position: relative; 
+        }
+        .progress-fill { 
+            height: 100%; 
+            background: linear-gradient(90deg, #007bff, #0056b3); 
+            border-radius: 12px; 
+            transition: width 0.3s ease; 
+            position: relative; 
+        }
+        .progress-fill::after { 
+            content: ''; 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0; 
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent); 
+            animation: shimmer 2s infinite; 
+        }
+        @keyframes shimmer { 
+            0% { transform: translateX(-100%); } 
+            100% { transform: translateX(100%); } 
+        }
+        .progress-details { 
+            margin-top: 10px; 
+            font-size: 0.9em; 
+            color: #6c757d; 
+        }
+        .progress-stats { 
+            display: flex; 
+            justify-content: space-between; 
+            margin-top: 10px; 
+        }
+        .stat-item { 
+            text-align: center; 
+            flex: 1; 
+        }
+        .stat-value { 
+            font-weight: bold; 
+            color: #007bff; 
+        }
+        .stat-label { 
+            font-size: 0.8em; 
+            color: #6c757d; 
+        }
+        
+        /* Scan Results */
+        .scan-results { 
+            margin-top: 20px; 
+            padding: 15px; 
+            background: #f8f9fa; 
+            border-radius: 5px; 
+            border-left: 4px solid #007bff; 
+        }
+        .vulnerability-item { 
+            margin: 10px 0; 
+            padding: 10px; 
+            background: white; 
+            border-radius: 3px; 
+            border-left: 4px solid #dc3545; 
+        }
+        .vulnerability-critical { border-left-color: #dc3545; }
+        .vulnerability-high { border-left-color: #fd7e14; }
+        .vulnerability-medium { border-left-color: #ffc107; }
+        .vulnerability-low { border-left-color: #28a745; }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Header -->
+        <div class="header">
+            <h1><i class="fas fa-shield-alt"></i> API Security Scanner</h1>
+            <p>OWASP API Top 10 2023 Compliance & Vulnerability Assessment</p>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <!-- Navigation Tabs -->
+            <ul class="nav nav-tabs" id="mainTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="scan-tab" data-bs-toggle="tab" data-bs-target="#scan" type="button" role="tab">
+                        <i class="fas fa-search"></i> New Scan
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab">
+                        <i class="fas fa-history"></i> Scan History
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="reports-tab" data-bs-toggle="tab" data-bs-target="#reports" type="button" role="tab">
+                        <i class="fas fa-chart-bar"></i> Reports
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="help-tab" data-bs-toggle="tab" data-bs-target="#help" type="button" role="tab">
+                        <i class="fas fa-question-circle"></i> Help
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="logs-tab" data-bs-toggle="tab" data-bs-target="#logs" type="button" role="tab">
+                        <i class="fas fa-file-alt"></i> Logs & Diagnostics
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Tab Content -->
+            <div class="tab-content" id="mainTabsContent">
+                <!-- New Scan Tab -->
+                <div class="tab-pane fade show active" id="scan" role="tabpanel">
+                    <form id="scanForm">
+                        <!-- Scan Type Selection -->
+                        <div class="form-section">
+                            <h3><i class="fas fa-cog"></i> Scan Configuration</h3>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="scanType" class="form-label">Scan Type</label>
+                                    <select class="form-select" id="scanType" required>
+                                        <option value="">Select scan type...</option>
+                                        <option value="swagger_url">Swagger/OpenAPI URL</option>
+                                        <option value="json_file">JSON Specification File</option>
+                                        <option value="collection">API Collection Upload</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="baseUrl" class="form-label">Base URL (Optional)</label>
+                                    <input type="url" class="form-control" id="baseUrl" placeholder="https://api.example.com">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Swagger URL Configuration -->
+                        <div class="form-section" id="swaggerConfig" style="display: none;">
+                            <h3><i class="fas fa-link"></i> Swagger URL Configuration</h3>
+                            <div class="row">
+                                <div class="col-12">
+                                    <label for="swaggerUrl" class="form-label">Swagger/OpenAPI URL</label>
+                                    <input type="url" class="form-control" id="swaggerUrl" placeholder="https://api.example.com/swagger.json">
+                                    <div class="form-text">Enter the URL to your Swagger or OpenAPI specification</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- JSON File Configuration -->
+                        <div class="form-section" id="jsonConfig" style="display: none;">
+                            <h3><i class="fas fa-file-code"></i> JSON File Configuration</h3>
+                            <div class="row">
+                                <div class="col-12">
+                                    <label for="jsonFile" class="form-label">JSON Specification File</label>
+                                    <input type="file" class="form-control" id="jsonFile" accept=".json">
+                                    <div class="form-text">Upload your API specification JSON file</div>
+                                    <div id="jsonUploadStatus"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Collection Upload Configuration -->
+                        <div class="form-section" id="collectionConfig" style="display: none;">
+                            <h3><i class="fas fa-upload"></i> Collection Upload</h3>
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="upload-area" id="uploadArea">
+                                        <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                                        <h5>Drag & Drop Files Here</h5>
+                                        <p class="text-muted">or click to browse</p>
+                                        <p class="text-muted small">Supported: Postman (.json), Insomnia (.json), HAR (.har), curl commands (.txt)</p>
+                                        <input type="file" id="collectionFile" accept=".json,.har,.txt" style="display: none;">
+                                    </div>
+                                    <div id="uploadStatus"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Authentication Configuration -->
+                        <div class="form-section">
+                            <h3><i class="fas fa-lock"></i> Authentication (Optional)</h3>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="authType" class="form-label">Authentication Type</label>
+                                    <select class="form-select" id="authType">
+                                        <option value="">No Authentication</option>
+                                        <option value="bearer">Bearer Token</option>
+                                        <option value="apikey">API Key</option>
+                                        <option value="basic">Basic Authentication</option>
+                                        <option value="oauth2">OAuth2 Token</option>
+                                        <option value="custom">Custom Headers</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <button type="button" class="btn btn-outline-primary mt-4" id="testAuth">
+                                        <i class="fas fa-vial"></i> Test Authentication
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Bearer Token -->
+                            <div class="auth-section" id="bearerAuth" style="display: none;">
+                                <label for="bearerToken" class="form-label">Bearer Token</label>
+                                <input type="password" class="form-control" id="bearerToken" placeholder="Enter your JWT token">
+                            </div>
+
+                            <!-- API Key -->
+                            <div class="auth-section" id="apikeyAuth" style="display: none;">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <label for="apiKeyName" class="form-label">Header Name</label>
+                                        <input type="text" class="form-control" id="apiKeyName" placeholder="X-API-Key">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="apiKeyValue" class="form-label">API Key Value</label>
+                                        <input type="password" class="form-control" id="apiKeyValue" placeholder="Enter your API key">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="apiKeyLocation" class="form-label">Location</label>
+                                        <select class="form-select" id="apiKeyLocation">
+                                            <option value="header">Header</option>
+                                            <option value="query">Query Parameter</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Basic Auth -->
+                            <div class="auth-section" id="basicAuth" style="display: none;">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label for="basicUsername" class="form-label">Username</label>
+                                        <input type="text" class="form-control" id="basicUsername" placeholder="Enter username">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="basicPassword" class="form-label">Password</label>
+                                        <input type="password" class="form-control" id="basicPassword" placeholder="Enter password">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- OAuth2 -->
+                            <div class="auth-section" id="oauth2Auth" style="display: none;">
+                                <label for="oauth2Token" class="form-label">OAuth2 Access Token</label>
+                                <input type="password" class="form-control" id="oauth2Token" placeholder="Enter your OAuth2 access token">
+                            </div>
+
+                            <!-- Custom Headers -->
+                            <div class="auth-section" id="customAuth" style="display: none;">
+                                <div id="customHeaders">
+                                    <div class="row mb-2">
+                                        <div class="col-md-5">
+                                            <input type="text" class="form-control" placeholder="Header Name" data-header-key="0">
+                                        </div>
+                                        <div class="col-md-5">
+                                            <input type="text" class="form-control" placeholder="Header Value" data-header-value="0">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <button type="button" class="btn btn-outline-danger btn-sm remove-header">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="addHeader">
+                                    <i class="fas fa-plus"></i> Add Header
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Start Scan Button -->
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-primary btn-lg" id="startScan">
+                                <i class="fas fa-play"></i> Start Security Scan
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Scan Status -->
+                    <div id="scanStatus" style="display: none;">
+                        <div class="status-card status-running">
+                            <h4><i class="fas fa-spinner fa-spin"></i> Scan in Progress</h4>
+                            <div class="progress mb-3">
+                                <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                            </div>
+                            <p id="scanProgress">Initializing scan...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scan History Tab -->
+                <div class="tab-pane fade" id="history" role="tabpanel">
+                    <h3><i class="fas fa-history"></i> Scan History</h3>
+                    <div class="row mb-2">
+                        <div class="col-md-3">
+                            <input type="text" class="form-control" id="scanSearch" placeholder="Search by ID or time...">
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select" id="scanTypeFilter">
+                                <option value="">All Types</option>
+                                <option value="collection">Collection</option>
+                                <option value="swagger_url">Swagger URL</option>
+                                <option value="json_file">JSON File</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select" id="scanStatusFilter">
+                                <option value="">All Statuses</option>
+                                <option value="completed">Completed</option>
+                                <option value="running">Running</option>
+                                <option value="failed">Failed</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-center">
+                            <button class="btn btn-outline-primary btn-sm me-2" id="refreshScanHistory"><i class="fas fa-sync"></i> Refresh</button>
+                            <button class="btn btn-outline-secondary btn-sm" id="clearScanFilters"><i class="fas fa-times"></i> Clear</button>
+                        </div>
+                    </div>
+                    <div id="scanHistory" class="scan-history"></div>
+                    <nav>
+                        <ul class="pagination justify-content-center" id="scanHistoryPagination"></ul>
+                    </nav>
+                </div>
+
+                <!-- Reports Tab -->
+                <div class="tab-pane fade" id="reports" role="tabpanel">
+                    <h3><i class="fas fa-chart-bar"></i> Reports</h3>
+                    <div class="row mb-2">
+                        <div class="col-md-3">
+                            <input type="text" class="form-control" id="reportSearch" placeholder="Search by ID or time...">
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select" id="reportTypeFilter">
+                                <option value="">All Types</option>
+                                <option value="collection">Collection</option>
+                                <option value="swagger_url">Swagger URL</option>
+                                <option value="json_file">JSON File</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select" id="reportStatusFilter">
+                                <option value="">All Statuses</option>
+                                <option value="completed">Completed</option>
+                                <option value="running">Running</option>
+                                <option value="failed">Failed</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-center">
+                            <button class="btn btn-outline-primary btn-sm me-2" id="refreshReports"><i class="fas fa-sync"></i> Refresh</button>
+                            <button class="btn btn-outline-secondary btn-sm" id="clearReportFilters"><i class="fas fa-times"></i> Clear</button>
+                        </div>
+                    </div>
+                    <div id="reportsList"></div>
+                    <nav>
+                        <ul class="pagination justify-content-center" id="reportsPagination"></ul>
+                    </nav>
+                </div>
+
+                <!-- Help Tab -->
+                <div class="tab-pane fade" id="help" role="tabpanel">
+                    <h3><i class="fas fa-question-circle"></i> Help & Documentation</h3>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="stats-card">
+                                <div class="stats-number">10</div>
+                                <div class="stats-label">OWASP API Top 10 Categories</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="stats-card">
+                                <div class="stats-number">5</div>
+                                <div class="stats-label">Supported Collection Formats</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h4><i class="fas fa-info-circle"></i> Quick Start Guide</h4>
+                        <ol>
+                            <li>Select your scan type (Swagger URL, JSON file, or Collection upload)</li>
+                            <li>Configure authentication if needed</li>
+                            <li>Click "Start Security Scan"</li>
+                            <li>Monitor progress and download reports</li>
+                        </ol>
+                    </div>
+
+                    <div class="form-section">
+                        <h4><i class="fas fa-shield-alt"></i> OWASP API Top 10 2023</h4>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <ul class="list-unstyled">
+                                    <li><span class="badge bg-danger">API1</span> Broken Object Property Level Authorization</li>
+                                    <li><span class="badge bg-danger">API2</span> Broken Authentication</li>
+                                    <li><span class="badge bg-danger">API3</span> Broken Object Property Level Authorization</li>
+                                    <li><span class="badge bg-warning">API4</span> Unrestricted Resource Consumption</li>
+                                    <li><span class="badge bg-danger">API5</span> Broken Function Level Authorization</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="list-unstyled">
+                                    <li><span class="badge bg-warning">API6</span> Unrestricted Access to Sensitive Business Flows</li>
+                                    <li><span class="badge bg-warning">API7</span> Server-Side Request Forgery</li>
+                                    <li><span class="badge bg-info">API8</span> Security Misconfiguration</li>
+                                    <li><span class="badge bg-info">API9</span> Improper Inventory Management</li>
+                                    <li><span class="badge bg-info">API10</span> Unsafe Consumption of APIs</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h4><i class="fas fa-file-upload"></i> Supported Formats</h4>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <i class="fas fa-file-code fa-2x text-primary mb-2"></i>
+                                    <h6>Postman Collections</h6>
+                                    <small class="text-muted">.json files</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <i class="fas fa-file-code fa-2x text-success mb-2"></i>
+                                    <h6>Insomnia Collections</h6>
+                                    <small class="text-muted">.json files</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <i class="fas fa-file-code fa-2x text-warning mb-2"></i>
+                                    <h6>HAR Files</h6>
+                                    <small class="text-muted">.har files</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <i class="fas fa-terminal fa-2x text-info mb-2"></i>
+                                    <h6>curl Commands</h6>
+                                    <small class="text-muted">.txt files</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Logs & Diagnostics Tab -->
+                <div class="tab-pane fade" id="logs" role="tabpanel">
+                    <h3><i class="fas fa-file-alt"></i> Logs & Diagnostics</h3>
+                    <div class="form-section mb-4">
+                        <div class="row align-items-end">
+                            <div class="col-md-3">
+                                <label for="logLines" class="form-label">Show Last N Lines</label>
+                                <input type="number" class="form-control" id="logLines" value="200" min="10" max="2000">
+                            </div>
+                            <div class="col-md-5">
+                                <label for="logSearch" class="form-label">Search Logs</label>
+                                <input type="text" class="form-control" id="logSearch" placeholder="Search logs...">
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-primary w-100" id="refreshLogs"><i class="fas fa-sync"></i> Refresh</button>
+                            </div>
+                            <div class="col-md-2">
+                                <a href="/api/logs/download" class="btn btn-success w-100" id="downloadLogs"><i class="fas fa-download"></i> Download</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-section" style="max-height: 350px; overflow-y: auto; background: #222; color: #eee; font-family: monospace; font-size: 0.95em;" id="logViewer">
+                        <pre id="logContent" style="margin:0; background:transparent; color:inherit;"></pre>
+                    </div>
+                    <div class="form-section mt-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h4 class="mb-0"><i class="fas fa-stethoscope"></i> Diagnostics Summary</h4>
+                            <button class="btn btn-outline-primary btn-sm" id="exportDiagnostics"><i class="fas fa-file-export"></i> Export All Debug Data</button>
+                        </div>
+                        <div id="diagnosticsSummary">
+                            <div class="text-muted">Loading diagnostics...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>&copy; 2024 API Security Scanner - OWASP API Top 10 2023 Compliance</p>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JavaScript -->
+    <script>
+        // Global variables
+        let currentScanId = null;
+        let scanInterval = null;
+        let uploadedFiles = {}; // Store uploaded file information
+        let startTime = null;
+        let allScansCache = [];
+
+        // --- Pagination State ---
+        let scanHistoryPage = 1;
+        let reportsPage = 1;
+        const ITEMS_PER_PAGE = 10;
+
+        // DOM elements
+        const scanForm = document.getElementById('scanForm');
+        const scanType = document.getElementById('scanType');
+        const scanStatus = document.getElementById('scanStatus');
+        const startScanBtn = document.getElementById('startScan');
+        const authType = document.getElementById('authType');
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, initializing application...');
+            initializeEventListeners();
+            loadScanHistory();
+            
+            // Test if confirmEndpoints button exists
+            const confirmBtn = document.getElementById('confirmEndpoints');
+            if (confirmBtn) {
+                console.log('Confirm endpoints button found');
+            } else {
+                console.error('Confirm endpoints button not found!');
+            }
+        });
+
+        function initializeEventListeners() {
+            // Scan type change
+            scanType.addEventListener('change', toggleScanConfig);
+            
+            // Authentication type change
+            authType.addEventListener('change', toggleAuthConfig);
+            
+            // Form submission
+            scanForm.addEventListener('submit', startScan);
+            
+            // File upload
+            setupFileUpload();
+            
+            // Custom headers
+            document.getElementById('addHeader').addEventListener('click', addCustomHeader);
+            
+            // Test authentication
+            document.getElementById('testAuth').addEventListener('click', testAuthentication);
+
+            // Logs & Diagnostics Tab
+            document.getElementById('logs-tab').addEventListener('click', function() {
+                loadLogs();
+                loadDiagnostics();
+            });
+            document.getElementById('refreshLogs').addEventListener('click', loadLogs);
+            document.getElementById('logLines').addEventListener('change', loadLogs);
+            document.getElementById('logSearch').addEventListener('input', function() {
+                setTimeout(loadLogs, 300);
+            });
+            document.getElementById('exportDiagnostics').addEventListener('click', function() {
+                fetch('/api/diagnostics/export', {method: 'POST'})
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) showAlert('success', data.message);
+                        else showAlert('error', data.error);
+                    });
+            });
+
+            // Scan History and Reports rendering
+            document.getElementById('refreshScanHistory').addEventListener('click', loadScanHistory);
+            document.getElementById('refreshReports').addEventListener('click', loadScanHistory);
+            document.getElementById('clearScanFilters').addEventListener('click', function() {
+                document.getElementById('scanSearch').value = '';
+                document.getElementById('scanTypeFilter').value = '';
+                document.getElementById('scanStatusFilter').value = '';
+                renderScanHistory(allScansCache);
+            });
+            document.getElementById('clearReportFilters').addEventListener('click', function() {
+                document.getElementById('reportSearch').value = '';
+                document.getElementById('reportTypeFilter').value = '';
+                document.getElementById('reportStatusFilter').value = '';
+                renderReports(allScansCache);
+            });
+            document.getElementById('scanSearch').addEventListener('input', function() { scanHistoryPage = 1; renderScanHistory(allScansCache); });
+            document.getElementById('scanTypeFilter').addEventListener('change', function() { scanHistoryPage = 1; renderScanHistory(allScansCache); });
+            document.getElementById('scanStatusFilter').addEventListener('change', function() { scanHistoryPage = 1; renderScanHistory(allScansCache); });
+            document.getElementById('reportSearch').addEventListener('input', function() { reportsPage = 1; renderReports(allScansCache); });
+            document.getElementById('reportTypeFilter').addEventListener('change', function() { reportsPage = 1; renderReports(allScansCache); });
+            document.getElementById('reportStatusFilter').addEventListener('change', function() { reportsPage = 1; renderReports(allScansCache); });
+            // Auto-refresh every 60 seconds
+            setInterval(loadScanHistory, 60000);
+        }
+
+        function toggleScanConfig() {
+            // Hide all config sections
+            document.getElementById('swaggerConfig').style.display = 'none';
+            document.getElementById('jsonConfig').style.display = 'none';
+            document.getElementById('collectionConfig').style.display = 'none';
+            
+            // Show selected config
+            const selectedType = scanType.value;
+            if (selectedType === 'swagger_url') {
+                document.getElementById('swaggerConfig').style.display = 'block';
+            } else if (selectedType === 'json_file') {
+                document.getElementById('jsonConfig').style.display = 'block';
+            } else if (selectedType === 'collection') {
+                document.getElementById('collectionConfig').style.display = 'block';
+            }
+        }
+
+        function toggleAuthConfig() {
+            // Hide all auth sections
+            const authSections = ['bearerAuth', 'apikeyAuth', 'basicAuth', 'oauth2Auth', 'customAuth'];
+            authSections.forEach(section => {
+                document.getElementById(section).style.display = 'none';
+            });
+            
+            // Show selected auth
+            const selectedAuth = authType.value;
+            if (selectedAuth) {
+                document.getElementById(selectedAuth + 'Auth').style.display = 'block';
+            }
+        }
+
+        function setupFileUpload() {
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('collectionFile');
+            const jsonFileInput = document.getElementById('jsonFile');
+            
+            uploadArea.addEventListener('click', () => fileInput.click());
+            uploadArea.addEventListener('dragover', handleDragOver);
+            uploadArea.addEventListener('drop', handleDrop);
+            fileInput.addEventListener('change', handleFileSelect);
+            
+            // Add file upload handling for JSON file input
+            jsonFileInput.addEventListener('change', handleJsonFileSelect);
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('dragover');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+
+        function handleJsonFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+
+        function handleFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showAlert('error', data.error);
+                } else {
+                    // Store uploaded file information
+                    uploadedFiles[file.name] = {
+                        filename: data.filename,
+                        filepath: data.filepath
+                    };
+                    
+                    showAlert('success', 'File uploaded successfully: ' + data.filename);
+                    
+                    // Show status in appropriate area based on file type
+                    const jsonFileInput = document.getElementById('jsonFile');
+                    const collectionFileInput = document.getElementById('collectionFile');
+                    
+                    if (jsonFileInput.files.length > 0 && jsonFileInput.files[0].name === file.name) {
+                        // This is a JSON file upload
+                        document.getElementById('jsonUploadStatus').innerHTML = 
+                            `<div class="alert alert-success">File uploaded: ${data.filename}</div>`;
+                    } else if (collectionFileInput.files.length > 0 && collectionFileInput.files[0].name === file.name) {
+                        // This is a collection file upload
+                        document.getElementById('uploadStatus').innerHTML = 
+                            `<div class="alert alert-success">File uploaded: ${data.filename}</div>`;
+                    }
+                }
+            })
+            .catch(error => {
+                showAlert('error', 'Upload failed: ' + error.message);
+            });
+        }
+
+        function startScan(e) {
+            e.preventDefault();
+            console.log("Start scan button clicked"); // Debug log
+            const scanConfig = buildScanConfig();
+            if (!scanConfig) return;
+            
+            // Show scan status
+            scanStatus.style.display = 'block';
+            startScanBtn.disabled = true;
+            startScanBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
+            
+            // Start scan
+            fetch('/api/scan', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(scanConfig)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showAlert('error', data.error);
+                    resetScanUI();
+                } else {
+                    currentScanId = data.scan_id;
+                    startTime = Date.now();
+                    monitorScan();
+                }
+            })
+            .catch(error => {
+                showAlert('error', 'Failed to start scan: ' + error.message);
+                resetScanUI();
+            });
+        }
+
+        function buildScanConfig() {
+            const config = {
+                scan_type: scanType.value
+            };
+            
+            if (!config.scan_type) {
+                showAlert('error', 'Please select a scan type');
+                return null;
+            }
+            
+            // Add base URL if provided
+            const baseUrl = document.getElementById('baseUrl').value;
+            if (baseUrl) config.base_url = baseUrl;
+            
+            // Add scan-specific config
+            if (config.scan_type === 'swagger_url') {
+                const swaggerUrl = document.getElementById('swaggerUrl').value;
+                if (!swaggerUrl) {
+                    showAlert('error', 'Please enter Swagger URL');
+                    return null;
+                }
+                config.swagger_url = swaggerUrl;
+            } else if (config.scan_type === 'json_file') {
+                const jsonFile = document.getElementById('jsonFile').files[0];
+                if (!jsonFile) {
+                    showAlert('error', 'Please select a JSON file');
+                    return null;
+                }
+                // Use stored filepath if available, otherwise use filename
+                const uploadedFile = uploadedFiles[jsonFile.name];
+                config.json_file = uploadedFile ? uploadedFile.filepath : jsonFile.name;
+            } else if (config.scan_type === 'collection') {
+                const collectionFile = document.getElementById('collectionFile').files[0];
+                if (!collectionFile) {
+                    showAlert('error', 'Please select a collection file');
+                    return null;
+                }
+                // Use stored filepath if available, otherwise use filename
+                const uploadedFile = uploadedFiles[collectionFile.name];
+                config.collection_file = uploadedFile ? uploadedFile.filepath : collectionFile.name;
+            }
+            
+            // Add authentication config
+            const authTypeValue = authType.value;
+            if (authTypeValue) {
+                config.auth_type = authTypeValue;
+                
+                if (authTypeValue === 'bearer') {
+                    config.bearer_token = document.getElementById('bearerToken').value;
+                } else if (authTypeValue === 'apikey') {
+                    config.api_key_name = document.getElementById('apiKeyName').value;
+                    config.api_key_value = document.getElementById('apiKeyValue').value;
+                    config.api_key_location = document.getElementById('apiKeyLocation').value;
+                } else if (authTypeValue === 'basic') {
+                    config.basic_username = document.getElementById('basicUsername').value;
+                    config.basic_password = document.getElementById('basicPassword').value;
+                } else if (authTypeValue === 'oauth2') {
+                    config.oauth2_token = document.getElementById('oauth2Token').value;
+                } else if (authTypeValue === 'custom') {
+                    // Add custom headers
+                    const headers = document.querySelectorAll('[data-header-key]');
+                    headers.forEach((header, index) => {
+                        const key = header.value;
+                        const value = document.querySelector(`[data-header-value="${index}"]`).value;
+                        if (key && value) {
+                            config[`custom_header_key_${index}`] = key;
+                            config[`custom_header_value_${index}`] = value;
+                        }
+                    });
+                }
+            }
+            
+            return config;
+        }
+
+        function monitorScan() {
+            if (!currentScanId) return;
+            
+            const checkStatus = () => {
+                fetch(`/api/scan/${currentScanId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            showAlert('error', data.error);
+                            resetScanUI();
+                            return;
+                        }
+                        
+                        const status = data.status;
+                        const results = data.results;
+                        
+                        // Update status display
+                        if (status === 'running' || status === 'in_progress') {
+                            scanStatus.innerHTML = `
+                                <div class="alert alert-info">
+                                    <i class="fas fa-spinner fa-spin"></i> 
+                                    <strong>Scan in Progress...</strong>
+                                    <br>
+                                    <small>Scanning endpoints for vulnerabilities...</small>
+                                </div>
+                            `;
+                            
+                            // Continue monitoring
+                            setTimeout(checkStatus, 2000);
+                        } else if (status === 'completed') {
+                            scanStatus.innerHTML = `
+                                <div class="alert alert-success">
+                                    <i class="fas fa-check-circle"></i> 
+                                    <strong>Scan Completed!</strong>
+                                    <br>
+                                    <small>Found ${results?.vulnerabilities?.length || 0} vulnerabilities</small>
+                                </div>
+                            `;
+                            
+                            // Show results
+                            if (results) {
+                                displayScanResults(results);
+                            }
+                            
+                            resetScanUI();
+                        } else if (status === 'failed') {
+                            scanStatus.innerHTML = `
+                                <div class="alert alert-danger">
+                                    <i class="fas fa-exclamation-triangle"></i> 
+                                    <strong>Scan Failed</strong>
+                                    <br>
+                                    <small>${data.error || 'Unknown error occurred'}</small>
+                                </div>
+                            `;
+                            resetScanUI();
+                        } else {
+                            // Unknown status, continue monitoring
+                            setTimeout(checkStatus, 2000);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error checking scan status:', error);
+                        setTimeout(checkStatus, 5000); // Retry after 5 seconds
+                    });
+            };
+            
+            checkStatus();
+        }
+
+        function updateScanStatus(data) {
+            const statusCard = document.querySelector('.status-card');
+            const progressBar = document.querySelector('.progress-bar');
+            const progressText = document.getElementById('scanProgress');
+            
+            // Update status class
+            statusCard.className = `status-card status-${data.status}`;
+            
+            // Update progress
+            if (data.status === 'running') {
+                progressBar.style.width = '50%';
+                progressText.textContent = 'Scanning API endpoints...';
+            } else if (data.status === 'completed') {
+                progressBar.style.width = '100%';
+                progressText.textContent = 'Scan completed!';
+            } else if (data.status === 'failed') {
+                progressBar.style.width = '100%';
+                progressText.textContent = 'Scan failed: ' + data.error;
+            }
+        }
+
+        function stopMonitoring() {
+            if (scanInterval) {
+                clearInterval(scanInterval);
+                scanInterval = null;
+            }
+            currentScanId = null;
+        }
+
+        function resetScanUI() {
+            scanStatus.style.display = 'none';
+            startScanBtn.disabled = false;
+            startScanBtn.innerHTML = '<i class="fas fa-play"></i> Start Security Scan';
+        }
+
+        function loadScanHistory() {
+            fetch('/api/scans')
+            .then(response => response.json())
+            .then(scans => {
+                allScansCache = scans;
+                renderScanHistory(scans);
+                renderReports(scans);
+            })
+            .catch(error => {
+                document.getElementById('scanHistory').innerHTML = `<div class='alert alert-danger'>Error loading scan history: ${error.message}</div>`;
+                document.getElementById('reportsList').innerHTML = `<div class='alert alert-danger'>Error loading reports: ${error.message}</div>`;
+            });
+        }
+
+        function renderScanHistory(scans) {
+            const search = document.getElementById('scanSearch').value.trim();
+            const type = document.getElementById('scanTypeFilter').value;
+            const status = document.getElementById('scanStatusFilter').value;
+            const filtered = filterScans(scans, search, type, status);
+            const paged = paginate(filtered, scanHistoryPage, ITEMS_PER_PAGE);
+            const historyContainer = document.getElementById('scanHistory');
+            if (!paged.items || paged.items.length === 0) {
+                historyContainer.innerHTML = `
+                    <div class="text-center text-muted">
+                        <i class="fas fa-history fa-3x mb-3"></i>
+                        <p>No scan history available</p>
+                    </div>
+                `;
+                document.getElementById('scanHistoryPagination').innerHTML = '';
+                return;
+            }
+            let html = `<div class="table-responsive"><table class="table table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Scan Type</th>
+                        <th>Start Time</th>
+                        <th>Status</th>
+                        <th>Endpoints</th>
+                        <th>Vulnerabilities</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+            for (const scan of paged.items) {
+                html += `<tr>
+                    <td>${scan.scan_type ? scan.scan_type.replace('_', ' ').toUpperCase() : ''}</td>
+                    <td>${scan.start_time ? new Date(scan.start_time).toLocaleString() : ''}</td>
+                    <td><span class="badge bg-${getStatusColor(scan.status)}">${scan.status ? scan.status.toUpperCase() : ''}</span></td>
+                    <td>${scan.endpoints_found ?? (scan.summary ? scan.summary.total_endpoints : 'N/A')}</td>
+                    <td>${scan.vulnerabilities_found ?? (scan.summary ? scan.summary.total_vulnerabilities : 'N/A')}</td>
+                    <td>
+                        ${scan.status === 'completed' ? `
+                            <a href="/api/report/${scan.id}/standard" class="btn btn-sm btn-outline-primary" title="Download JSON Report"><i class="fas fa-download"></i> JSON</a>
+                            <a href="/api/report/${scan.id}/owasp" class="btn btn-sm btn-outline-success" title="Download HTML Report"><i class="fas fa-download"></i> HTML</a>
+                            <a href="/api/report/${scan.id}/view" class="btn btn-sm btn-outline-info" target="_blank" title="View HTML Report"><i class="fas fa-eye"></i> View</a>
+                        ` : '<span class="text-muted">N/A</span>'}
+                    </td>
+                </tr>`;
+            }
+            html += '</tbody></table></div>';
+            historyContainer.innerHTML = html;
+            renderPagination('scanHistoryPagination', paged.page, paged.totalPages, function(newPage) {
+                scanHistoryPage = newPage;
+                renderScanHistory(scans);
+            });
+        }
+
+        function renderReports(scans) {
+            const search = document.getElementById('reportSearch').value.trim();
+            const type = document.getElementById('reportTypeFilter').value;
+            const status = document.getElementById('reportStatusFilter').value;
+            const filtered = filterScans(scans, search, type, status);
+            const paged = paginate(filtered, reportsPage, ITEMS_PER_PAGE);
+            const reportsList = document.getElementById('reportsList');
+            if (!paged.items || paged.items.length === 0) {
+                reportsList.innerHTML = `
+                    <div class="text-center text-muted">
+                        <i class="fas fa-file-alt fa-3x mb-3"></i>
+                        <p>No reports available</p>
+                    </div>
+                `;
+                document.getElementById('reportsPagination').innerHTML = '';
+                return;
+            }
+            let html = `<div class="table-responsive"><table class="table table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Scan ID</th>
+                        <th>Type</th>
+                        <th>Start Time</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+            for (const scan of paged.items) {
+                html += `<tr>
+                    <td>${scan.id}</td>
+                    <td>${scan.scan_type ? scan.scan_type.replace('_', ' ').toUpperCase() : ''}</td>
+                    <td>${scan.start_time ? new Date(scan.start_time).toLocaleString() : ''}</td>
+                    <td><span class="badge bg-${getStatusColor(scan.status)}">${scan.status ? scan.status.toUpperCase() : ''}</span></td>
+                    <td>
+                        ${scan.status === 'completed' ? `
+                            <a href="/api/report/${scan.id}/standard" class="btn btn-sm btn-outline-primary" title="Download JSON Report"><i class="fas fa-download"></i> JSON</a>
+                            <a href="/api/report/${scan.id}/owasp" class="btn btn-sm btn-outline-success" title="Download HTML Report"><i class="fas fa-download"></i> HTML</a>
+                            <a href="/api/report/${scan.id}/view" class="btn btn-sm btn-outline-info" target="_blank" title="View HTML Report"><i class="fas fa-eye"></i> View</a>
+                        ` : '<span class="text-muted">N/A</span>'}
+                    </td>
+                </tr>`;
+            }
+            html += '</tbody></table></div>';
+            reportsList.innerHTML = html;
+            renderPagination('reportsPagination', paged.page, paged.totalPages, function(newPage) {
+                reportsPage = newPage;
+                renderReports(scans);
+            });
+        }
+
+        function getStatusColor(status) {
+            switch (status) {
+                case 'completed': return 'success';
+                case 'running': return 'warning';
+                case 'failed': return 'danger';
+                default: return 'secondary';
+            }
+        }
+
+        function addCustomHeader() {
+            const container = document.getElementById('customHeaders');
+            const headerCount = container.children.length;
+            
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'row mb-2';
+            headerDiv.innerHTML = `
+                <div class="col-md-5">
+                    <input type="text" class="form-control" placeholder="Header Name" data-header-key="${headerCount}">
+                </div>
+                <div class="col-md-5">
+                    <input type="text" class="form-control" placeholder="Header Value" data-header-value="${headerCount}">
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-outline-danger btn-sm remove-header">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+            
+            container.appendChild(headerDiv);
+            
+            // Add event listener to remove button
+            headerDiv.querySelector('.remove-header').addEventListener('click', function() {
+                container.removeChild(headerDiv);
+            });
+        }
+
+        function testAuthentication() {
+            const authConfig = buildAuthConfig();
+            if (!authConfig) {
+                showAlert('error', 'Please configure authentication first');
+                return;
+            }
+            
+            fetch('/api/auth/test', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(authConfig)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', 'Authentication test successful!');
+                } else {
+                    showAlert('error', 'Authentication test failed: ' + data.error);
+                }
+            })
+            .catch(error => {
+                showAlert('error', 'Authentication test failed: ' + error.message);
+            });
+        }
+
+        function buildAuthConfig() {
+            const authTypeValue = authType.value;
+            if (!authTypeValue) return null;
+            
+            const config = { type: authTypeValue };
+            
+            if (authTypeValue === 'bearer') {
+                config.token = document.getElementById('bearerToken').value;
+            } else if (authTypeValue === 'apikey') {
+                config.key = document.getElementById('apiKeyName').value;
+                config.value = document.getElementById('apiKeyValue').value;
+                config.location = document.getElementById('apiKeyLocation').value;
+            } else if (authTypeValue === 'basic') {
+                config.username = document.getElementById('basicUsername').value;
+                config.password = document.getElementById('basicPassword').value;
+            }
+            
+            return config;
+        }
+
+        function showAlert(type, message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            // Insert at the top of the content
+            const content = document.querySelector('.content');
+            content.insertBefore(alertDiv, content.firstChild);
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+
+        // Logs & Diagnostics Tab
+        function loadLogs() {
+            const lines = document.getElementById('logLines').value;
+            const search = document.getElementById('logSearch').value;
+            fetch(`/api/logs?lines=${lines}&search=${encodeURIComponent(search)}`)
+                .then(r => r.json())
+                .then(data => {
+                    const logContent = document.getElementById('logContent');
+                    if (data.error) {
+                        logContent.textContent = data.error;
+                    } else {
+                        logContent.textContent = data.lines.join('');
+                    }
+                });
+        }
+        function loadDiagnostics() {
+            fetch('/api/diagnostics')
+                .then(r => r.json())
+                .then(data => {
+                    const diag = document.getElementById('diagnosticsSummary');
+                    if (data.error) {
+                        diag.innerHTML = `<div class='alert alert-danger'>${data.error}</div>`;
+                        return;
+                    }
+                    diag.innerHTML = `
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="stats-card">
+                                    <div class="stats-number">${data.metrics_summary.current_cpu ?? 'N/A'}%</div>
+                                    <div class="stats-label">CPU Usage</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stats-card">
+                                    <div class="stats-number">${data.metrics_summary.current_memory ?? 'N/A'}%</div>
+                                    <div class="stats-label">Memory Usage</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stats-card">
+                                    <div class="stats-number">${data.metrics_summary.current_threads ?? 'N/A'}</div>
+                                    <div class="stats-label">Active Threads</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <div class="alert alert-info">
+                                    <b>Requests:</b> ${data.debug_stats.request_count} &nbsp; <b>Errors:</b> ${data.debug_stats.error_count}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="alert alert-secondary">
+                                    <b>Monitoring:</b> ${data.metrics_summary.monitoring_duration ?? 'N/A'}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-12">
+                                <pre style="font-size:0.9em; background:#f8f9fa; border-radius:8px; padding:10px;">${JSON.stringify(data.diagnostics.summary ?? data.diagnostics, null, 2)}</pre>
+                            </div>
+                        </div>
+                    `;
+                });
+        }
+
+        // --- Filtering and Search Logic ---
+        function filterScans(scans, search, type, status) {
+            return scans.filter(scan => {
+                let matches = true;
+                if (search) {
+                    const s = search.toLowerCase();
+                    matches = matches && (
+                        (scan.id && scan.id.toLowerCase().includes(s)) ||
+                        (scan.start_time && new Date(scan.start_time).toLocaleString().toLowerCase().includes(s))
+                    );
+                }
+                if (type) {
+                    matches = matches && scan.scan_type === type;
+                }
+                if (status) {
+                    matches = matches && scan.status === status;
+                }
+                return matches;
+            });
+        }
+
+        // --- Pagination Logic ---
+        function paginate(items, page, perPage) {
+            const total = items.length;
+            const totalPages = Math.ceil(total / perPage) || 1;
+            const start = (page - 1) * perPage;
+            const end = start + perPage;
+            return {
+                items: items.slice(start, end),
+                total,
+                totalPages,
+                page
+            };
+        }
+
+        function renderPagination(containerId, page, totalPages, onPageChange) {
+            const container = document.getElementById(containerId);
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+            let html = '';
+            html += `<li class="page-item${page === 1 ? ' disabled' : ''}"><a class="page-link" href="#" data-page="${page - 1}">Prev</a></li>`;
+            for (let i = 1; i <= totalPages; i++) {
+                html += `<li class="page-item${i === page ? ' active' : ''}"><a class="page-link" href="#" data-page="${i}">${i}</a></li>`;
+            }
+            html += `<li class="page-item${page === totalPages ? ' disabled' : ''}"><a class="page-link" href="#" data-page="${page + 1}">Next</a></li>`;
+            container.innerHTML = html;
+            Array.from(container.querySelectorAll('a.page-link')).forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const newPage = parseInt(this.getAttribute('data-page'));
+                    if (!isNaN(newPage) && newPage >= 1 && newPage <= totalPages) {
+                        onPageChange(newPage);
+                    }
+                });
+            });
+        }
+    </script>
+
+    <!-- Endpoint Selection Modal -->
+    <div class="custom-modal" id="endpointModal" style="display: none;">
+        <div class="custom-modal-backdrop"></div>
+        <div class="custom-modal-dialog">
+            <div class="custom-modal-content">
+                <div class="custom-modal-header">
+                    <h5 class="custom-modal-title"><i class="fas fa-list"></i> Select Endpoints to Scan</h5>
+                    <button type="button" class="custom-modal-close" id="closeEndpointModal" aria-label="Close">×</button>
+                </div>
+                <div class="custom-modal-body">
+                    <div id="endpointListContainer">
+                        <div class="text-muted">Loading endpoints...</div>
+                    </div>
+                </div>
+                <div class="custom-modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelEndpoints">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirmEndpoints">Start Scan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

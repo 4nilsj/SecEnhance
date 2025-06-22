@@ -1,0 +1,72 @@
+{
+  "info": {
+    "name": "Insecure API Test Collection",
+    "description": "Test collection for insecure API"
+  },
+  "item": [
+    {
+      "name": "Get Users",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://localhost:5001/api/users",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5001",
+          "path": [
+            "api",
+            "users"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Create User",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "http://localhost:5001/api/users",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5001",
+          "path": [
+            "api",
+            "users"
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"username\": \"test\", \"email\": \"test@test.com\", \"password\": \"test123\"}"
+        }
+      }
+    },
+    {
+      "name": "Admin Panel",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://localhost:5001/api/admin",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5001",
+          "path": [
+            "api",
+            "admin"
+          ]
+        }
+      }
+    }
+  ]
+}

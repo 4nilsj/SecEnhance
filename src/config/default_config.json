@@ -1,0 +1,44 @@
+{
+  "scanner": {
+    "timeout": 30,
+    "max_retries": 3,
+    "concurrent_requests": 5,
+    "user_agent": "API-Security-Scanner/1.0.0"
+  },
+  "security_tests": {
+    "broken_object_level_authorization": true,
+    "broken_user_authentication": true,
+    "excessive_data_exposure": true,
+    "lack_of_resources_rate_limiting": true,
+    "broken_function_level_authorization": true,
+    "mass_assignment": true,
+    "security_misconfiguration": true,
+    "injection": true,
+    "improper_assets_management": true,
+    "insufficient_logging_monitoring": true
+  },
+  "output": {
+    "json_reports": true,
+    "html_reports": true,
+    "console_output": true,
+    "output_directory": "reports"
+  },
+  "performance": {
+    "enable_performance_testing": true,
+    "max_requests_per_second": 10,
+    "test_duration": 60
+  },
+  "web_interface": {
+    "host": "127.0.0.1",
+    "port": 5000,
+    "debug": false,
+    "upload_folder": "data/uploads",
+    "max_file_size": 16777216
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "reports/logs/api_scanner.log",
+    "max_size": 10485760,
+    "backup_count": 5
+  }
+} 
