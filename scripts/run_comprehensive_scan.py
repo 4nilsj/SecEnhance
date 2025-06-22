@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Import the clean version
 try:
-    from api_security_scanner_clean import APISecurityScanner
+    from src.core.api_security_scanner import APISecurityScanner
 except ImportError:
     print("❌ Could not import clean API security scanner")
     sys.exit(1)

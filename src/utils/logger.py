@@ -6,6 +6,7 @@ import logging
 import logging.handlers
 import os
 from datetime import datetime
+from pathlib import Path
 
 
 def setup_logging(verbose=False, log_file=None, max_size=10*1024*1024, backup_count=5):
@@ -18,11 +19,20 @@ def setup_logging(verbose=False, log_file=None, max_size=10*1024*1024, backup_co
         max_size (int): Maximum size of log file in bytes
         backup_count (int): Number of backup files to keep
     """
-    # Create logs directory if it doesn't exist
+    # Resolve log file path to absolute path if it's relative
     if log_file:
-        log_dir = os.path.dirname(log_file)
-        if log_dir and not os.path.exists(log_dir):
-            os.makedirs(log_dir, exist_ok=True)
+        log_path = Path(log_file)
+        if not log_path.is_absolute():
+            # Assume relative to project root (3 levels up from src/utils/)
+            project_root = Path(__file__).parent.parent.parent
+            log_path = project_root / log_file
+        
+        # Create logs directory if it doesn't exist
+        log_dir = log_path.parent
+        if log_dir and not log_dir.exists():
+            log_dir.mkdir(parents=True, exist_ok=True)
+        
+        log_file = str(log_path)
     
     # Set log level
     level = logging.DEBUG if verbose else logging.INFO
@@ -85,4 +95,10 @@ class LoggerMixin:
     @property
     def logger(self):
         """Get logger for this class."""
-        return get_logger(self.__class__.__name__) 
+        return get_logger(self.__class__.__name__)
+
+
+def resolve_log_path(relative_path: str) -> Path:
+    """Resolve a relative log path to absolute path from project root"""
+    project_root = Path(__file__).parent.parent.parent
+    return project_root / relative_path 

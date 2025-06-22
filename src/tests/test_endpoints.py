@@ -1,25 +1,31 @@
 #!/usr/bin/env python3
 import json
 import os
-from api_security_scanner_updated import APISecurityScanner
+from src.core.api_security_scanner import APISecurityScanner
+from pathlib import Path
 
 def test_endpoint_extraction():
-    print("🔍 Testing Endpoint Extraction")
-    print("=" * 30)
+    """Test endpoint extraction from uploaded files"""
+    # Get project root directory (3 levels up from src/tests/)
+    project_root = Path(__file__).parent.parent.parent
+    uploads_dir = project_root / "uploads"
     
-    # Find a test file
-    uploads_dir = "uploads"
-    if not os.path.exists(uploads_dir):
-        print("❌ Uploads directory not found")
-        return
+    if not uploads_dir.exists():
+        print(f"❌ Uploads directory not found: {uploads_dir}")
+        return False
     
-    collection_files = [f for f in os.listdir(uploads_dir) if f.endswith('.json')]
+    # Find JSON files in uploads directory
+    collection_files = [f for f in uploads_dir.iterdir() if f.suffix == '.json']
+    
     if not collection_files:
-        print("❌ No Postman collection files found")
-        return
+        print("❌ No JSON files found in uploads directory")
+        return False
     
-    test_file = os.path.join(uploads_dir, collection_files[0])
-    print(f"📁 Testing with file: {test_file}")
+    print(f"📁 Found {len(collection_files)} JSON files in uploads directory")
+    
+    # Test with the first file
+    test_file = collection_files[0]
+    print(f"🔍 Testing with file: {test_file.name}")
     
     try:
         # Create scanner

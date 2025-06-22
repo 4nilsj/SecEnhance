@@ -7,7 +7,8 @@ import sys
 import traceback
 import json
 import os
-from api_security_scanner_updated import APISecurityScanner
+from src.core.api_security_scanner import APISecurityScanner
+from pathlib import Path
 
 def test_imports():
     """Test all imports"""
@@ -139,6 +140,29 @@ def test_endpoint_extraction():
     except Exception as e:
         print(f"❌ Test error: {e}")
         traceback.print_exc()
+
+def test_with_uploaded_file():
+    """Test scanner with an uploaded file"""
+    # Get project root directory (3 levels up from src/examples/)
+    project_root = Path(__file__).parent.parent.parent
+    uploads_dir = project_root / "uploads"
+    
+    if not uploads_dir.exists():
+        print(f"❌ Uploads directory not found: {uploads_dir}")
+        return False
+    
+    # Find JSON files in uploads directory
+    collection_files = [f for f in uploads_dir.iterdir() if f.suffix == '.json']
+    
+    if not collection_files:
+        print("❌ No JSON files found in uploads directory")
+        return False
+    
+    print(f"📁 Found {len(collection_files)} JSON files in uploads directory")
+    
+    # Test with the first file
+    test_file = collection_files[0]
+    print(f"🔍 Testing with file: {test_file.name}")
 
 def main():
     """Main test function"""

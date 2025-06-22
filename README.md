@@ -1,125 +1,151 @@
 # API Security Scanner
 
-A comprehensive API security testing tool that analyzes Postman collections for OWASP API Security Top 10 vulnerabilities and other security issues.
+A comprehensive API security scanning tool with web interface and CLI capabilities.
 
-## Features
+## 🚀 Quick Start
 
-- **OWASP API Security Top 10 Testing**: Comprehensive testing against all OWASP API Security Top 10 vulnerabilities
-- **Postman Collection Support**: Direct support for Postman collection JSON files
-- **Multiple Output Formats**: JSON and HTML report generation
-- **Web Interface**: User-friendly web UI for uploading and scanning collections
-- **Performance Monitoring**: Built-in performance testing and optimization
-- **Extensible Architecture**: Modular design for easy extension and customization
+### Prerequisites
+- Python 3.8+
+- Required packages: `pip install -r requirements.txt`
 
-## Project Structure
+### Running the Application
 
-```
-api-security-scanner/
-├── src/                    # Source code
-│   ├── core/              # Core functionality
-│   ├── scanners/          # Security scanners
-│   ├── utils/             # Utility functions
-│   ├── web/               # Web interface
-│   ├── tests/             # Test modules
-│   ├── config/            # Configuration files
-│   ├── docs/              # Documentation
-│   └── examples/          # Example usage
-├── reports/               # Generated reports
-│   ├── json/              # JSON reports
-│   ├── html/              # HTML reports
-│   └── logs/              # Log files
-├── data/                  # Data files
-├── scripts/               # Utility scripts
-├── docs/                  # Project documentation
-├── main.py                # Main entry point
-├── requirements.txt       # Python dependencies
-└── README.md             # This file
-```
-
-## Installation
-
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd api-security-scanner
-```
-
-2. Create a virtual environment:
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-## Usage
-
-### Command Line Interface
-
-#### Scan a Postman Collection
-```bash
-python main.py scan --collection path/to/collection.json
-```
-
-#### Scan with custom output directory
-```bash
-python main.py scan --collection collection.json --output reports/custom/
-```
-
-#### Start Web Interface
-```bash
-python main.py web --port 8080
-```
-
-### Web Interface
-
-1. Start the web server:
+#### Web Interface (Recommended)
 ```bash
 python main.py web
 ```
+Access the web interface at: http://localhost:5000
 
-2. Open your browser and navigate to `http://localhost:5000`
+#### CLI Mode
+```bash
+python main.py cli
+```
 
-3. Upload your Postman collection and run the scan
+## 📁 Project Structure
 
-## Configuration
+```
+myproject/
+├── main.py                 # Main entry point
+├── requirements.txt        # Python dependencies
+├── setup.py               # Package setup
+├── README.md              # This file
+├── .gitignore             # Git ignore rules
+│
+├── src/                   # Source code
+│   ├── core/             # Core scanner functionality
+│   ├── web/              # Web interface
+│   ├── config/           # Configuration management
+│   ├── utils/            # Utility functions
+│   ├── scanners/         # Scanner implementations
+│   ├── examples/         # Example usage
+│   └── tests/            # Unit tests
+│
+├── tests/                # Integration and functional tests
+│   ├── test_complete_scan.py
+│   ├── test_misconfiguration_security.py
+│   ├── test_swagger_openapi.py
+│   └── ... (other test files)
+│
+├── demos/                # Demo scripts
+│   └── demo_swagger_ui.py
+│
+├── examples/             # Example usage scripts
+│   ├── simple_scan_demo.py
+│   └── scan_vulnerable_api.py
+│
+├── tools/                # Utility tools
+│   └── refresh_web_ui_reports.py
+│
+├── docs/                 # Documentation
+│   ├── guides/           # User guides
+│   │   ├── swagger_ui_guide.md
+│   │   └── demo_delete_functionality.md
+│   ├── reports/          # Report documentation
+│   │   └── web_ui_reports_status.md
+│   └── PROJECT_STRUCTURE.md
+│
+├── reports/              # Generated scan reports
+├── logs/                 # Application logs
+├── uploads/              # File uploads
+├── data/                 # Test data
+├── static/               # Static web assets
+├── templates/            # Web templates
+└── scripts/              # Additional scripts
+```
 
-The scanner can be configured using JSON configuration files. Default configuration is located at `src/config/default_config.json`.
+## 🔧 Features
 
-### Key Configuration Options
+- **Comprehensive API Security Scanning**: Tests for OWASP Top 10 vulnerabilities
+- **Multiple Input Formats**: Swagger/OpenAPI, Postman collections, direct endpoints
+- **Web Interface**: User-friendly web UI with real-time scanning
+- **CLI Support**: Command-line interface for automation
+- **Report Generation**: JSON and HTML reports with detailed findings
+- **Authentication Support**: Bearer tokens, API keys, Basic auth, OAuth2
+- **Performance Optimization**: Configurable concurrency and timeouts
 
-- **Scan Settings**: Timeout values, retry attempts, concurrent requests
-- **Security Tests**: Enable/disable specific security tests
-- **Output Settings**: Report formats, output directories
-- **Performance Settings**: Request limits, rate limiting
+## 📊 Security Tests
 
-## Security Tests
+The scanner performs comprehensive security tests including:
 
-The scanner performs the following security tests:
+- **Injection Attacks**: SQL injection, NoSQL injection, Command injection
+- **Authentication Bypass**: Missing authentication, weak authentication
+- **Authorization Issues**: Missing authorization, privilege escalation
+- **Information Disclosure**: Sensitive data exposure, error messages
+- **Security Misconfigurations**: Missing security headers, CORS issues
+- **Rate Limiting**: Missing or weak rate limiting
+- **Input Validation**: Missing input validation, XSS vulnerabilities
 
-1. **Broken Object Level Authorization (BOLA)**
-2. **Broken User Authentication**
-3. **Excessive Data Exposure**
-4. **Lack of Resources & Rate Limiting**
-5. **Broken Function Level Authorization (BFLA)**
-6. **Mass Assignment**
-7. **Security Misconfiguration**
-8. **Injection**
-9. **Improper Assets Management**
-10. **Insufficient Logging & Monitoring**
+## 🛠️ Usage Examples
 
-## Output Formats
+### Basic Scan
+```python
+from src.core.api_security_scanner import APISecurityScanner
 
-### JSON Reports
-Detailed JSON reports with vulnerability findings, severity levels, and remediation recommendations.
+scanner = APISecurityScanner()
+endpoints = [
+    {'url': 'https://api.example.com/users', 'method': 'GET'},
+    {'url': 'https://api.example.com/users', 'method': 'POST'}
+]
 
-### HTML Reports
-User-friendly HTML reports with visual charts and interactive elements.
+results = scanner.scan_api_endpoints(endpoints)
+```
 
-## Contributing
+### Collection Scan
+```python
+results = scanner.upload_and_scan_collection('postman_collection.json')
+```
+
+### Swagger/OpenAPI Scan
+```python
+results = scanner.scan_from_swagger_url('https://api.example.com/swagger.json')
+```
+
+## 📄 Reports
+
+The scanner generates detailed reports in multiple formats:
+
+- **JSON Reports**: Machine-readable format for integration
+- **HTML Reports**: Human-readable format with visualizations
+- **OWASP Reports**: Standardized OWASP format
+
+## 🔍 Running Tests
+
+```bash
+# Run all tests
+python -m pytest tests/
+
+# Run specific test
+python tests/test_complete_scan.py
+```
+
+## 📚 Documentation
+
+- [Swagger UI Guide](docs/guides/swagger_ui_guide.md)
+- [Delete Functionality Demo](docs/guides/demo_delete_functionality.md)
+- [Web UI Reports Status](docs/reports/web_ui_reports_status.md)
+- [Project Structure](docs/PROJECT_STRUCTURE.md)
+
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -127,19 +153,6 @@ User-friendly HTML reports with visual charts and interactive elements.
 4. Add tests for new functionality
 5. Submit a pull request
 
-## License
+## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Support
-
-For support and questions, please open an issue on the GitHub repository.
-
-## Changelog
-
-### Version 1.0.0
-- Initial release
-- OWASP API Security Top 10 testing
-- Postman collection support
-- Web interface
-- JSON and HTML report generation 
+This project is licensed under the MIT License - see the LICENSE file for details. 

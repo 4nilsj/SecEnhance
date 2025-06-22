@@ -4,9 +4,12 @@ Test script for API Security Scanner
 This script helps verify that the scanner is working correctly and identifies issues.
 """
 
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 import json
 import time
-from api_security_scanner import APISecurityScanner
+from src.core.api_security_scanner import APISecurityScanner
 
 def test_scanner_initialization():
     """Test scanner initialization"""

@@ -1,0 +1,1031 @@
+{
+	"info": {
+		"_postman_id": "71d9f9c2-0342-4fcc-96a1-daedbe37c796",
+		"name": "DCP Prospects Support",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "7447131"
+	},
+	"item": [
+		{
+			"name": "Prospect Controller",
+			"item": [
+				{
+					"name": "age-calculation-date",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"ageCalculationDate\": \"2024-08-26\"\n}'",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://stg-ui-cp-01.trinet.com/api-wf-hw-bss-prospect/v1/prospect-info/age-calculation-date?prospectId=001Ea00000LH4r8IAD",
+							"protocol": "https",
+							"host": [
+								"stg-ui-cp-01",
+								"trinet",
+								"com"
+							],
+							"path": [
+								"api-wf-hw-bss-prospect",
+								"v1",
+								"prospect-info",
+								"age-calculation-date"
+							],
+							"query": [
+								{
+									"key": "prospectId",
+									"value": "001Ea00000LH4r8IAD"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "prospects info",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://stg-ui-cp-01.trinet.com/api-wf-hw-bss-prospect/v1/prospect-info?prospectId=001Ea00000LH4r8IAD",
+							"protocol": "https",
+							"host": [
+								"stg-ui-cp-01",
+								"trinet",
+								"com"
+							],
+							"path": [
+								"api-wf-hw-bss-prospect",
+								"v1",
+								"prospect-info"
+							],
+							"query": [
+								{
+									"key": "prospectId",
+									"value": "001Ea00000LH4r8IAD"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Census Controller",
+			"item": [
+				{
+					"name": "employee-plans",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://stg-ui-cp-01.trinet.com/api-wf-hw-bss-prospect/v1/employee-plans?prospectId=001Ea00000LH4r8IAD",
+							"protocol": "https",
+							"host": [
+								"stg-ui-cp-01",
+								"trinet",
+								"com"
+							],
+							"path": [
+								"api-wf-hw-bss-prospect",
+								"v1",
+								"employee-plans"
+							],
+							"query": [
+								{
+									"key": "prospectId",
+									"value": "001Ea00000LH4r8IAD"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "employee-plans",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"benefitType\": \"10\", \"employeePlanAssignments\": [{\"employeeId\": \"aCGEa0000000Rd4OAE\", \"benefitPlan\":141519}]}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://stg-ui-cp-01.trinet.com/api-wf-hw-bss-prospect/v1/employee-plans?prospectId=001Ea00000LH4r8IA1",
+							"protocol": "https",
+							"host": [
+								"stg-ui-cp-01",
+								"trinet",
+								"com"
+							],
+							"path": [
+								"api-wf-hw-bss-prospect",
+								"v1",
+								"employee-plans"
+							],
+							"query": [
+								{
+									"key": "prospectId",
+									"value": "001Ea00000LH4r8IA1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "census-info",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://stg-ui-cp-01.trinet.com/api-wf-hw-bss-prospect/v1/census-info?prospectId=001Ea00000LH4r8IAD",
+							"protocol": "https",
+							"host": [
+								"stg-ui-cp-01",
+								"trinet",
+								"com"
+							],
+							"path": [
+								"api-wf-hw-bss-prospect",
+								"v1",
+								"census-info"
+							],
+							"query": [
+								{
+									"key": "prospectId",
+									"value": "001Ea00000LH4r8IAD"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "EE Dependent Controller",
+			"item": [
+				{
+					"name": "dependents",
+					"request": {
+						"auth": {
+							"type": "apikey",
+							"apikey": [
+								{
+									"key": "value",
+									"value": "41e67c979e39ee7b0edb36630b7f063cd6c84b33c9894891d54813305f9acf66",
+									"type": "string"
+								},
+								{
+									"key": "key",
+									"value": "Token",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n  {\n    \"dependentId\": \"aCHEa0000000iavOAA\",\n    \"includeInCost\": true\n  }\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://stg-ui-cp-01.trinet.com/api-wf-hw-bss-prospect/v1/dependents/",
+							"protocol": "https",
+							"host": [
+								"stg-ui-cp-01",
+								"trinet",
+								"com"
+							],
+							"path": [
+								"api-wf-hw-bss-prospect",
+								"v1",
+								"dependents",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"auth": {
+				"type": "apikey",
+				"apikey": [
+					{
+						"key": "value",
+						"value": "dedcc5b0b914c4ddd166d00460ac6ea1d4cabc7e7655cd6d5603897bc3f1517b",
+						"type": "string"
+					},
+					{
+						"key": "key",
+						"value": "Token",
+						"type": "string"
+					}
+				]
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"exec": [
+							""
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "Benefit Plan Controller",
+			"item": [
+				{
+					"name": "benefits-plans",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://stg-ui-cp-01.trinet.com/api-wf-hw-bss-prospect/v1/benefits-plans?prospectId=001Ea00000LH4r8IAD&includeWithRates=true",
+							"protocol": "https",
+							"host": [
+								"stg-ui-cp-01",
+								"trinet",
+								"com"
+							],
+							"path": [
+								"api-wf-hw-bss-prospect",
+								"v1",
+								"benefits-plans"
+							],
+							"query": [
+								{
+									"key": "prospectId",
+									"value": "001Ea00000LH4r8IAD"
+								},
+								{
+									"key": "includeWithRates",
+									"value": "true"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "benefits-plans",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n  {\n    \"benefitPlanId\": \"140349\",\n    \"benefitPlanName\": \"sajkjks\",\n    \"carrier\": \"3sdksjd32\",\n    \"benefitTypeCode\": \"string\",\n    \"rateType\": \"ageBanded\",\n    \"attributes\": [\n      {\n        \"id\": 0,\n        \"value\": \"string\"\n      }\n    ],\n    \"tierRates\": [\n      {\n        \"rateKey\": \"string\",\n        \"cost\": 99999.99,\n        \"cvgTierCode\": \"string\"\n      }\n    ],\n    \"ageBandedRates\": [\n      {\n        \"rateKey\": \"string\",\n        \"cost\": 99999.99,\n        \"ageBandCode\": \"string\"\n      }\n    ]\n  }\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://stg-ui-cp-01.trinet.com/api-wf-hw-bss-prospect/v1/benefits-plans",
+							"protocol": "https",
+							"host": [
+								"stg-ui-cp-01",
+								"trinet",
+								"com"
+							],
+							"path": [
+								"api-wf-hw-bss-prospect",
+								"v1",
+								"benefits-plans"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "benefits-plans",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"benefitTypeCode\": \"10\",\n  \"carrier\": \"3sdksjd32\",\n  \"benefitPlanName\": \"sdkwjewkering\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://stg-ui-cp-01.trinet.com/api-wf-hw-bss-prospect/v1/benefits-plans?prospectId=001Ea00000LH4r8IAD&includeWithRates=false",
+							"protocol": "https",
+							"host": [
+								"stg-ui-cp-01",
+								"trinet",
+								"com"
+							],
+							"path": [
+								"api-wf-hw-bss-prospect",
+								"v1",
+								"benefits-plans"
+							],
+							"query": [
+								{
+									"key": "prospectId",
+									"value": "001Ea00000LH4r8IAD"
+								},
+								{
+									"key": "includeWithRates",
+									"value": "false"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "benefits-plans-rates - U",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://stg-ui-cp-01.trinet.com/api-wf-hw-bss-prospect/v1/benefits-plans/rates/12",
+							"protocol": "https",
+							"host": [
+								"stg-ui-cp-01",
+								"trinet",
+								"com"
+							],
+							"path": [
+								"api-wf-hw-bss-prospect",
+								"v1",
+								"benefits-plans",
+								"rates",
+								"12"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "benefits-plans",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "https://stg-ui-cp-01.trinet.com/api-wf-hw-bss-prospect/v1/benefits-plans/139938?prospectId=001Ea00000LH4r8IAD\n",
+							"protocol": "https",
+							"host": [
+								"stg-ui-cp-01",
+								"trinet",
+								"com"
+							],
+							"path": [
+								"api-wf-hw-bss-prospect",
+								"v1",
+								"benefits-plans",
+								"139938"
+							],
+							"query": [
+								{
+									"key": "prospectId",
+									"value": "001Ea00000LH4r8IAD\n"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Benefit Group Controller",
+			"item": [
+				{
+					"name": "benefit-group-name",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id\": 0,\n  \"name\": \"string\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://stg-ui-cp-01.trinet.com/api-wf-hw-bss-prospect/v1/benefit-group/12/name",
+							"protocol": "https",
+							"host": [
+								"stg-ui-cp-01",
+								"trinet",
+								"com"
+							],
+							"path": [
+								"api-wf-hw-bss-prospect",
+								"v1",
+								"benefit-group",
+								"12",
+								"name"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "benefit-group",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id\": 0,\n  \"name\": \"string\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://stg-ui-cp-01.trinet.com/api-wf-hw-bss-prospect/v1/benefit-group?prospectId=001Ea00000LH4r8IAD",
+							"protocol": "https",
+							"host": [
+								"stg-ui-cp-01",
+								"trinet",
+								"com"
+							],
+							"path": [
+								"api-wf-hw-bss-prospect",
+								"v1",
+								"benefit-group"
+							],
+							"query": [
+								{
+									"key": "prospectId",
+									"value": "001Ea00000LH4r8IAD"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "benefit group",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "https://stg-ui-cp-01.trinet.com/api-wf-hw-bss-prospect/v1/benefit-group/12",
+							"protocol": "https",
+							"host": [
+								"stg-ui-cp-01",
+								"trinet",
+								"com"
+							],
+							"path": [
+								"api-wf-hw-bss-prospect",
+								"v1",
+								"benefit-group",
+								"12"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Benefit Group Funding Controller",
+			"item": [
+				{
+					"name": "benefit-group-funding - Null",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://stg-ui-cp-01.trinet.com/api-wf-hw-bss-prospect/v1/benefit-group/1234/funding",
+							"protocol": "https",
+							"host": [
+								"stg-ui-cp-01",
+								"trinet",
+								"com"
+							],
+							"path": [
+								"api-wf-hw-bss-prospect",
+								"v1",
+								"benefit-group",
+								"1234",
+								"funding"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "benefit-group-funding",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n  {\n    \"benefitType\": \"10\",\n    \"fundingType\": \"PCT\",\n    \"cvgCodeValues\": [\n      {\n        \"cvgCode\": \"1\",\n        \"value\": 100.00\n      }\n    ],\n    \"fundingCapDetails\": null\n  }\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://stg-ui-cp-01.trinet.com/api-wf-hw-bss-prospect/v1/benefit-group/12/funding",
+							"protocol": "https",
+							"host": [
+								"stg-ui-cp-01",
+								"trinet",
+								"com"
+							],
+							"path": [
+								"api-wf-hw-bss-prospect",
+								"v1",
+								"benefit-group",
+								"12",
+								"funding"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Employee Group Assignment Controller",
+			"item": [
+				{
+					"name": "employee-group-assignment",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://stg-ui-cp-01.trinet.com/api-wf-hw-bss-prospect/v1/benefit-group/employee-assignment?prospectId=001Ea00000LH4r8IAD",
+							"protocol": "https",
+							"host": [
+								"stg-ui-cp-01",
+								"trinet",
+								"com"
+							],
+							"path": [
+								"api-wf-hw-bss-prospect",
+								"v1",
+								"benefit-group",
+								"employee-assignment"
+							],
+							"query": [
+								{
+									"key": "prospectId",
+									"value": "001Ea00000LH4r8IAD"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "employee-assignment",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n  {\n    \"employeeId\": \"string\",\n    \"benefitGroupId\": 0\n  }\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://stg-ui-cp-01.trinet.com/api-wf-hw-bss-prospect/v1/benefit-group/employee-assignment",
+							"protocol": "https",
+							"host": [
+								"stg-ui-cp-01",
+								"trinet",
+								"com"
+							],
+							"path": [
+								"api-wf-hw-bss-prospect",
+								"v1",
+								"benefit-group",
+								"employee-assignment"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Event client Controller",
+			"item": [
+				{
+					"name": "Event-Prospect",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"prospectId\": \"string\",\n  \"companyName\": \"string\",\n  \"hqState\": \"string\",\n  \"hqCity\": \"string\",\n  \"salesNaicsCode\": \"string\",\n  \"primaryNaicsCode\": \"string\",\n  \"address\": \"string\",\n  \"zipCode\": \"string\",\n  \"benStartDate\": \"2024-08-26\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://stg-ui-cp-01.trinet.com/api-wf-hw-bss-prospect/v1/event/prospect?eventType=11",
+							"protocol": "https",
+							"host": [
+								"stg-ui-cp-01",
+								"trinet",
+								"com"
+							],
+							"path": [
+								"api-wf-hw-bss-prospect",
+								"v1",
+								"event",
+								"prospect"
+							],
+							"query": [
+								{
+									"key": "eventType",
+									"value": "11"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Event-census",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"prospectId\": \"string\",\n  \"censusDetails\": [\n    {\n      \"eeIdentifier\": \"string\",\n      \"firstName\": \"string\",\n      \"lastName\": \"string\",\n      \"dob\": \"2024-08-26\",\n      \"gender\": \"string\",\n      \"homeState\": \"string\",\n      \"homePostalCode\": \"string\",\n      \"workState\": \"string\",\n      \"workPostalCode\": \"string\",\n      \"jobTitle\": \"string\",\n      \"k1\": true,\n      \"currBenTiers\": [\n        {\n          \"benefitType\": \"string\",\n          \"desiredCvgCode\": \"string\"\n        }\n      ],\n      \"annualSalary\": 0\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://stg-ui-cp-01.trinet.com/api-wf-hw-bss-prospect/v1/event/census?eventType=2",
+							"protocol": "https",
+							"host": [
+								"stg-ui-cp-01",
+								"trinet",
+								"com"
+							],
+							"path": [
+								"api-wf-hw-bss-prospect",
+								"v1",
+								"event",
+								"census"
+							],
+							"query": [
+								{
+									"key": "eventType",
+									"value": "2"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Event Banding",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"testProspectId\": \"string\",\n  \"testProposalId\": \"string\",\n  \"testExchangeId\": \"string\",\n  \"testExchangeName\": \"string\",\n  \"testBenefitsStartDate\": \"string\",\n  \"testExpiryDate\": \"string\",\n  \"testCommonOwnerCompany\": \"string\",\n  \"testBenefitsQuarterException\": true,\n  \"testBands\": [\n    {\n      \"effectiveDate\": \"string\",\n      \"bandType\": \"string\",\n      \"testCarrierBands\": [\n        {\n          \"carrier\": \"string\",\n          \"bandCode\": \"string\"\n        }\n      ]\n    }\n  ],\n  \"isContingentPricing\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://stg-ui-cp-01.trinet.com/api-wf-hw-bss-prospect/v1/event/banding?eventType=1212",
+							"protocol": "https",
+							"host": [
+								"stg-ui-cp-01",
+								"trinet",
+								"com"
+							],
+							"path": [
+								"api-wf-hw-bss-prospect",
+								"v1",
+								"event",
+								"banding"
+							],
+							"query": [
+								{
+									"key": "eventType",
+									"value": "1212"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Exchange Controller",
+			"item": [
+				{
+					"name": "excahange-carriers - N",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://stg-ui-cp-01.trinet.com/api-wf-hw-bss-prospect/v1/exchange-carriers?prospectId=001Ea00000Ng4BeIAJ",
+							"protocol": "https",
+							"host": [
+								"stg-ui-cp-01",
+								"trinet",
+								"com"
+							],
+							"path": [
+								"api-wf-hw-bss-prospect",
+								"v1",
+								"exchange-carriers"
+							],
+							"query": [
+								{
+									"key": "prospectId",
+									"value": "001Ea00000Ng4BeIAJ"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "exchange-bands -N",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://stg-ui-cp-01.trinet.com/api-wf-hw-bss-prospect/v1/exchange-bands?prospectId=001Ea00000LH4r8IAD",
+							"protocol": "https",
+							"host": [
+								"stg-ui-cp-01",
+								"trinet",
+								"com"
+							],
+							"path": [
+								"api-wf-hw-bss-prospect",
+								"v1",
+								"exchange-bands"
+							],
+							"query": [
+								{
+									"key": "prospectId",
+									"value": "001Ea00000LH4r8IAD"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Estimation controller",
+			"item": [
+				{
+					"name": "Estimation Type",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				},
+				{
+					"name": "Type Estimates",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n  {\n    \"benefitType\": \"STD\",\n    \"estimateType\": \"GRP\",\n    \"estimateDetails\": [\n      {\n        \"groupId\": 0,\n        \"cost\": 0\n      }\n    ]\n  }\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://stg-ui-cp-01.trinet.com/api-wf-hw-bss-prospect/v1/benefit-type-estimates?prospectId=001Ea00000LH4r8IAD",
+							"protocol": "https",
+							"host": [
+								"stg-ui-cp-01",
+								"trinet",
+								"com"
+							],
+							"path": [
+								"api-wf-hw-bss-prospect",
+								"v1",
+								"benefit-type-estimates"
+							],
+							"query": [
+								{
+									"key": "prospectId",
+									"value": "001Ea00000LH4r8IAD"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Employee Roles",
+			"request": {
+				"auth": {
+					"type": "apikey",
+					"apikey": [
+						{
+							"key": "value",
+							"value": "41e67c979e39ee7b0edb36630b7f063cd6c84b33c9894891d54813305f9acf66",
+							"type": "string"
+						},
+						{
+							"key": "key",
+							"value": "Token",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://stg-ui-cp-01.trinet.com/api-wf-hw-bss-prospect/v1/employee-roles",
+					"protocol": "https",
+					"host": [
+						"stg-ui-cp-01",
+						"trinet",
+						"com"
+					],
+					"path": [
+						"api-wf-hw-bss-prospect",
+						"v1",
+						"employee-roles"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "benefits-details",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://stg-ui-cp-01.trinet.com/api-wf-hw-bss-prospect/v1/benefits-details/10?prospectId=001Ea00000LH4r8IAD",
+					"protocol": "https",
+					"host": [
+						"stg-ui-cp-01",
+						"trinet",
+						"com"
+					],
+					"path": [
+						"api-wf-hw-bss-prospect",
+						"v1",
+						"benefits-details",
+						"10"
+					],
+					"query": [
+						{
+							"key": "prospectId",
+							"value": "001Ea00000LH4r8IAD"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "employee-level-contribution",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://stg-ui-cp-01.trinet.com/api-wf-hw-bss-prospect/v1/benefits-details/employee-level-contribution/10?prospectId=001Ea00000LH4r8IAD",
+					"protocol": "https",
+					"host": [
+						"stg-ui-cp-01",
+						"trinet",
+						"com"
+					],
+					"path": [
+						"api-wf-hw-bss-prospect",
+						"v1",
+						"benefits-details",
+						"employee-level-contribution",
+						"10"
+					],
+					"query": [
+						{
+							"key": "prospectId",
+							"value": "001Ea00000LH4r8IAD"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "apikey",
+		"apikey": [
+			{
+				"key": "value",
+				"value": "024f9fccffb86df727be991a48be3d3cf730537f7905f6c1c3314a090065d282",
+				"type": "string"
+			},
+			{
+				"key": "key",
+				"value": "Token",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}

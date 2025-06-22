@@ -4,9 +4,10 @@ API Security Scanner - Run Script
 Simple script to demonstrate how to use the API Security Scanner
 """
 
-from api_security_scanner import APISecurityScanner
-import os
 import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+from src.core.api_security_scanner import APISecurityScanner
 
 def main():
     print("🔍 API Security Scanner - Run Script")

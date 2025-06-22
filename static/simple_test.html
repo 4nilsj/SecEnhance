@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Scan Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .running { background: #fff3cd; border: 1px solid #ffeaa7; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; }
+        button:disabled { background: #ccc; }
+    </style>
+</head>
+<body>
+    <h1>API Security Scanner - Simple Test</h1>
+    
+    <button id="startScan">Start Test Scan</button>
+    <div id="status"></div>
+    <div id="progress"></div>
+    
+    <script>
+        let currentScanId = null;
+        
+        document.getElementById('startScan').addEventListener('click', function() {
+            const button = this;
+            button.disabled = true;
+            button.textContent = 'Starting...';
+            
+            document.getElementById('status').innerHTML = '<div class="status running">Starting scan...</div>';
+            
+            // Start scan
+            fetch('/api/scan', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    scan_type: 'swagger_url',
+                    swagger_url: 'https://petstore.swagger.io/v2/swagger.json'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                currentScanId = data.scan_id;
+                document.getElementById('status').innerHTML = '<div class="status running">Scan started: ' + data.scan_id + '</div>';
+                
+                // Monitor scan
+                monitorScan();
+            })
+            .catch(error => {
+                document.getElementById('status').innerHTML = '<div class="status error">Error: ' + error.message + '</div>';
+                button.disabled = false;
+                button.textContent = 'Start Test Scan';
+            });
+        });
+        
+        function monitorScan() {
+            if (!currentScanId) return;
+            
+            // Check progress
+            fetch('/api/scan/' + currentScanId + '/progress')
+                .then(response => response.json())
+                .then(progress => {
+                    document.getElementById('progress').innerHTML = 
+                        '<div class="status running">Progress: ' + progress.current + '/' + progress.total + ' (' + progress.percentage + '%)</div>';
+                })
+                .catch(error => {
+                    console.log('Progress error:', error);
+                });
+            
+            // Check status
+            fetch('/api/scan/' + currentScanId)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'running' || data.status === 'in_progress') {
+                        setTimeout(monitorScan, 500);
+                    } else if (data.status === 'completed') {
+                        document.getElementById('status').innerHTML = '<div class="status success">Scan completed successfully!</div>';
+                        document.getElementById('progress').innerHTML = '<div class="status success">Found ' + (data.results?.vulnerabilities?.length || 0) + ' vulnerabilities</div>';
+                        document.getElementById('startScan').disabled = false;
+                        document.getElementById('startScan').textContent = 'Start Test Scan';
+                    } else if (data.status === 'failed') {
+                        document.getElementById('status').innerHTML = '<div class="status error">Scan failed: ' + (data.error || 'Unknown error') + '</div>';
+                        document.getElementById('startScan').disabled = false;
+                        document.getElementById('startScan').textContent = 'Start Test Scan';
+                    }
+                })
+                .catch(error => {
+                    console.error('Status check error:', error);
+                    setTimeout(monitorScan, 1000);
+                });
+        }
+    </script>
+</body>
+</html> 

@@ -1,111 +1,114 @@
 #!/usr/bin/env python3
 """
 API Security Scanner - Main Entry Point
-=======================================
-
-This is the main entry point for the API Security Scanner application.
-It provides command-line interface and web interface options.
-
-Usage:
-    python main.py --help
-    python main.py scan --collection path/to/collection.json
-    python main.py web --port 8080
+A comprehensive API security scanning tool with web interface
 """
 
-import argparse
 import sys
 import os
+import subprocess
+import argparse
+from pathlib import Path
 
-# Add src to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+def setup_environment():
+    """Setup the Python path and environment"""
+    # Add src directory to Python path
+    src_path = Path(__file__).parent / "src"
+    if str(src_path) not in sys.path:
+        sys.path.insert(0, str(src_path))
 
-from src.core.scanner import APISecurityScanner
-from src.web.app import create_app
-from src.utils.logger import setup_logging
+def launch_web_ui():
+    """Launch the enhanced web UI"""
+    try:
+        setup_environment()
+        web_app_path = Path(__file__).parent / "src" / "web" / "app.py"
+        
+        if not web_app_path.exists():
+            print(f"❌ Web app not found at: {web_app_path}")
+            return False
+            
+        print("🚀 Launching API Security Scanner Web UI...")
+        print("📱 Access the interface at: http://localhost:5000")
+        print("⏹️  Press Ctrl+C to stop the server")
+        print("-" * 50)
+        
+        subprocess.run([sys.executable, str(web_app_path)])
+        return True
+        
+    except KeyboardInterrupt:
+        print("\n🛑 Web UI stopped by user")
+        return True
+    except Exception as e:
+        print(f"❌ Error launching web UI: {e}")
+        return False
 
+def run_cli_scanner():
+    """Run the scanner in CLI mode"""
+    try:
+        setup_environment()
+        from src.core.api_security_scanner import APISecurityScanner
+        
+        print("🔍 API Security Scanner - CLI Mode")
+        print("📝 Use the web interface for a better experience: python main.py web")
+        
+        # Example usage
+        scanner = APISecurityScanner()
+        print(f"✅ Scanner initialized successfully")
+        
+    except ImportError as e:
+        print(f"❌ Import error: {e}")
+        print("💡 Make sure all dependencies are installed: pip install -r requirements.txt")
+    except Exception as e:
+        print(f"❌ Error: {e}")
 
 def main():
-    """Main entry point for the application."""
+    """Main entry point"""
     parser = argparse.ArgumentParser(
         description="API Security Scanner - Comprehensive API security testing tool",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s scan --collection test_collection.json
-  %(prog)s scan --collection test_collection.json --output reports/
-  %(prog)s web --port 8080
-  %(prog)s web --host 0.0.0.0 --port 5000
+  python main.py web          # Launch web interface
+  python main.py cli          # Run in CLI mode
+  python main.py --help       # Show this help message
         """
     )
     
-    subparsers = parser.add_subparsers(dest='command', help='Available commands')
+    parser.add_argument(
+        'mode',
+        nargs='?',
+        choices=['web', 'cli'],
+        default='web',
+        help='Run mode: web (default) or cli'
+    )
     
-    # Scan command
-    scan_parser = subparsers.add_parser('scan', help='Run security scan on API collection')
-    scan_parser.add_argument('--collection', '-c', required=True,
-                           help='Path to Postman collection JSON file')
-    scan_parser.add_argument('--output', '-o', default='reports/',
-                           help='Output directory for reports (default: reports/)')
-    scan_parser.add_argument('--config', default='src/config/default_config.json',
-                           help='Configuration file path')
-    scan_parser.add_argument('--verbose', '-v', action='store_true',
-                           help='Enable verbose logging')
+    parser.add_argument(
+        '--port',
+        type=int,
+        default=5000,
+        help='Port for web interface (default: 5000)'
+    )
     
-    # Web command
-    web_parser = subparsers.add_parser('web', help='Start web interface')
-    web_parser.add_argument('--host', default='127.0.0.1',
-                           help='Host to bind to (default: 127.0.0.1)')
-    web_parser.add_argument('--port', '-p', type=int, default=5000,
-                           help='Port to bind to (default: 5000)')
-    web_parser.add_argument('--debug', action='store_true',
-                           help='Enable debug mode')
+    parser.add_argument(
+        '--host',
+        default='0.0.0.0',
+        help='Host for web interface (default: 0.0.0.0)'
+    )
     
     args = parser.parse_args()
     
-    if not args.command:
+    print("🔒 API Security Scanner")
+    print("=" * 50)
+    
+    if args.mode == 'web':
+        # Set environment variables for Flask
+        os.environ['FLASK_HOST'] = args.host
+        os.environ['FLASK_PORT'] = str(args.port)
+        launch_web_ui()
+    elif args.mode == 'cli':
+        run_cli_scanner()
+    else:
         parser.print_help()
-        return
-    
-    # Setup logging
-    setup_logging(verbose=args.verbose)
-    
-    if args.command == 'scan':
-        run_scan(args)
-    elif args.command == 'web':
-        run_web(args)
 
-
-def run_scan(args):
-    """Run security scan on API collection."""
-    try:
-        scanner = APISecurityScanner(config_path=args.config)
-        results = scanner.scan_collection(args.collection)
-        
-        # Save results
-        output_dir = args.output
-        os.makedirs(output_dir, exist_ok=True)
-        
-        scanner.save_results(results, output_dir)
-        print(f"Scan completed. Results saved to {output_dir}")
-        
-    except Exception as e:
-        print(f"Error during scan: {e}")
-        sys.exit(1)
-
-
-def run_web(args):
-    """Start web interface."""
-    try:
-        app = create_app()
-        app.run(
-            host=args.host,
-            port=args.port,
-            debug=args.debug
-        )
-    except Exception as e:
-        print(f"Error starting web interface: {e}")
-        sys.exit(1)
-
-
-if __name__ == '__main__':
-    main() 
+if __name__ == "__main__":
+    main()

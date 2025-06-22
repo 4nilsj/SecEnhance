@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scan Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; }
+        input, select { width: 100%; padding: 8px; margin-bottom: 10px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; }
+        button:disabled { background: #ccc; }
+        .alert { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .alert-success { background: #d4edda; color: #155724; }
+        .alert-danger { background: #f8d7da; color: #721c24; }
+        .alert-info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>API Security Scanner Test</h1>
+    
+    <form id="scanForm">
+        <div class="form-group">
+            <label for="scanType">Scan Type:</label>
+            <select id="scanType" required>
+                <option value="">Select scan type...</option>
+                <option value="swagger_url">Swagger/OpenAPI URL</option>
+                <option value="json_file">JSON Specification File</option>
+                <option value="collection">API Collection Upload</option>
+            </select>
+        </div>
+        
+        <div class="form-group" id="swaggerConfig" style="display: none;">
+            <label for="swaggerUrl">Swagger URL:</label>
+            <input type="url" id="swaggerUrl" placeholder="https://petstore.swagger.io/v2/swagger.json">
+        </div>
+        
+        <div class="form-group" id="jsonConfig" style="display: none;">
+            <label for="jsonFile">JSON File:</label>
+            <input type="file" id="jsonFile" accept=".json">
+            <div id="jsonUploadStatus"></div>
+        </div>
+        
+        <div class="form-group" id="collectionConfig" style="display: none;">
+            <label for="collectionFile">Collection File:</label>
+            <input type="file" id="collectionFile" accept=".json,.har,.txt">
+            <div id="uploadStatus"></div>
+        </div>
+        
+        <button type="submit" id="startScan">Start Scan</button>
+    </form>
+    
+    <div id="scanStatus" style="display: none;">
+        <div class="alert alert-info">
+            <strong>Scan Status:</strong> <span id="statusText">Initializing...</span>
+        </div>
+    </div>
+    
+    <div id="alerts"></div>
+    
+    <script>
+        // Global variables
+        let currentScanId = null;
+        let uploadedFiles = {};
+        
+        // DOM elements
+        const scanForm = document.getElementById('scanForm');
+        const scanType = document.getElementById('scanType');
+        const scanStatus = document.getElementById('scanStatus');
+        const startScanBtn = document.getElementById('startScan');
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, initializing...');
+            initializeEventListeners();
+        });
+        
+        function initializeEventListeners() {
+            // Scan type change
+            scanType.addEventListener('change', function() {
+                toggleScanConfig();
+            });
+            
+            // Form submission
+            scanForm.addEventListener('submit', startScan);
+            
+            // File uploads
+            document.getElementById('jsonFile').addEventListener('change', handleFileSelect);
+            document.getElementById('collectionFile').addEventListener('change', handleFileSelect);
+        }
+        
+        function toggleScanConfig() {
+            // Hide all config sections
+            document.getElementById('swaggerConfig').style.display = 'none';
+            document.getElementById('jsonConfig').style.display = 'none';
+            document.getElementById('collectionConfig').style.display = 'none';
+            
+            // Show selected config
+            const selectedType = scanType.value;
+            if (selectedType === 'swagger_url') {
+                document.getElementById('swaggerConfig').style.display = 'block';
+            } else if (selectedType === 'json_file') {
+                document.getElementById('jsonConfig').style.display = 'block';
+            } else if (selectedType === 'collection') {
+                document.getElementById('collectionConfig').style.display = 'block';
+            }
+        }
+        
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                uploadFile(file);
+            }
+        }
+        
+        function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            // Show upload status
+            const uploadStatusElement = document.getElementById('uploadStatus');
+            const jsonUploadStatusElement = document.getElementById('jsonUploadStatus');
+            
+            if (uploadStatusElement) {
+                uploadStatusElement.innerHTML = '<div class="alert alert-info">Uploading file...</div>';
+            }
+            if (jsonUploadStatusElement) {
+                jsonUploadStatusElement.innerHTML = '<div class="alert alert-info">Uploading file...</div>';
+            }
+            
+            fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showAlert('error', data.error);
+                    if (uploadStatusElement) {
+                        uploadStatusElement.innerHTML = '<div class="alert alert-danger">Upload failed: ' + data.error + '</div>';
+                    }
+                    if (jsonUploadStatusElement) {
+                        jsonUploadStatusElement.innerHTML = '<div class="alert alert-danger">Upload failed: ' + data.error + '</div>';
+                    }
+                } else {
+                    // Store uploaded file information
+                    uploadedFiles[file.name] = {
+                        filename: data.filename,
+                        filepath: data.filepath
+                    };
+                    
+                    console.log("File uploaded successfully:", file.name, "->", data.filepath);
+                    showAlert('success', 'File uploaded successfully: ' + data.filename);
+                    
+                    // Show status
+                    if (uploadStatusElement) {
+                        uploadStatusElement.innerHTML = '<div class="alert alert-success">File uploaded: ' + data.filename + '</div>';
+                    }
+                    if (jsonUploadStatusElement) {
+                        jsonUploadStatusElement.innerHTML = '<div class="alert alert-success">File uploaded: ' + data.filename + '</div>';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Upload error:', error);
+                showAlert('error', 'Upload failed: ' + error.message);
+                if (uploadStatusElement) {
+                    uploadStatusElement.innerHTML = '<div class="alert alert-danger">Upload failed: ' + error.message + '</div>';
+                }
+                if (jsonUploadStatusElement) {
+                    jsonUploadStatusElement.innerHTML = '<div class="alert alert-danger">Upload failed: ' + error.message + '</div>';
+                }
+            });
+        }
+        
+        function startScan(e) {
+            e.preventDefault();
+            console.log("Start scan button clicked");
+            const scanConfig = buildScanConfig();
+            if (!scanConfig) return;
+            
+            console.log("Scan config built:", scanConfig);
+            
+            // Show scan status
+            scanStatus.style.display = 'block';
+            startScanBtn.disabled = true;
+            startScanBtn.innerHTML = 'Starting...';
+            
+            // Start scan
+            fetch('/api/scan', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(scanConfig)
+            })
+            .then(response => {
+                console.log("Response status:", response.status);
+                if (!response.ok) {
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.error || `HTTP ${response.status}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log("Scan started successfully:", data);
+                if (data.error) {
+                    showAlert('error', data.error);
+                    resetScanUI();
+                } else {
+                    currentScanId = data.scan_id;
+                    document.getElementById('statusText').textContent = 'Scan started: ' + data.scan_id;
+                    monitorScan();
+                }
+            })
+            .catch(error => {
+                console.error("Scan start error:", error);
+                showAlert('error', 'Failed to start scan: ' + error.message);
+                resetScanUI();
+            });
+        }
+        
+        function buildScanConfig() {
+            const config = {
+                scan_type: scanType.value
+            };
+            
+            console.log("Building scan config for type:", config.scan_type);
+            
+            if (!config.scan_type) {
+                showAlert('error', 'Please select a scan type');
+                return null;
+            }
+            
+            // Add scan-specific config
+            if (config.scan_type === 'swagger_url') {
+                const swaggerUrl = document.getElementById('swaggerUrl').value;
+                if (!swaggerUrl) {
+                    showAlert('error', 'Please enter Swagger URL');
+                    return null;
+                }
+                config.swagger_url = swaggerUrl;
+                console.log("Added swagger URL:", swaggerUrl);
+            } else if (config.scan_type === 'json_file') {
+                const jsonFile = document.getElementById('jsonFile').files[0];
+                if (!jsonFile) {
+                    showAlert('error', 'Please select a JSON file');
+                    return null;
+                }
+                const uploadedFile = uploadedFiles[jsonFile.name];
+                config.json_file = uploadedFile ? uploadedFile.filepath : jsonFile.name;
+                console.log("Added JSON file:", config.json_file);
+            } else if (config.scan_type === 'collection') {
+                const collectionFile = document.getElementById('collectionFile').files[0];
+                if (!collectionFile) {
+                    showAlert('error', 'Please select a collection file');
+                    return null;
+                }
+                const uploadedFile = uploadedFiles[collectionFile.name];
+                config.collection_file = uploadedFile ? uploadedFile.filepath : collectionFile.name;
+                console.log("Added collection file:", config.collection_file);
+                
+                if (!uploadedFile) {
+                    showAlert('error', 'Collection file not uploaded yet. Please wait for upload to complete.');
+                    return null;
+                }
+            }
+            
+            console.log("Final scan config:", config);
+            return config;
+        }
+        
+        function monitorScan() {
+            if (!currentScanId) return;
+            
+            const checkStatus = () => {
+                fetch(`/api/scan/${currentScanId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            showAlert('error', data.error);
+                            resetScanUI();
+                            return;
+                        }
+                        
+                        const status = data.status;
+                        document.getElementById('statusText').textContent = `Status: ${status}`;
+                        
+                        if (status === 'running' || status === 'in_progress') {
+                            // Continue monitoring
+                            setTimeout(checkStatus, 2000);
+                        } else if (status === 'completed') {
+                            showAlert('success', 'Scan completed successfully!');
+                            resetScanUI();
+                        } else if (status === 'failed') {
+                            showAlert('error', 'Scan failed: ' + (data.error || 'Unknown error'));
+                            resetScanUI();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Status check error:', error);
+                        showAlert('error', 'Failed to check scan status: ' + error.message);
+                        resetScanUI();
+                    });
+            };
+            
+            checkStatus();
+        }
+        
+        function resetScanUI() {
+            startScanBtn.disabled = false;
+            startScanBtn.innerHTML = 'Start Scan';
+            scanStatus.style.display = 'none';
+        }
+        
+        function showAlert(type, message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type === 'error' ? 'danger' : type}`;
+            alertDiv.textContent = message;
+            
+            const alertsContainer = document.getElementById('alerts');
+            alertsContainer.appendChild(alertDiv);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+</html> 

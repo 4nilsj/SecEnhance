@@ -7,7 +7,7 @@ Tests the basic performance improvements
 import time
 import json
 from datetime import datetime
-from api_security_scanner import APISecurityScanner
+from src.core.api_security_scanner import APISecurityScanner
 
 def test_basic_performance():
     """Test basic performance improvements"""

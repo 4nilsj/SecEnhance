@@ -6,7 +6,8 @@ Test and debug endpoint extraction from Postman collections
 
 import json
 import os
-from api_security_scanner_updated import APISecurityScanner
+from src.core.api_security_scanner import APISecurityScanner
+from pathlib import Path
 
 def debug_endpoint_extraction():
     """Debug endpoint extraction from Postman collections"""
@@ -14,25 +15,26 @@ def debug_endpoint_extraction():
     print("=" * 50)
     
     # Check for uploaded files
-    uploads_dir = "uploads"
-    if not os.path.exists(uploads_dir):
-        print("❌ Uploads directory not found")
+    project_root = Path(__file__).parent.parent.parent
+    uploads_dir = project_root / "uploads"
+    if not uploads_dir.exists():
+        print(f"❌ Uploads directory not found: {uploads_dir}")
         return
     
     # List all uploaded files
-    uploaded_files = [f for f in os.listdir(uploads_dir) if f.endswith('.json')]
-    print(f"📁 Found {len(uploaded_files)} uploaded files:")
+    uploaded_files = [f for f in uploads_dir.iterdir() if f.suffix == '.json']
+    print(f"📁 Found {len(uploaded_files)} JSON files in uploads directory")
     
     for file in uploaded_files:
-        print(f"   - {file}")
+        print(f"   - {file.name}")
     
     if not uploaded_files:
         print("❌ No uploaded files found")
         return
     
     # Test with the first uploaded file
-    test_file = os.path.join(uploads_dir, uploaded_files[0])
-    print(f"\n🔍 Testing with file: {test_file}")
+    test_file = uploaded_files[0]
+    print(f"\n🔍 Testing with file: {test_file.name}")
     
     try:
         # Read the collection file
@@ -40,7 +42,7 @@ def debug_endpoint_extraction():
             collection_data = json.load(f)
         
         print(f"✅ File loaded successfully")
-        print(f"📊 File size: {os.path.getsize(test_file)} bytes")
+        print(f"📊 File size: {test_file.stat().st_size} bytes")
         
         # Check collection structure
         print(f"\n📋 Collection Structure:")

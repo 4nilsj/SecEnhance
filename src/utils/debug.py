@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 import traceback
 
-from debug_config import debug_logger, get_debug_stats, debug_config
+from src.config.debug_config import debug_logger, get_debug_stats, debug_config
 
 class DebugMonitor:
     """Real-time monitoring and debugging utilities"""

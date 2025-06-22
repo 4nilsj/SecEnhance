@@ -7,7 +7,7 @@ Comprehensive testing of all features and performance optimizations
 import time
 import json
 from datetime import datetime
-from api_security_scanner_updated import APISecurityScanner
+from src.core.api_security_scanner import APISecurityScanner
 
 def test_basic_functionality():
     """Test basic scanner functionality"""

@@ -6,7 +6,10 @@ This script tests the scanner functionality directly without the web interface.
 
 import json
 import time
-from api_security_scanner import APISecurityScanner
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from src.core.api_security_scanner import APISecurityScanner
 
 def test_basic_scan():
     """Test basic scanning functionality"""
