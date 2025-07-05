@@ -15,7 +15,6 @@ from datetime import datetime
 import argparse
 import sys
 import os
-from utils.debug_utils import setup_debug_logging, debug_print
 
 class AutomatedSecurityScanner:
     def __init__(self):
@@ -433,22 +432,14 @@ def main():
     parser.add_argument("--config", help="Configuration file")
     parser.add_argument("--output", help="Output file for scan results")
     parser.add_argument("--threads", type=int, default=5, help="Number of concurrent threads")
-    parser.add_argument("--debug", action="store_true", help="Enable debug mode with detailed logging")
+    
     args = parser.parse_args()
     
-    # Setup debug logging if requested
-    if args.debug:
-        setup_debug_logging()
-        debug_print("Debug mode enabled.")
-    
-    debug_print(f"Parsed arguments: {args}")
     scanner = AutomatedSecurityScanner()
     scanner.load_scan_config(args.config)
-    debug_print(f"Loaded scan config: {scanner.scan_config}")
     
     if args.threads:
         scanner.scan_config["threads"] = args.threads
-        debug_print(f"Set threads to: {args.threads}")
     
     if args.targets:
         targets = args.targets
@@ -466,13 +457,10 @@ def main():
     
     if not targets:
         print("❌ No targets specified. Exiting.")
-        debug_print("No targets specified. Exiting.")
         return
     
     # Run scan
-    debug_print(f"Starting scan for targets: {targets}")
     output_file = scanner.run_scan(targets, args.output)
-    debug_print(f"Scan completed. Results saved to: {output_file}")
     
     print(f"\n🎉 Scan completed! Results saved to: {output_file}")
 

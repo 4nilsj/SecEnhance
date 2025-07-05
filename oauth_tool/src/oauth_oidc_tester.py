@@ -15,28 +15,7 @@ import json
 import logging
 import sys
 from datetime import datetime
-
-# Configure debug logging
-def setup_debug_logging(debug: bool = False):
-    """Setup debug logging configuration."""
-    if debug:
-        logging.basicConfig(
-            level=logging.DEBUG,
-            format='%(asctime)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.StreamHandler(sys.stdout),
-                logging.FileHandler('oauth_debug.log')
-            ]
-        )
-        logging.debug("Debug logging enabled")
-    else:
-        logging.basicConfig(level=logging.INFO)
-
-def debug_print(message: str, debug: bool = False):
-    """Print debug message if debug mode is enabled."""
-    if debug:
-        print(f"[DEBUG] {message}")
-        logging.debug(message)
+from utils.debug_utils import setup_debug_logging, debug_print
 
 # Placeholders for future imports
 # import requests, jwt, cryptography, flask, etc.

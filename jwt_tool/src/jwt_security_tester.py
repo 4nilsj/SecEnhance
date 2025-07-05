@@ -17,28 +17,7 @@ import jwt
 from jwt.exceptions import InvalidTokenError, DecodeError
 import requests
 import time
-
-# Configure debug logging
-def setup_debug_logging(debug: bool = False):
-    """Setup debug logging configuration."""
-    if debug:
-        logging.basicConfig(
-            level=logging.DEBUG,
-            format='%(asctime)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.StreamHandler(sys.stdout),
-                logging.FileHandler('jwt_debug.log')
-            ]
-        )
-        logging.debug("Debug logging enabled")
-    else:
-        logging.basicConfig(level=logging.INFO)
-
-def debug_print(message: str, debug: bool = False):
-    """Print debug message if debug mode is enabled."""
-    if debug:
-        print(f"[DEBUG] {message}")
-        logging.debug(message)
+from utils.debug_utils import setup_debug_logging, debug_print
 
 class JWTSecurityTester:
     def __init__(self, debug: bool = False):
@@ -588,6 +567,7 @@ class JWTSecurityTester:
                 "description": "Null Signature Vulnerability",
                 "vulnerable": False,
                 "tests": []
+                
             }
             null_signature_token = (
                 base64.urlsafe_b64encode(json.dumps(header).encode()).rstrip(b'=').decode() + '.' +

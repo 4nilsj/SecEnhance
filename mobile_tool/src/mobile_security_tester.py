@@ -30,6 +30,7 @@ from .analyzers.code_analyzer import CodeAnalyzer
 from .reporters.report_generator import ReportGenerator
 from .utils.file_utils import FileUtils
 from .utils.config_manager import ConfigManager
+from .utils.debug_utils import setup_debug_logging, debug_print
 
 class MobileSecurityTester:
     """Main class for mobile security testing."""
@@ -382,10 +383,16 @@ def main():
     
     args = parser.parse_args()
     
+    # Setup debug logging if requested
+    if args.debug:
+        setup_debug_logging()
+        debug_print("Debug mode enabled.")
+    
     # Initialize tester
     tester = MobileSecurityTester(config_file=args.config, debug=args.debug)
     
     try:
+        debug_print("Parsed arguments:", args)
         # Determine tests to run
         if args.comprehensive:
             tests = ["static", "dynamic", "network", "storage", "code"]
@@ -393,41 +400,42 @@ def main():
             tests = args.tests.split(",")
         else:
             tests = ["static", "network", "storage", "code"]
-        
+        debug_print("Tests to run:", tests)
         # Run analysis
         if args.apk:
+            debug_print("Starting APK analysis for:", args.apk)
             results = tester.analyze_apk(args.apk, tests)
         elif args.ipa:
+            debug_print("Starting IPA analysis for:", args.ipa)
             results = tester.analyze_ipa(args.ipa, tests)
         elif args.device:
+            debug_print(f"Starting device analysis for {args.device}, package={args.package}")
             results = tester.analyze_device(args.device, args.package)
         elif args.batch:
             # Determine file type from directory contents
             apk_files = list(Path(args.batch).glob("*.apk"))
             ipa_files = list(Path(args.batch).glob("*.ipa"))
-            
+            debug_print(f"Batch analysis: {len(apk_files)} APKs, {len(ipa_files)} IPAs found.")
             if apk_files and not ipa_files:
                 file_type = "apk"
             elif ipa_files and not apk_files:
                 file_type = "ipa"
             else:
                 file_type = "apk"  # Default to APK
-            
+            debug_print(f"Batch analysis file type: {file_type}")
             results = tester.batch_analyze(args.batch, file_type)
-        
         # Print summary
         if args.verbose:
             tester.print_summary()
-        
         # Generate report
         report_file = tester.generate_report(args.output, args.format)
-        
         if args.verbose:
             print(f"\n✅ Analysis completed successfully!")
             print(f"📄 Report saved: {report_file}")
-        
+        debug_print("Analysis complete. Report file:", report_file)
     except Exception as e:
         print(f"❌ Error during analysis: {str(e)}")
+        debug_print("Exception occurred:", str(e))
         if args.debug:
             import traceback
             traceback.print_exc()

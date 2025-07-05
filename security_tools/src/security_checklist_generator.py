@@ -11,7 +11,6 @@ from datetime import datetime
 from typing import Dict, List, Any, Optional
 import csv
 import argparse
-from utils.debug_utils import setup_debug_logging, debug_print
 
 class SecurityChecklistGenerator:
     def __init__(self):
@@ -430,31 +429,21 @@ def main():
     parser.add_argument("--framework", help="Generate checklist for specific framework")
     parser.add_argument("--output", choices=["json", "csv"], default="json", help="Output format")
     parser.add_argument("--interactive", action="store_true", help="Run in interactive mode")
-    parser.add_argument("--debug", action="store_true", help="Enable debug mode with detailed logging")
-    args = parser.parse_args()
     
-    # Setup debug logging if requested
-    if args.debug:
-        setup_debug_logging()
-        debug_print("Debug mode enabled.")
-    debug_print(f"Parsed arguments: {args}")
+    args = parser.parse_args()
     
     generator = SecurityChecklistGenerator()
     
     if args.interactive or not args.framework:
-        debug_print("Running in interactive mode.")
         generator.interactive_mode()
     else:
         generator.load_security_frameworks()
-        debug_print(f"Loaded frameworks: {list(generator.frameworks.keys())}")
         if args.framework.upper() in generator.frameworks:
-            debug_print(f"Generating checklist for framework: {args.framework.upper()} in {args.output} format.")
             checklist = generator.generate_checklist(args.framework.upper(), args.output)
             generator.view_checklist(checklist)
         else:
             print(f"❌ Framework '{args.framework}' not found.")
             print("Available frameworks:", list(generator.frameworks.keys()))
-            debug_print(f"Framework '{args.framework}' not found.")
 
 if __name__ == "__main__":
     main() 
