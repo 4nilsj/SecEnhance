@@ -1,6 +1,43 @@
-# AI-Enabled SAST Scanner
+# AI-Enabled SAST Scanner with AI-Powered Code Fixing
 
-A comprehensive Static Application Security Testing (SAST) tool with AI-powered analysis capabilities for identifying security vulnerabilities in source code.
+A comprehensive Static Application Security Testing (SAST) tool with **AI-powered analysis capabilities** and **intelligent code fixing** for identifying and remediating security vulnerabilities in source code.
+
+## 🚀 **NEW: AI-Powered Code Fixing**
+
+### 🤖 **What's New: Actual Code Extraction & AI-Generated Fixes**
+
+Instead of generic examples, the SAST scanner now:
+
+- **📝 Extracts Actual Vulnerable Code (POC)** - Shows the real vulnerable code from your files
+- **🤖 Generates AI-Powered Specific Fixes** - Creates tailored fix recommendations for the exact code
+- **📊 Provides Confidence Scores** - Shows how confident the AI is in the fix recommendation
+- **💡 Includes Detailed Explanations** - Explains why the fix is secure
+
+### **Example AI-Powered Report:**
+
+```markdown
+#### SQL Injection
+
+- **File:** `app.py`
+- **Line:** 15
+- **Severity:** High
+- **Impact:** Allows attackers to execute arbitrary SQL commands
+
+**Actual Vulnerable Code (POC):**
+```python
+>>> def get_user(user_input):
+        # SQL Injection
+        query = f"SELECT * FROM users WHERE id = {user_input}"
+>>>     cursor.execute(query)
+```
+
+**AI-Generated Fix (Confidence: 90.0%):**
+```python
+cursor.execute("SELECT * FROM users WHERE id = %s", (user_input,))
+```
+
+**Fix Explanation:** This fix uses parameterized queries to prevent SQL injection by separating code from data.
+```
 
 ## Features
 
@@ -10,17 +47,23 @@ A comprehensive Static Application Security Testing (SAST) tool with AI-powered 
 - **Context-aware scanning** for better accuracy
 - **Multi-language support** (Python, JavaScript, Java, C/C++, PHP, Ruby, Go, Rust)
 
-### 🤖 **AI-Powered Analysis**
+### 🤖 **AI-Powered Analysis & Code Fixing**
 - **Semantic code analysis** using transformer models
 - **Context understanding** for better vulnerability identification
 - **Intelligent insights** and recommendations
 - **Pattern recognition** for complex security issues
+- **🎯 Actual Code Extraction** - Extracts real vulnerable code from scanned files
+- **🔧 AI-Generated Specific Fixes** - Creates tailored fix recommendations
+- **📊 Fix Confidence Scoring** - Shows AI confidence in fix recommendations
+- **💡 Fix Explanations** - Detailed explanations of why fixes are secure
 
 ### 📊 **Advanced Reporting**
 - **Multiple output formats** (HTML, JSON, Markdown, PDF)
 - **Detailed vulnerability reports** with mitigation strategies
 - **AI-generated insights** and recommendations
 - **Comprehensive statistics** and metrics
+- **🎨 Visual Code Comparison** - Side-by-side vulnerable vs fixed code
+- **📈 Confidence Metrics** - Detection and fix confidence scores
 
 ### ⚡ **Performance & Scalability**
 - **Parallel scanning** with configurable worker threads
@@ -114,7 +157,226 @@ python sast_scanner_cli.py scan directory /path/to/code --patterns "*.py,*.js,*.
 python sast_scanner_cli.py scan directory /path/to/code --max-workers 8
 ```
 
-### Advanced Usage
+### 🤖 **AI-Powered Code Fixing Usage**
+
+#### **Understanding AI-Generated Reports**
+
+The AI-powered SAST scanner provides comprehensive vulnerability reports with:
+
+1. **📝 Actual Vulnerable Code (POC)** - Real code from your files with context
+2. **🔧 AI-Generated Specific Fix** - Tailored fix for the exact vulnerability
+3. **📊 Fix Confidence Score** - How confident the AI is in the fix (0-100%)
+4. **💡 Fix Explanation** - Why the fix is secure and how it works
+
+#### **Example: SQL Injection Detection & Fix**
+
+**Input Code:**
+```python
+def get_user(user_input):
+    query = f"SELECT * FROM users WHERE id = {user_input}"
+    cursor.execute(query)
+    return cursor.fetchone()
+```
+
+**AI-Generated Report:**
+```markdown
+#### SQL Injection
+
+- **File:** `app.py`
+- **Line:** 3
+- **Severity:** High
+- **CWE:** CWE-89
+- **Impact:** Allows attackers to execute arbitrary SQL commands
+
+**Actual Vulnerable Code (POC):**
+```python
+>>> def get_user(user_input):
+        query = f"SELECT * FROM users WHERE id = {user_input}"
+>>>     cursor.execute(query)
+```
+
+**AI-Generated Fix (Confidence: 90.0%):**
+```python
+cursor.execute("SELECT * FROM users WHERE id = %s", (user_input,))
+```
+
+**Fix Explanation:** This fix uses parameterized queries to prevent SQL injection by separating code from data.
+```
+
+#### **Example: XSS Detection & Fix**
+
+**Input Code:**
+```javascript
+function displayUser(userInput) {
+    element.innerHTML = userInput;
+}
+```
+
+**AI-Generated Report:**
+```markdown
+#### Cross-Site Scripting (XSS)
+
+- **File:** `script.js`
+- **Line:** 2
+- **Severity:** High
+- **CWE:** CWE-79
+
+**Actual Vulnerable Code (POC):**
+```javascript
+>>> function displayUser(userInput) {
+>>>     element.innerHTML = userInput;
+```
+
+**AI-Generated Fix (Confidence: 90.0%):**
+```javascript
+element.textContent = userInput;
+```
+
+**Fix Explanation:** This fix uses textContent instead of innerHTML to prevent XSS by not interpreting HTML/JS.
+```
+
+#### **Example: Hardcoded Credentials Detection & Fix**
+
+**Input Code:**
+```python
+def connect_database():
+    password = "super_secret_password_123"
+    api_key = "sk-1234567890abcdef"
+    return connect(password, api_key)
+```
+
+**AI-Generated Report:**
+```markdown
+#### Hardcoded Credentials
+
+- **File:** `database.py`
+- **Line:** 2
+- **Severity:** Medium
+- **CWE:** CWE-259
+
+**Actual Vulnerable Code (POC):**
+```python
+>>> def connect_database():
+>>>     password = "super_secret_password_123"
+        api_key = "sk-1234567890abcdef"
+```
+
+**AI-Generated Fix (Confidence: 90.0%):**
+```python
+import os
+password = os.environ.get('DB_PASSWORD')
+api_key = os.environ.get('API_KEY')
+```
+
+**Fix Explanation:** This fix uses environment variables to keep sensitive data out of source code.
+```
+
+### **AI Fix Confidence Levels**
+
+- **🟢 90-100%** - High confidence, recommended fix
+- **🟡 70-89%** - Medium confidence, review recommended
+- **🔴 50-69%** - Low confidence, manual review required
+
+### **Supported AI Fix Types**
+
+| Vulnerability | Python | JavaScript | PHP | Java |
+|---------------|--------|------------|-----|------|
+| SQL Injection | ✅ | ✅ | ✅ | ✅ |
+| XSS | ✅ | ✅ | ✅ | ✅ |
+| Command Injection | ✅ | ✅ | ✅ | ✅ |
+| Hardcoded Credentials | ✅ | ✅ | ✅ | ✅ |
+| Weak Crypto | ✅ | ✅ | ✅ | ✅ |
+| Insecure Random | ✅ | ✅ | ✅ | ✅ |
+| Path Traversal | ✅ | ✅ | ✅ | ✅ |
+| Debug Code | ✅ | ✅ | ✅ | ✅ |
+
+### **Complete Vulnerability Report Parameters**
+
+Each vulnerability report includes comprehensive information:
+
+#### **📋 File Information**
+- ✅ **File Name** - The actual file where the vulnerability was found
+- ✅ **Line Number(s)** - Exact line number where the vulnerability occurs
+
+#### **🚨 Vulnerability Details**
+- ✅ **Vulnerability Name** - The type of vulnerability (e.g., "sql_injection", "xss")
+- ✅ **Description** - Detailed description of the vulnerability
+- ✅ **Severity** - Critical, High, Medium, Low
+- ✅ **CWE** - Common Weakness Enumeration identifier
+
+#### **💻 Code Information**
+- ✅ **Vulnerable Code Snippet** - The actual vulnerable line of code
+- ✅ **Pattern Match** - The specific pattern that triggered detection
+- ✅ **Actual Vulnerable Code (POC)** - Real code with context (2 lines before/after)
+
+#### **🔍 Analysis Details**
+- ✅ **Detection Method** - How it was detected (pattern_matching, ast_analysis, etc.)
+- ✅ **Confidence** - Detection confidence level (0.0-1.0)
+- ✅ **False Positive Summary** - Explanation of why it's not a false positive
+
+#### **🎯 Impact & Mitigation**
+- ✅ **Impact** - Detailed explanation of what attackers can do
+- ✅ **Potential Fix** - General guidance on how to fix
+- ✅ **Mitigation** - Specific mitigation strategy
+
+#### **🤖 AI-Powered Fixes**
+- ✅ **AI-Generated Fix** - Specific, actionable fix code
+- ✅ **Fix Explanation** - Why this fix is secure
+- ✅ **Fix Confidence** - AI confidence in the fix (0.0-1.0)
+
+## Testing AI-Powered Features
+
+### **Quick Test of AI Code Fixing**
+
+Test the AI-powered code fixing functionality:
+
+```bash
+# Test AI code fixing with sample vulnerable code
+python test_ai_standalone.py
+
+# Test comprehensive AI features
+python test_ai_fixes.py
+
+# Test simple AI functionality
+python test_ai_simple.py
+```
+
+### **Expected Test Output**
+
+The test will show:
+
+```
+🤖 Testing AI-powered code fixing functionality...
+📊 Testing 3 vulnerabilities...
+
+--- Vulnerability 1: sql_injection ---
+✅ Actual Vulnerable Code (POC):
+   >>> def vulnerable_function(user_input):
+        # SQL Injection
+        query = f"SELECT * FROM users WHERE id = {user_input}"
+✅ AI-Generated Fix:
+   cursor.execute("SELECT * FROM users WHERE id = %s", (user_input,))
+✅ Explanation:
+   This fix uses parameterized queries to prevent SQL injection by separating code from data.
+✅ Confidence: 90.0%
+
+🎉 AI-powered code fixing test completed successfully!
+```
+
+### **Testing Different Languages**
+
+The AI code fixer supports multiple languages:
+
+```bash
+# Test Python vulnerabilities
+python test_ai_standalone.py
+
+# Test JavaScript vulnerabilities (included in the test)
+# Test PHP vulnerabilities (included in the test)
+# Test Java vulnerabilities (included in the test)
+```
+
+## Advanced Usage
 
 #### Custom File Patterns
 ```bash
