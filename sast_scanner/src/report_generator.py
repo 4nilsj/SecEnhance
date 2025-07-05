@@ -150,6 +150,24 @@ class ReportGenerator:
                 <p><strong>False Positive Summary:</strong> {vuln.get('false_positive_summary', 'No summary provided')}</p>
             </div>
             """
+            
+            # Add vulnerable code example if available
+            if vuln.get('vulnerable_code_example'):
+                html += f"""
+                <div class="code-example">
+                    <h4>Vulnerable Code Example:</h4>
+                    <pre><code>{vuln.get('vulnerable_code_example')}</code></pre>
+                </div>
+                """
+            
+            # Add recommended fix code if available
+            if vuln.get('recommended_fix_code'):
+                html += f"""
+                <div class="code-example">
+                    <h4>Recommended Fix:</h4>
+                    <pre><code>{vuln.get('recommended_fix_code')}</code></pre>
+                </div>
+                """
         
         return html
     
@@ -269,9 +287,27 @@ This report contains the results of a Static Application Security Testing (SAST)
 
 **Mitigation:**
 {vuln.get('mitigation', 'No mitigation provided')}
-
----
 """
+        
+        # Add vulnerable code example if available
+        if vuln.get('vulnerable_code_example'):
+            content += f"""
+**Vulnerable Code Example:**
+```{self._get_language_for_file(vuln.get('file_name', ''))}
+{vuln.get('vulnerable_code_example')}
+```
+"""
+        
+        # Add recommended fix code if available
+        if vuln.get('recommended_fix_code'):
+            content += f"""
+**Recommended Fix:**
+```{self._get_language_for_file(vuln.get('file_name', ''))}
+{vuln.get('recommended_fix_code')}
+```
+"""
+        
+        content += "\n---\n"
         return content
     
     def _generate_insight_markdown(self, insight: Dict[str, Any]) -> str:
@@ -530,3 +566,24 @@ This report contains the results of a Static Application Security Testing (SAST)
             """
         
         return html 
+
+    def _get_language_for_file(self, file_name: str) -> str:
+        """Get language identifier for syntax highlighting."""
+        if file_name.endswith('.py'):
+            return 'python'
+        elif file_name.endswith(('.js', '.jsx', '.ts', '.tsx')):
+            return 'javascript'
+        elif file_name.endswith('.php'):
+            return 'php'
+        elif file_name.endswith('.java'):
+            return 'java'
+        elif file_name.endswith(('.c', '.cpp', '.h', '.hpp')):
+            return 'cpp'
+        elif file_name.endswith('.rb'):
+            return 'ruby'
+        elif file_name.endswith('.go'):
+            return 'go'
+        elif file_name.endswith('.rs'):
+            return 'rust'
+        else:
+            return 'text' 

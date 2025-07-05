@@ -216,6 +216,28 @@
             margin: 10px 0;
         }
 
+        .code-snippet.vulnerable {
+            background-color: #fff5f5;
+            border-color: #feb2b2;
+            border-left: 4px solid #e53e3e;
+        }
+
+        .code-snippet.fixed {
+            background-color: #f0fff4;
+            border-color: #9ae6b4;
+            border-left: 4px solid #38a169;
+        }
+
+        .code-snippet pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .code-snippet code {
+            color: #2d3748;
+        }
+
         .mitigation {
             background-color: #d4edda;
             border: 1px solid #c3e6cb;
@@ -507,6 +529,20 @@
                         <div class="code-snippet">
                             <strong>Code:</strong><br>
                             {{ vulnerability.line_content }}
+                        </div>
+                        {% endif %}
+                        
+                        {% if vulnerability.vulnerable_code_example %}
+                        <div class="code-snippet vulnerable">
+                            <strong>Vulnerable Code Example:</strong><br>
+                            <pre><code>{{ vulnerability.vulnerable_code_example }}</code></pre>
+                        </div>
+                        {% endif %}
+                        
+                        {% if vulnerability.recommended_fix_code %}
+                        <div class="code-snippet fixed">
+                            <strong>Recommended Fix:</strong><br>
+                            <pre><code>{{ vulnerability.recommended_fix_code }}</code></pre>
                         </div>
                         {% endif %}
                         
