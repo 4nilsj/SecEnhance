@@ -32,6 +32,9 @@ Examples:
   # Generate HTML report
   python threat_modeler_cli.py -i architecture.json -o html -f report.html
   
+  # AI-assisted analysis
+  python threat_modeler_cli.py --ai -i architecture.yaml
+  
   # Debug mode
   python threat_modeler_cli.py --debug -i architecture.txt
         """
@@ -62,6 +65,12 @@ Examples:
     )
     
     parser.add_argument(
+        '--ai',
+        action='store_true',
+        help='Enable AI-assisted threat discovery'
+    )
+    
+    parser.add_argument(
         '--debug',
         action='store_true',
         help='Enable debug mode'
@@ -84,7 +93,7 @@ Examples:
         
         # Run analysis
         if args.input_file:
-            modeler.run_file_input(args.input_file, args.methodology)
+            modeler.run_file_input(args.input_file, args.methodology, args.ai)
         else:
             modeler.run_interactive()
             

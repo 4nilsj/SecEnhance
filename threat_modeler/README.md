@@ -10,6 +10,17 @@ A comprehensive threat modeling tool for application security analysis, supporti
 - **Rich Reporting**: Generate reports in Markdown, HTML, and JSON formats
 - **Debug Support**: Built-in debugging and verbose logging
 - **Extensible**: Easy to extend with custom threat libraries and methodologies
+- **AI-Assisted Threat Discovery**: Advanced machine learning capabilities for enhanced threat detection
+
+### AI Capabilities
+
+The tool includes advanced AI-assisted threat discovery features:
+
+- **CVE Analysis**: Transformer models trained on CVE databases to identify potential vulnerabilities
+- **Architecture Pattern Recognition**: ML-based recognition of common architectural patterns and their associated threats
+- **Natural Language Processing**: Analysis of design documents and requirements for security insights
+- **Predictive Threat Modeling**: Machine learning models that predict potential threats based on historical data
+- **Intelligent Threat Synthesis**: Combines traditional and AI-identified threats for comprehensive analysis
 
 ## Installation
 
@@ -54,6 +65,14 @@ Use a predefined architecture file:
 python threat_modeler_cli.py -i architecture.yaml -m STRIDE
 ```
 
+### AI-Assisted Analysis
+
+Enable AI capabilities for enhanced threat discovery:
+
+```bash
+python threat_modeler_cli.py --ai -i architecture.yaml -m STRIDE
+```
+
 ### Generate HTML Report
 
 ```bash
@@ -72,9 +91,29 @@ Options:
   -m, --methodology TEXT    Threat modeling methodology (STRIDE/PASTA/DREAD)
   -o, --output-format TEXT  Output report format (markdown/html/json)
   -f, --output-file TEXT    Output file path
+  --ai                      Enable AI-assisted threat discovery
   --debug                   Enable debug mode
   --version                 Show version and exit
   --help                    Show help message
+```
+
+### AI-Assisted Analysis
+
+When using the `--ai` flag, the tool will:
+
+1. **CVE Analysis**: Search CVE databases for vulnerabilities matching your architecture
+2. **Pattern Recognition**: Identify architectural patterns and their known threats
+3. **Predictive Modeling**: Use ML models to predict potential threats
+4. **Threat Synthesis**: Combine traditional and AI-identified threats
+5. **Enhanced Recommendations**: Provide AI-powered security recommendations
+
+Example AI analysis:
+```bash
+# Run comprehensive AI-assisted analysis
+python threat_modeler_cli.py --ai -i architecture.yaml -m STRIDE --debug
+
+# Test AI capabilities
+python examples/test_ai_capabilities.py
 ```
 
 ### Input File Formats

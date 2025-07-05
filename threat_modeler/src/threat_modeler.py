@@ -20,6 +20,7 @@ from .debug_utils import setup_debug_logging, debug_print, debug_log
 from .model_parser import ArchitectureParser
 from .threat_engine import ThreatEngine
 from .report_generator import ReportGenerator
+from .ai_assisted_threat_discovery import AIAssistedThreatDiscovery
 
 console = Console()
 
@@ -32,6 +33,7 @@ class ThreatModeler:
         self.parser = ArchitectureParser()
         self.engine = ThreatEngine()
         self.report_gen = ReportGenerator()
+        self.ai_discovery = AIAssistedThreatDiscovery(debug=debug)
         debug_log("main", "Threat modeler initialized")
     
     def run_interactive(self) -> None:
@@ -48,18 +50,25 @@ class ThreatModeler:
         # Select methodology
         methodology = self._select_methodology()
         
+        # Ask about AI capabilities
+        use_ai = self._ask_about_ai_capabilities()
+        
         # Run threat analysis
-        threats = self._analyze_threats(architecture, methodology)
+        if use_ai:
+            threats = self._analyze_threats_with_ai(architecture, methodology)
+        else:
+            threats = self._analyze_threats(architecture, methodology)
         
         # Generate report
         self._generate_report(threats, architecture, methodology)
     
-    def run_file_input(self, input_file: str, methodology: str = "STRIDE") -> None:
+    def run_file_input(self, input_file: str, methodology: str = "STRIDE", use_ai: bool = False) -> None:
         """Run threat modeling with file input."""
         console.print(Panel.fit(
             f"[bold blue]Threat Modeling Tool - File Input Mode[/bold blue]\n"
             f"Input file: {input_file}\n"
-            f"Methodology: {methodology}",
+            f"Methodology: {methodology}\n"
+            f"AI Analysis: {'Enabled' if use_ai else 'Disabled'}",
             border_style="blue"
         ))
         
@@ -67,10 +76,95 @@ class ThreatModeler:
         architecture = self._parse_architecture_file(input_file)
         
         # Run threat analysis
-        threats = self._analyze_threats(architecture, methodology)
+        if use_ai:
+            threats = self._analyze_threats_with_ai(architecture, methodology)
+        else:
+            threats = self._analyze_threats(architecture, methodology)
         
         # Generate report
         self._generate_report(threats, architecture, methodology)
+    
+    def _ask_about_ai_capabilities(self) -> bool:
+        """Ask user about using AI capabilities."""
+        console.print("\n[bold]AI-Assisted Threat Discovery[/bold]")
+        console.print("The tool can use AI to enhance threat discovery with:")
+        console.print("• CVE database analysis using transformer models")
+        console.print("• Architecture pattern recognition")
+        console.print("• Natural language processing of design documents")
+        console.print("• Predictive threat modeling")
+        
+        return click.confirm("Enable AI-assisted threat discovery?")
+    
+    def _analyze_threats_with_ai(self, architecture: Dict, methodology: str) -> List[Dict]:
+        """Analyze threats using both traditional and AI methods."""
+        debug_log("main", "Running AI-assisted threat analysis")
+        
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console
+        ) as progress:
+            # Traditional analysis
+            task1 = progress.add_task("Running traditional threat analysis...", total=None)
+            traditional_threats = self.engine.analyze_threats(architecture, methodology)
+            progress.update(task1, completed=True)
+            
+            # AI analysis
+            task2 = progress.add_task("Running AI-assisted analysis...", total=None)
+            ai_results = self.ai_discovery.comprehensive_threat_analysis(
+                architecture=architecture,
+                enable_cve_analysis=True,
+                enable_pattern_recognition=True,
+                enable_nlp_analysis=False,  # No design document in interactive mode
+                enable_predictive_modeling=True
+            )
+            progress.update(task2, completed=True)
+        
+        # Combine traditional and AI threats
+        combined_threats = self._combine_traditional_and_ai_threats(traditional_threats, ai_results)
+        
+        debug_log("main", f"AI-assisted analysis completed. Found {len(combined_threats)} total threats")
+        return combined_threats
+    
+    def _combine_traditional_and_ai_threats(self, traditional_threats: List[Dict], 
+                                          ai_results: Dict) -> List[Dict]:
+        """Combine traditional and AI-identified threats."""
+        combined = traditional_threats.copy()
+        
+        # Add AI-identified threats
+        ai_threats = ai_results.get("combined_threats", [])
+        for ai_threat in ai_threats:
+            # Check if threat already exists
+            existing = False
+            for trad_threat in combined:
+                if (ai_threat["title"].lower() in trad_threat.get("title", "").lower() or
+                    trad_threat.get("title", "").lower() in ai_threat["title"].lower()):
+                    # Update existing threat with AI insights
+                    trad_threat["ai_enhanced"] = True
+                    trad_threat["ai_confidence"] = ai_threat.get("confidence", 0.0)
+                    trad_threat["ai_sources"] = ai_threat.get("sources", [])
+                    existing = True
+                    break
+            
+            if not existing:
+                # Add new AI-identified threat
+                combined.append({
+                    "title": ai_threat["title"],
+                    "category": "AI-Identified",
+                    "description": ai_threat["description"],
+                    "severity": ai_threat["severity"],
+                    "risk_score": ai_threat["risk_score"],
+                    "methodology": "AI-Assisted",
+                    "ai_enhanced": True,
+                    "ai_confidence": ai_threat.get("confidence", 0.0),
+                    "ai_sources": ai_threat.get("sources", []),
+                    "mitigations": ai_threat.get("mitigations", [])
+                })
+        
+        # Sort by risk score
+        combined.sort(key=lambda x: x.get("risk_score", 0), reverse=True)
+        
+        return combined
     
     def _get_architecture_interactive(self) -> Dict:
         """Get architecture information interactively."""
@@ -234,6 +328,11 @@ class ThreatModeler:
         table.add_row("Methodology", methodology)
         table.add_row("Total Threats", str(len(threats)))
         
+        # Count AI-enhanced threats
+        ai_enhanced = sum(1 for t in threats if t.get("ai_enhanced", False))
+        if ai_enhanced > 0:
+            table.add_row("AI-Enhanced Threats", str(ai_enhanced))
+        
         # Count by severity
         severity_counts = {}
         for threat in threats:
@@ -254,12 +353,15 @@ class ThreatModeler:
             threat_table.add_column("Threat", style="cyan")
             threat_table.add_column("Category", style="yellow")
             threat_table.add_column("Risk Score", style="red")
+            threat_table.add_column("AI Enhanced", style="green")
             
             for threat in top_threats:
+                ai_marker = "✓" if threat.get("ai_enhanced", False) else ""
                 threat_table.add_row(
                     threat.get("title", "Unknown"),
                     threat.get("category", "Unknown"),
-                    str(threat.get("risk_score", 0))
+                    str(threat.get("risk_score", 0)),
+                    ai_marker
                 )
             
             console.print(threat_table)
@@ -275,16 +377,17 @@ class ThreatModeler:
               default='markdown',
               help='Output report format')
 @click.option('--output-file', '-f', help='Output file path')
+@click.option('--ai', is_flag=True, help='Enable AI-assisted threat discovery')
 @click.option('--debug', is_flag=True, help='Enable debug mode')
 def main(input_file: Optional[str], methodology: str, output_format: str, 
-         output_file: Optional[str], debug: bool) -> None:
+         output_file: Optional[str], ai: bool, debug: bool) -> None:
     """Comprehensive Threat Modeling Tool for Application Security Analysis."""
     
     try:
         modeler = ThreatModeler(debug=debug)
         
         if input_file:
-            modeler.run_file_input(input_file, methodology)
+            modeler.run_file_input(input_file, methodology, ai)
         else:
             modeler.run_interactive()
             
