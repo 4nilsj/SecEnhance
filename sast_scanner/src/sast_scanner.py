@@ -1,6 +1,6 @@
+#!/usr/bin/env python3
 """
-AI-Enabled SAST Scanner
-Static Application Security Testing with AI-powered analysis and context understanding.
+AI-enabled Static Application Security Testing (SAST) Scanner
 """
 
 import os
@@ -18,10 +18,14 @@ from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeEl
 from rich.table import Table
 from rich.panel import Panel
 
+# Add the src directory to the path for imports
+sys.path.insert(0, str(Path(__file__).parent))
+
 from .debug_utils import setup_debug_logging, debug_print, debug_log, debug_performance
 from .analyzers.code_analyzer import CodeAnalyzer
 from .analyzers.ai_analyzer import AIAnalyzer
 from .analyzers.vulnerability_detector import VulnerabilityDetector
+from .analyzers.ai_code_fixer import AICodeFixer
 from .analyzers.context_analyzer import ContextAnalyzer
 from .report_generator import ReportGenerator
 

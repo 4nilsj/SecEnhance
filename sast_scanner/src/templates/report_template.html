@@ -532,17 +532,18 @@
                         </div>
                         {% endif %}
                         
-                        {% if vulnerability.vulnerable_code_example %}
+                        {% if vulnerability.actual_vulnerable_code %}
                         <div class="code-snippet vulnerable">
-                            <strong>Vulnerable Code Example:</strong><br>
-                            <pre><code>{{ vulnerability.vulnerable_code_example }}</code></pre>
+                            <strong>Actual Vulnerable Code (POC):</strong><br>
+                            <pre><code>{{ vulnerability.actual_vulnerable_code }}</code></pre>
                         </div>
                         {% endif %}
                         
-                        {% if vulnerability.recommended_fix_code %}
+                        {% if vulnerability.specific_fix_code %}
                         <div class="code-snippet fixed">
-                            <strong>Recommended Fix:</strong><br>
-                            <pre><code>{{ vulnerability.recommended_fix_code }}</code></pre>
+                            <strong>AI-Generated Fix (Confidence: {{ "%.1f"|format(vulnerability.fix_confidence * 100) if vulnerability.fix_confidence else 'N/A' }}%):</strong><br>
+                            <pre><code>{{ vulnerability.specific_fix_code }}</code></pre>
+                            <p><strong>Explanation:</strong> {{ vulnerability.fix_explanation if vulnerability.fix_explanation else 'No explanation provided' }}</p>
                         </div>
                         {% endif %}
                         

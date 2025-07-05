@@ -151,21 +151,24 @@ class ReportGenerator:
             </div>
             """
             
-            # Add vulnerable code example if available
-            if vuln.get('vulnerable_code_example'):
+            # Add actual vulnerable code if available
+            if vuln.get('actual_vulnerable_code'):
                 html += f"""
                 <div class="code-example">
-                    <h4>Vulnerable Code Example:</h4>
-                    <pre><code>{vuln.get('vulnerable_code_example')}</code></pre>
+                    <h4>Actual Vulnerable Code (POC):</h4>
+                    <pre><code>{vuln.get('actual_vulnerable_code')}</code></pre>
                 </div>
                 """
             
-            # Add recommended fix code if available
-            if vuln.get('recommended_fix_code'):
+            # Add AI-generated specific fix if available
+            if vuln.get('specific_fix_code'):
+                confidence = vuln.get('fix_confidence', 0.0)
+                confidence_percent = f"{confidence * 100:.1f}%"
                 html += f"""
                 <div class="code-example">
-                    <h4>Recommended Fix:</h4>
-                    <pre><code>{vuln.get('recommended_fix_code')}</code></pre>
+                    <h4>AI-Generated Fix (Confidence: {confidence_percent}):</h4>
+                    <pre><code>{vuln.get('specific_fix_code')}</code></pre>
+                    <p><strong>Explanation:</strong> {vuln.get('fix_explanation', 'No explanation provided')}</p>
                 </div>
                 """
         
@@ -289,22 +292,27 @@ This report contains the results of a Static Application Security Testing (SAST)
 {vuln.get('mitigation', 'No mitigation provided')}
 """
         
-        # Add vulnerable code example if available
-        if vuln.get('vulnerable_code_example'):
+        # Add actual vulnerable code if available
+        if vuln.get('actual_vulnerable_code'):
             content += f"""
-**Vulnerable Code Example:**
+**Actual Vulnerable Code (POC):**
 ```{self._get_language_for_file(vuln.get('file_name', ''))}
-{vuln.get('vulnerable_code_example')}
+{vuln.get('actual_vulnerable_code')}
 ```
 """
         
-        # Add recommended fix code if available
-        if vuln.get('recommended_fix_code'):
+        # Add AI-generated specific fix if available
+        if vuln.get('specific_fix_code'):
+            confidence = vuln.get('fix_confidence', 0.0)
+            confidence_percent = f"{confidence * 100:.1f}%"
             content += f"""
-**Recommended Fix:**
+**AI-Generated Fix (Confidence: {confidence_percent}):**
 ```{self._get_language_for_file(vuln.get('file_name', ''))}
-{vuln.get('recommended_fix_code')}
+{vuln.get('specific_fix_code')}
 ```
+
+**Fix Explanation:**
+{vuln.get('fix_explanation', 'No explanation provided')}
 """
         
         content += "\n---\n"
