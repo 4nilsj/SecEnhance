@@ -145,6 +145,9 @@ class ReportGenerator:
                 <p><strong>File:</strong> {vuln.get('file_name', 'Unknown')}</p>
                 <p><strong>Line:</strong> {vuln.get('line_number', 'Unknown')}</p>
                 <p><strong>Mitigation:</strong> {vuln.get('mitigation', 'No mitigation provided')}</p>
+                <p><strong>Impact:</strong> {vuln.get('impact', 'No impact provided')}</p>
+                <p><strong>Potential Fix:</strong> {vuln.get('potential_fix', 'No fix provided')}</p>
+                <p><strong>False Positive Summary:</strong> {vuln.get('false_positive_summary', 'No summary provided')}</p>
             </div>
             """
         
@@ -255,6 +258,9 @@ This report contains the results of a Static Application Security Testing (SAST)
 - **Severity:** {vuln.get('severity', 'Unknown')}
 - **CWE:** {vuln.get('cwe', 'Unknown')}
 - **Confidence:** {vuln.get('confidence', 'Unknown')}
+- **Impact:** {vuln.get('impact', 'No impact provided')}
+- **Potential Fix:** {vuln.get('potential_fix', 'No fix provided')}
+- **False Positive Summary:** {vuln.get('false_positive_summary', 'No summary provided')}
 
 **Code:**
 ```

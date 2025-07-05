@@ -489,6 +489,18 @@
                                 <strong>Detection Method</strong>
                                 {{ vulnerability.detection_method.replace('_', ' ').title() if vulnerability.detection_method else 'N/A' }}
                             </div>
+                            <div class="detail-item">
+                                <strong>Impact</strong>
+                                {{ vulnerability.impact if vulnerability.impact else 'N/A' }}
+                            </div>
+                            <div class="detail-item">
+                                <strong>Potential Fix</strong>
+                                {{ vulnerability.potential_fix if vulnerability.potential_fix else 'N/A' }}
+                            </div>
+                            <div class="detail-item">
+                                <strong>False Positive Summary</strong>
+                                {{ vulnerability.false_positive_summary if vulnerability.false_positive_summary else 'N/A' }}
+                            </div>
                         </div>
                         
                         {% if vulnerability.line_content %}
