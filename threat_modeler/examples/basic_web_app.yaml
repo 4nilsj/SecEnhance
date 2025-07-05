@@ -1,0 +1,77 @@
+name: "Basic Web Application"
+description: "Simple web application with user authentication and data storage"
+
+components:
+  - name: "Web Server"
+    type: "web_server"
+    description: "Apache/Nginx web server serving static content"
+    technologies: ["Apache", "HTML", "CSS", "JavaScript"]
+    external: false
+  
+  - name: "Application Server"
+    type: "api"
+    description: "Python Flask application handling business logic"
+    technologies: ["Python", "Flask", "SQLAlchemy"]
+    external: false
+  
+  - name: "Database"
+    type: "database"
+    description: "PostgreSQL database for user data and application data"
+    technologies: ["PostgreSQL"]
+    external: false
+  
+  - name: "Authentication Service"
+    type: "api"
+    description: "OAuth2 authentication service"
+    technologies: ["OAuth2", "JWT"]
+    external: false
+
+data_flows:
+  - from: "Web Server"
+    to: "Application Server"
+    protocol: "HTTP"
+    data_type: "user_requests"
+    encrypted: false
+  
+  - from: "Application Server"
+    to: "Database"
+    protocol: "TCP"
+    data_type: "queries"
+    encrypted: false
+  
+  - from: "Application Server"
+    to: "Authentication Service"
+    protocol: "HTTPS"
+    data_type: "auth_requests"
+    encrypted: true
+  
+  - from: "Authentication Service"
+    to: "Application Server"
+    protocol: "HTTPS"
+    data_type: "auth_tokens"
+    encrypted: true
+
+trust_boundaries:
+  - name: "Public Internet"
+    components: ["Web Server"]
+    description: "Publicly accessible web interface"
+  
+  - name: "Internal Network"
+    components: ["Application Server", "Database", "Authentication Service"]
+    description: "Internal application components"
+
+assets:
+  - name: "User Credentials"
+    type: "data"
+    value: "high"
+    description: "User passwords and authentication data"
+  
+  - name: "User Data"
+    type: "data"
+    value: "medium"
+    description: "User profile and application data"
+  
+  - name: "Application Code"
+    type: "service"
+    value: "medium"
+    description: "Business logic and application functionality" 

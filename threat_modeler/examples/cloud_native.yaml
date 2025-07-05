@@ -1,0 +1,233 @@
+name: "Cloud-Native SaaS Platform"
+description: "Modern cloud-native application using serverless and container technologies"
+
+components:
+  - name: "CDN"
+    type: "gateway"
+    description: "CloudFlare CDN for static content delivery"
+    technologies: ["CloudFlare", "Edge Computing"]
+    external: true
+  
+  - name: "Load Balancer"
+    type: "gateway"
+    description: "AWS Application Load Balancer"
+    technologies: ["AWS ALB", "SSL Termination"]
+    external: true
+  
+  - name: "API Gateway"
+    type: "gateway"
+    description: "AWS API Gateway for API management"
+    technologies: ["AWS API Gateway", "Lambda Authorizer"]
+    external: true
+  
+  - name: "Frontend App"
+    type: "web_server"
+    description: "React SPA hosted on S3"
+    technologies: ["React", "AWS S3", "CloudFront"]
+    external: false
+  
+  - name: "Authentication Lambda"
+    type: "api"
+    description: "Serverless authentication function"
+    technologies: ["AWS Lambda", "Cognito", "JWT"]
+    external: false
+  
+  - name: "User Management Lambda"
+    type: "api"
+    description: "Serverless user management function"
+    technologies: ["AWS Lambda", "DynamoDB"]
+    external: false
+  
+  - name: "Data Processing Lambda"
+    type: "api"
+    description: "Serverless data processing function"
+    technologies: ["AWS Lambda", "SQS", "S3"]
+    external: false
+  
+  - name: "Analytics Lambda"
+    type: "api"
+    description: "Serverless analytics function"
+    technologies: ["AWS Lambda", "Kinesis", "Redshift"]
+    external: false
+  
+  - name: "Container Service"
+    type: "api"
+    description: "ECS Fargate container for complex processing"
+    technologies: ["AWS ECS", "Docker", "Fargate"]
+    external: false
+  
+  - name: "DynamoDB"
+    type: "database"
+    description: "NoSQL database for user data"
+    technologies: ["AWS DynamoDB"]
+    external: true
+  
+  - name: "RDS Database"
+    type: "database"
+    description: "Relational database for transactional data"
+    technologies: ["AWS RDS", "PostgreSQL"]
+    external: true
+  
+  - name: "S3 Storage"
+    type: "service"
+    description: "Object storage for files and data"
+    technologies: ["AWS S3", "CloudFront"]
+    external: true
+  
+  - name: "Message Queue"
+    type: "service"
+    description: "SQS for asynchronous processing"
+    technologies: ["AWS SQS"]
+    external: true
+  
+  - name: "Stream Processing"
+    type: "service"
+    description: "Kinesis for real-time data processing"
+    technologies: ["AWS Kinesis"]
+    external: true
+  
+  - name: "Monitoring"
+    type: "service"
+    description: "CloudWatch monitoring and logging"
+    technologies: ["AWS CloudWatch", "X-Ray"]
+    external: true
+  
+  - name: "Third-party API"
+    type: "api"
+    description: "External payment processing API"
+    technologies: ["Stripe API"]
+    external: true
+
+data_flows:
+  - from: "CDN"
+    to: "Load Balancer"
+    protocol: "HTTPS"
+    data_type: "user_requests"
+    encrypted: true
+  
+  - from: "Load Balancer"
+    to: "API Gateway"
+    protocol: "HTTPS"
+    data_type: "api_requests"
+    encrypted: true
+  
+  - from: "API Gateway"
+    to: "Authentication Lambda"
+    protocol: "HTTPS"
+    data_type: "auth_requests"
+    encrypted: true
+  
+  - from: "API Gateway"
+    to: "User Management Lambda"
+    protocol: "HTTPS"
+    data_type: "user_operations"
+    encrypted: true
+  
+  - from: "API Gateway"
+    to: "Data Processing Lambda"
+    protocol: "HTTPS"
+    data_type: "data_operations"
+    encrypted: true
+  
+  - from: "API Gateway"
+    to: "Container Service"
+    protocol: "HTTPS"
+    data_type: "complex_operations"
+    encrypted: true
+  
+  - from: "User Management Lambda"
+    to: "DynamoDB"
+    protocol: "HTTPS"
+    data_type: "user_data"
+    encrypted: true
+  
+  - from: "Data Processing Lambda"
+    to: "S3 Storage"
+    protocol: "HTTPS"
+    data_type: "file_data"
+    encrypted: true
+  
+  - from: "Data Processing Lambda"
+    to: "Message Queue"
+    protocol: "HTTPS"
+    data_type: "async_messages"
+    encrypted: true
+  
+  - from: "Analytics Lambda"
+    to: "Stream Processing"
+    protocol: "HTTPS"
+    data_type: "analytics_data"
+    encrypted: true
+  
+  - from: "Container Service"
+    to: "RDS Database"
+    protocol: "TCP"
+    data_type: "transactional_data"
+    encrypted: true
+  
+  - from: "API Gateway"
+    to: "Third-party API"
+    protocol: "HTTPS"
+    data_type: "payment_processing"
+    encrypted: true
+
+trust_boundaries:
+  - name: "Public Internet"
+    components: ["CDN", "Load Balancer"]
+    description: "Publicly accessible edge services"
+  
+  - name: "API Layer"
+    components: ["API Gateway", "Authentication Lambda"]
+    description: "API management and authentication layer"
+  
+  - name: "Application Layer"
+    components: ["User Management Lambda", "Data Processing Lambda", "Analytics Lambda", "Container Service"]
+    description: "Application business logic layer"
+  
+  - name: "Data Layer"
+    components: ["DynamoDB", "RDS Database", "S3 Storage", "Message Queue", "Stream Processing"]
+    description: "Data storage and processing infrastructure"
+  
+  - name: "Monitoring Layer"
+    components: ["Monitoring"]
+    description: "Observability and monitoring services"
+  
+  - name: "External Services"
+    components: ["Third-party API"]
+    description: "Third-party external services"
+
+assets:
+  - name: "User Data"
+    type: "data"
+    value: "high"
+    description: "Personal information, preferences, account data"
+  
+  - name: "Payment Data"
+    type: "data"
+    value: "critical"
+    description: "Payment information, transaction data, billing details"
+  
+  - name: "Business Data"
+    type: "data"
+    value: "high"
+    description: "Transactional data, business metrics, analytics"
+  
+  - name: "File Storage"
+    type: "data"
+    value: "medium"
+    description: "User uploads, documents, media files"
+  
+  - name: "API Keys"
+    type: "data"
+    value: "high"
+    description: "AWS access keys, API credentials, service tokens"
+  
+  - name: "Infrastructure"
+    type: "infrastructure"
+    value: "medium"
+    description: "Cloud infrastructure, compute resources, networking"
+  
+  - name: "Business Logic"
+    type: "service"
+    value: "medium"
+    description: "Application code, algorithms, business processes" 

@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  threat-modeler:
+    build: .
+    container_name: threat-modeler
+    volumes:
+      # Mount examples directory
+      - ./examples:/app/examples:ro
+      # Mount output directory for reports
+      - ./output:/app/output
+      # Mount custom architectures
+      - ./custom:/app/custom:ro
+    environment:
+      - PYTHONPATH=/app/src
+      - PYTHONUNBUFFERED=1
+    working_dir: /app
+    command: ["--help"]
+    
+  # Development service with debug enabled
+  threat-modeler-dev:
+    build: .
+    container_name: threat-modeler-dev
+    volumes:
+      - ./examples:/app/examples:ro
+      - ./output:/app/output
+      - ./custom:/app/custom:ro
+      - ./src:/app/src:ro  # Mount source for development
+    environment:
+      - PYTHONPATH=/app/src
+      - PYTHONUNBUFFERED=1
+      - DEBUG=true
+    working_dir: /app
+    command: ["--debug", "--help"]
+    
+  # Interactive service for guided threat modeling
+  threat-modeler-interactive:
+    build: .
+    container_name: threat-modeler-interactive
+    volumes:
+      - ./examples:/app/examples:ro
+      - ./output:/app/output
+      - ./custom:/app/custom:ro
+    environment:
+      - PYTHONPATH=/app/src
+      - PYTHONUNBUFFERED=1
+    working_dir: /app
+    stdin_open: true
+    tty: true
+    command: []  # Will run interactive mode by default 

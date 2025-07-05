@@ -1,0 +1,236 @@
+{
+  "name": "E-commerce Microservices Platform",
+  "description": "Distributed microservices architecture for online retail platform",
+  "components": [
+    {
+      "name": "API Gateway",
+      "type": "gateway",
+      "description": "Kong API gateway for routing and authentication",
+      "technologies": ["Kong", "Nginx"],
+      "external": false
+    },
+    {
+      "name": "User Service",
+      "type": "api",
+      "description": "User management and authentication microservice",
+      "technologies": ["Node.js", "Express", "JWT"],
+      "external": false
+    },
+    {
+      "name": "Product Service",
+      "type": "api",
+      "description": "Product catalog and inventory management",
+      "technologies": ["Python", "FastAPI", "Redis"],
+      "external": false
+    },
+    {
+      "name": "Order Service",
+      "type": "api",
+      "description": "Order processing and management",
+      "technologies": ["Java", "Spring Boot", "Kafka"],
+      "external": false
+    },
+    {
+      "name": "Payment Service",
+      "type": "api",
+      "description": "Payment processing and transaction management",
+      "technologies": ["Go", "Gin", "PostgreSQL"],
+      "external": false
+    },
+    {
+      "name": "Notification Service",
+      "type": "api",
+      "description": "Email and SMS notification service",
+      "technologies": ["Node.js", "Express", "RabbitMQ"],
+      "external": false
+    },
+    {
+      "name": "User Database",
+      "type": "database",
+      "description": "PostgreSQL database for user data",
+      "technologies": ["PostgreSQL"],
+      "external": false
+    },
+    {
+      "name": "Product Database",
+      "type": "database",
+      "description": "MongoDB for product catalog",
+      "technologies": ["MongoDB"],
+      "external": false
+    },
+    {
+      "name": "Order Database",
+      "type": "database",
+      "description": "PostgreSQL for order data",
+      "technologies": ["PostgreSQL"],
+      "external": false
+    },
+    {
+      "name": "Payment Gateway",
+      "type": "api",
+      "description": "Stripe payment processing",
+      "technologies": ["Stripe API"],
+      "external": true
+    },
+    {
+      "name": "Email Service",
+      "type": "api",
+      "description": "SendGrid email service",
+      "technologies": ["SendGrid API"],
+      "external": true
+    },
+    {
+      "name": "Message Queue",
+      "type": "service",
+      "description": "RabbitMQ message broker",
+      "technologies": ["RabbitMQ"],
+      "external": false
+    },
+    {
+      "name": "Cache",
+      "type": "service",
+      "description": "Redis cache for session and data caching",
+      "technologies": ["Redis"],
+      "external": false
+    }
+  ],
+  "data_flows": [
+    {
+      "from": "API Gateway",
+      "to": "User Service",
+      "protocol": "HTTPS",
+      "data_type": "auth_requests",
+      "encrypted": true
+    },
+    {
+      "from": "API Gateway",
+      "to": "Product Service",
+      "protocol": "HTTPS",
+      "data_type": "product_requests",
+      "encrypted": true
+    },
+    {
+      "from": "API Gateway",
+      "to": "Order Service",
+      "protocol": "HTTPS",
+      "data_type": "order_requests",
+      "encrypted": true
+    },
+    {
+      "from": "Order Service",
+      "to": "Payment Service",
+      "protocol": "HTTPS",
+      "data_type": "payment_requests",
+      "encrypted": true
+    },
+    {
+      "from": "Payment Service",
+      "to": "Payment Gateway",
+      "protocol": "HTTPS",
+      "data_type": "payment_processing",
+      "encrypted": true
+    },
+    {
+      "from": "Order Service",
+      "to": "Notification Service",
+      "protocol": "AMQP",
+      "data_type": "notification_events",
+      "encrypted": true
+    },
+    {
+      "from": "Notification Service",
+      "to": "Email Service",
+      "protocol": "HTTPS",
+      "data_type": "email_requests",
+      "encrypted": true
+    },
+    {
+      "from": "User Service",
+      "to": "User Database",
+      "protocol": "TCP",
+      "data_type": "user_data",
+      "encrypted": false
+    },
+    {
+      "from": "Product Service",
+      "to": "Product Database",
+      "protocol": "TCP",
+      "data_type": "product_data",
+      "encrypted": false
+    },
+    {
+      "from": "Order Service",
+      "to": "Order Database",
+      "protocol": "TCP",
+      "data_type": "order_data",
+      "encrypted": false
+    },
+    {
+      "from": "Payment Service",
+      "to": "Order Database",
+      "protocol": "TCP",
+      "data_type": "transaction_data",
+      "encrypted": false
+    }
+  ],
+  "trust_boundaries": [
+    {
+      "name": "Public Internet",
+      "components": ["API Gateway"],
+      "description": "Publicly accessible API gateway"
+    },
+    {
+      "name": "Internal Services",
+      "components": ["User Service", "Product Service", "Order Service", "Payment Service", "Notification Service"],
+      "description": "Internal microservices"
+    },
+    {
+      "name": "Data Layer",
+      "components": ["User Database", "Product Database", "Order Database", "Cache", "Message Queue"],
+      "description": "Data storage and messaging infrastructure"
+    },
+    {
+      "name": "External Services",
+      "components": ["Payment Gateway", "Email Service"],
+      "description": "Third-party external services"
+    }
+  ],
+  "assets": [
+    {
+      "name": "Customer Data",
+      "type": "data",
+      "value": "high",
+      "description": "Personal information, addresses, preferences"
+    },
+    {
+      "name": "Payment Information",
+      "type": "data",
+      "value": "critical",
+      "description": "Credit card data, payment tokens, transaction history"
+    },
+    {
+      "name": "Order Data",
+      "type": "data",
+      "value": "high",
+      "description": "Order details, shipping information, purchase history"
+    },
+    {
+      "name": "Product Catalog",
+      "type": "data",
+      "value": "medium",
+      "description": "Product information, pricing, inventory data"
+    },
+    {
+      "name": "Authentication Tokens",
+      "type": "data",
+      "value": "high",
+      "description": "JWT tokens, session data, API keys"
+    },
+    {
+      "name": "Business Logic",
+      "type": "service",
+      "value": "medium",
+      "description": "Microservice business logic and algorithms"
+    }
+  ]
+} 
