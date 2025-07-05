@@ -37,13 +37,25 @@ A comprehensive CLI tool for analyzing and testing JWT token security with advan
 
 ## Installation
 
+### Option 1: Local Installation
 ```bash
 pip install -r requirements.txt
 ```
 
+### Option 2: Docker Installation (Recommended)
+```bash
+# Build the Docker image
+docker build -t jwt-security-tester .
+
+# Or use docker-compose
+docker-compose build
+```
+
 ## Usage
 
-### Basic Usage
+### Local Usage
+
+#### Basic Usage
 
 ```bash
 # Test a single token
@@ -54,6 +66,76 @@ python src/jwt_security_tester.py --token "your.jwt.token" --secret "your_secret
 
 # Test with public key for RS/ES algorithms
 python src/jwt_security_tester.py --token "your.jwt.token" --public-key "path/to/public.pem"
+```
+
+### Docker Usage
+
+#### Basic Docker Commands
+```bash
+# Run with Docker
+docker run --rm jwt-security-tester --token "your.jwt.token"
+
+# Run with volume for output
+docker run --rm -v $(pwd)/output:/app/output jwt-security-tester \
+    --token "your.jwt.token" --output /app/output/report.json
+
+# Interactive mode
+docker run --rm -it jwt-security-tester
+```
+
+#### Docker Compose Usage
+```bash
+# Basic test
+docker-compose run --rm jwt-tool --token "your.jwt.token"
+
+# Interactive mode
+docker-compose run --rm jwt-tool-interactive
+
+# Batch processing
+docker-compose run --rm jwt-tool-batch
+```
+
+#### Advanced Docker Examples
+```bash
+# Test with secret and save output
+docker run --rm -v $(pwd)/output:/app/output jwt-security-tester \
+    --token "your.jwt.token" \
+    --secret "your_secret" \
+    --output /app/output/security_report.json
+
+# Run comprehensive test
+docker run --rm -v $(pwd)/output:/app/output jwt-security-tester \
+    --token "your.jwt.token" \
+    --test all \
+    --output /app/output/comprehensive_report.json
+
+# Test JWKS spoofing
+docker run --rm -v $(pwd)/output:/app/output jwt-security-tester \
+    --token "your.jwt.token" \
+    --test jwks-spoofing \
+    --output /app/output/jwks_spoofing_report.json
+
+# Generate keys
+docker run --rm -v $(pwd)/output:/app/output jwt-security-tester \
+    --test generate-keys \
+    --key-size 2048
+```
+
+#### Docker with Custom Configuration
+```bash
+# Create directories for tokens and output
+mkdir -p tokens output
+
+# Add your tokens to tokens/tokens.txt
+echo "your.jwt.token" > tokens/tokens.txt
+
+# Run batch processing
+docker run --rm \
+    -v $(pwd)/tokens:/app/tokens:ro \
+    -v $(pwd)/output:/app/output \
+    jwt-security-tester \
+    --file /app/tokens/tokens.txt \
+    --output /app/output/batch_report.json
 ```
 
 ### Specific Tests
@@ -118,6 +200,15 @@ python src/jwt_security_tester.py
 | `--max-attempts` | Maximum attempts for dictionary attack (default: 1000) |
 | `--key-size` | RSA key size for generation (default: 2048) |
 | `--curve` | ECDSA curve for generation (default: P-256) |
+| `--debug` | Enable debug mode with detailed logging |
+
+### Docker Options
+| Option | Description |
+|--------|-------------|
+| `-v $(pwd)/output:/app/output` | Mount output directory |
+| `-v $(pwd)/tokens:/app/tokens:ro` | Mount tokens directory (read-only) |
+| `--rm` | Remove container after execution |
+| `-it` | Interactive mode with terminal |
 
 ### Test Options
 
@@ -170,6 +261,55 @@ python src/jwt_security_tester.py --token "your.jwt.token" --test jwks-spoofing
 
 # Test JWKS validation and spoofing together
 python src/jwt_security_tester.py --token "your.jwt.token" --test jwks --jwks-url "https://example.com/.well-known/jwks.json"
+```
+
+### Example 6: Docker Basic Test
+```bash
+# Simple token test with Docker
+docker run --rm jwt-security-tester --token "your.jwt.token"
+
+# Test with output file
+docker run --rm -v $(pwd)/output:/app/output jwt-security-tester \
+    --token "your.jwt.token" --output /app/output/report.json
+```
+
+### Example 7: Docker Comprehensive Test
+```bash
+# Run all tests with Docker
+docker run --rm -v $(pwd)/output:/app/output jwt-security-tester \
+    --token "your.jwt.token" --test all --output /app/output/comprehensive.json
+
+# Test with secret and public key
+docker run --rm -v $(pwd)/output:/app/output jwt-security-tester \
+    --token "your.jwt.token" \
+    --secret "your_secret" \
+    --public-key "/app/keys/public.pem" \
+    --test cve
+```
+
+### Example 8: Docker Batch Processing
+```bash
+# Create tokens file
+echo "token1.jwt" > tokens.txt
+echo "token2.jwt" >> tokens.txt
+
+# Run batch processing with Docker
+docker run --rm \
+    -v $(pwd)/tokens.txt:/app/tokens.txt:ro \
+    -v $(pwd)/output:/app/output \
+    jwt-security-tester \
+    --file /app/tokens.txt --output /app/output/batch_report.json
+```
+
+### Example 9: Docker Interactive Mode
+```bash
+# Start interactive session
+docker run --rm -it jwt-security-tester
+
+# In the container, you can run:
+# Enter JWT token (or 'quit' to exit): your.jwt.token
+# Save report? (y/n): y
+# Enter output filename: report.json
 ```
 
 ## Output

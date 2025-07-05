@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  jwt-tool:
+    build: .
+    image: jwt-security-tester:latest
+    container_name: jwt-security-tester
+    volumes:
+      - ./output:/app/output
+      - ./tokens:/app/tokens:ro  # Mount tokens directory for batch processing
+    environment:
+      - PYTHONUNBUFFERED=1
+    working_dir: /app
+    # Example usage - override with your own commands
+    command: ["--help"]
+    
+  jwt-tool-interactive:
+    build: .
+    image: jwt-security-tester:latest
+    container_name: jwt-security-tester-interactive
+    volumes:
+      - ./output:/app/output
+      - ./tokens:/app/tokens:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    working_dir: /app
+    stdin_open: true
+    tty: true
+    # Interactive mode
+    command: []
+    
+  jwt-tool-batch:
+    build: .
+    image: jwt-security-tester:latest
+    container_name: jwt-security-tester-batch
+    volumes:
+      - ./output:/app/output
+      - ./tokens:/app/tokens:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    working_dir: /app
+    # Batch processing example
+    command: ["--file", "/app/tokens/tokens.txt", "--output", "/app/output/batch_report.json"] 

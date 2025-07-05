@@ -1,0 +1,46 @@
+# Git files
+.git
+.gitignore
+
+# Python cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Output files
+output/
+*.json
+*.html
+*.pdf
+
+# Test files
+test_*.py
+*_test.py
+
+# Documentation build
+docs/_build/
+
+# Temporary files
+*.tmp
+*.temp 

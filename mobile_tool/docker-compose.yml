@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  mobile-tool:
+    build: .
+    image: mobile-security-tester:latest
+    container_name: mobile-security-tester
+    volumes:
+      - ./output:/app/output
+      - ./input:/app/input
+      - ./reports:/app/reports
+    environment:
+      - PYTHONUNBUFFERED=1
+    working_dir: /app
+    # Example usage - override with your own commands
+    command: ["--help"]
+    
+  mobile-tool-interactive:
+    build: .
+    image: mobile-security-tester:latest
+    container_name: mobile-security-tester-interactive
+    volumes:
+      - ./output:/app/output
+      - ./input:/app/input
+      - ./reports:/app/reports
+    environment:
+      - PYTHONUNBUFFERED=1
+    working_dir: /app
+    stdin_open: true
+    tty: true
+    # Interactive mode
+    command: []
+    
+  mobile-tool-static:
+    build: .
+    image: mobile-security-tester:latest
+    container_name: mobile-security-tester-static
+    volumes:
+      - ./output:/app/output
+      - ./input:/app/input
+      - ./reports:/app/reports
+    environment:
+      - PYTHONUNBUFFERED=1
+    working_dir: /app
+    # Static analysis example
+    command: ["/app/input/app.apk", "--analysis-type", "static", "--output", "/app/output/static_analysis.json"]
+    
+  mobile-tool-comprehensive:
+    build: .
+    image: mobile-security-tester:latest
+    container_name: mobile-security-tester-comprehensive
+    volumes:
+      - ./output:/app/output
+      - ./input:/app/input
+      - ./reports:/app/reports
+    environment:
+      - PYTHONUNBUFFERED=1
+    working_dir: /app
+    # Comprehensive analysis example
+    command: ["/app/input/app.apk", "--analysis-type", "comprehensive", "--output", "/app/output/comprehensive_analysis.json", "--report", "/app/reports/report.html"]
+    
+  mobile-tool-batch:
+    build: .
+    image: mobile-security-tester:latest
+    container_name: mobile-security-tester-batch
+    volumes:
+      - ./output:/app/output
+      - ./input:/app/input
+      - ./reports:/app/reports
+    environment:
+      - PYTHONUNBUFFERED=1
+    working_dir: /app
+    # Batch processing example
+    command: ["/app/input/", "--output", "/app/output/batch_results.json", "--summary", "/app/reports/summary.txt"] 

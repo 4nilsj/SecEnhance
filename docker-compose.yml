@@ -1,0 +1,113 @@
+version: '3.8'
+
+services:
+  # JWT Security Testing Tool Services
+  jwt-tool:
+    build: ./jwt_tool
+    image: jwt-security-tester:latest
+    container_name: jwt-security-tester
+    volumes:
+      - ./jwt_output:/app/output
+      - ./jwt_tokens:/app/tokens:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    working_dir: /app
+    command: ["--help"]
+    
+  jwt-tool-interactive:
+    build: ./jwt_tool
+    image: jwt-security-tester:latest
+    container_name: jwt-security-tester-interactive
+    volumes:
+      - ./jwt_output:/app/output
+      - ./jwt_tokens:/app/tokens:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    working_dir: /app
+    stdin_open: true
+    tty: true
+    command: []
+    
+  jwt-tool-batch:
+    build: ./jwt_tool
+    image: jwt-security-tester:latest
+    container_name: jwt-security-tester-batch
+    volumes:
+      - ./jwt_output:/app/output
+      - ./jwt_tokens:/app/tokens:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    working_dir: /app
+    command: ["--file", "/app/tokens/tokens.txt", "--output", "/app/output/batch_report.json"]
+    
+  # Mobile Security Testing Tool Services
+  mobile-tool:
+    build: ./mobile_tool
+    image: mobile-security-tester:latest
+    container_name: mobile-security-tester
+    volumes:
+      - ./mobile_output:/app/output
+      - ./mobile_input:/app/input
+      - ./mobile_reports:/app/reports
+    environment:
+      - PYTHONUNBUFFERED=1
+    working_dir: /app
+    command: ["--help"]
+    
+  mobile-tool-interactive:
+    build: ./mobile_tool
+    image: mobile-security-tester:latest
+    container_name: mobile-security-tester-interactive
+    volumes:
+      - ./mobile_output:/app/output
+      - ./mobile_input:/app/input
+      - ./mobile_reports:/app/reports
+    environment:
+      - PYTHONUNBUFFERED=1
+    working_dir: /app
+    stdin_open: true
+    tty: true
+    command: []
+    
+  mobile-tool-static:
+    build: ./mobile_tool
+    image: mobile-security-tester:latest
+    container_name: mobile-security-tester-static
+    volumes:
+      - ./mobile_output:/app/output
+      - ./mobile_input:/app/input
+      - ./mobile_reports:/app/reports
+    environment:
+      - PYTHONUNBUFFERED=1
+    working_dir: /app
+    command: ["/app/input/app.apk", "--analysis-type", "static", "--output", "/app/output/static_analysis.json"]
+    
+  mobile-tool-comprehensive:
+    build: ./mobile_tool
+    image: mobile-security-tester:latest
+    container_name: mobile-security-tester-comprehensive
+    volumes:
+      - ./mobile_output:/app/output
+      - ./mobile_input:/app/input
+      - ./mobile_reports:/app/reports
+    environment:
+      - PYTHONUNBUFFERED=1
+    working_dir: /app
+    command: ["/app/input/app.apk", "--analysis-type", "comprehensive", "--output", "/app/output/comprehensive_analysis.json", "--report", "/app/reports/report.html"]
+    
+  mobile-tool-batch:
+    build: ./mobile_tool
+    image: mobile-security-tester:latest
+    container_name: mobile-security-tester-batch
+    volumes:
+      - ./mobile_output:/app/output
+      - ./mobile_input:/app/input
+      - ./mobile_reports:/app/reports
+    environment:
+      - PYTHONUNBUFFERED=1
+    working_dir: /app
+    command: ["/app/input/", "--output", "/app/output/batch_results.json", "--summary", "/app/reports/summary.txt"]
+
+networks:
+  default:
+    name: security-tools-network 
