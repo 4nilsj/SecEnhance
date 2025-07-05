@@ -25,6 +25,7 @@ A comprehensive CLI tool for analyzing and testing JWT token security with advan
 - **Timestamp Tampering**: Test timestamp manipulation attacks
 - **Dictionary Attack**: High-speed secret cracking with wordlists
 - **JWKS Validation**: Test against JSON Web Key Sets
+- **JWKS Spoofing**: Test for JWKS spoofing and key injection attacks
 - **Key Generation**: Generate RSA and ECDSA key pairs
 - **Token Forging**: Create custom JWT tokens
 
@@ -131,6 +132,7 @@ python src/jwt_security_tester.py
 - `timestamps`: Timestamp tampering
 - `dictionary`: Dictionary attack
 - `jwks`: JWKS validation
+- `jwks-spoofing`: JWKS spoofing attacks
 - `generate-keys`: Generate key pairs
 - `forge`: Forge new tokens
 - `all`: All tests (default)
@@ -159,6 +161,15 @@ python src/jwt_security_tester.py --test generate-keys
 
 # Test with generated public key
 python src/jwt_security_tester.py --token "your.jwt.token" --public-key "rsa_public_2048.pem"
+```
+
+### Example 5: JWKS Spoofing Test
+```bash
+# Test JWKS spoofing vulnerabilities
+python src/jwt_security_tester.py --token "your.jwt.token" --test jwks-spoofing
+
+# Test JWKS validation and spoofing together
+python src/jwt_security_tester.py --token "your.jwt.token" --test jwks --jwks-url "https://example.com/.well-known/jwks.json"
 ```
 
 ## Output

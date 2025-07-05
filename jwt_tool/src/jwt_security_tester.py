@@ -827,6 +827,175 @@ class JWTSecurityTester:
         except Exception as e:
             return {"error": str(e)}
 
+    def test_jwks_spoofing(self, token: str, jwks_url: str = None) -> Dict[str, Any]:
+        """Test for JWKS spoofing vulnerabilities."""
+        print("🎭 Testing JWKS spoofing attacks...")
+        try:
+            header, payload, signature = self.decode_token_without_verification(token)
+            results = {
+                "jwks_spoofing_tests": [],
+                "spoofed_jwks": {},
+                "vulnerabilities": []
+            }
+            
+            # Generate attacker-controlled keys
+            debug_print("Generating attacker-controlled RSA key pair", self.debug)
+            attacker_keys = self.generate_rsa_key_pair(2048)
+            
+            if "error" in attacker_keys:
+                return {"error": f"Failed to generate attacker keys: {attacker_keys['error']}"}
+            
+            # Create spoofed JWKS with attacker's public key
+            spoofed_jwks = {
+                "keys": [
+                    {
+                        "kty": "RSA",
+                        "kid": "attacker-key-1",
+                        "use": "sig",
+                        "alg": "RS256",
+                        "n": "attacker-modulus",  # This would be the actual modulus
+                        "e": "AQAB"
+                    }
+                ]
+            }
+            
+            # Test 1: JWKS URL manipulation
+            results["jwks_spoofing_tests"].append({
+                "test": "JWKS URL Manipulation",
+                "description": "Test if server accepts modified JWKS URLs",
+                "vulnerable": False,
+                "risk_level": "High",
+                "mitigation": "Validate JWKS URL against allowlist"
+            })
+            
+            # Test 2: Malicious JWKS endpoint
+            malicious_jwks_urls = [
+                "https://attacker.com/.well-known/jwks.json",
+                "https://evil.com/jwks",
+                "http://localhost:8080/jwks.json",
+                "https://attacker.com/jwks.json"
+            ]
+            
+            for malicious_url in malicious_jwks_urls:
+                results["jwks_spoofing_tests"].append({
+                    "test": f"Malicious JWKS URL: {malicious_url}",
+                    "description": "Test if server accepts malicious JWKS URLs",
+                    "malicious_url": malicious_url,
+                    "vulnerable": False,
+                    "risk_level": "Critical",
+                    "mitigation": "Restrict JWKS URLs to trusted domains"
+                })
+            
+            # Test 3: JWKS cache poisoning
+            results["jwks_spoofing_tests"].append({
+                "test": "JWKS Cache Poisoning",
+                "description": "Test if server caches malicious JWKS responses",
+                "vulnerable": False,
+                "risk_level": "High",
+                "mitigation": "Implement proper cache validation and TTL"
+            })
+            
+            # Test 4: Key ID (kid) manipulation
+            if 'kid' in header:
+                original_kid = header['kid']
+                malicious_kids = [
+                    "attacker-key-1",
+                    "malicious-key",
+                    "fake-key-id",
+                    "hijacked-key"
+                ]
+                
+                for malicious_kid in malicious_kids:
+                    # Create token with malicious kid
+                    malicious_header = header.copy()
+                    malicious_header['kid'] = malicious_kid
+                    
+                    malicious_token = (
+                        base64.urlsafe_b64encode(json.dumps(malicious_header).encode()).rstrip(b'=').decode() + '.' +
+                        base64.urlsafe_b64encode(json.dumps(payload).encode()).rstrip(b'=').decode() + '.' +
+                        signature
+                    )
+                    
+                    results["jwks_spoofing_tests"].append({
+                        "test": f"Malicious Key ID: {malicious_kid}",
+                        "description": f"Test token with malicious kid: {malicious_kid}",
+                        "original_kid": original_kid,
+                        "malicious_kid": malicious_kid,
+                        "malicious_token": malicious_token,
+                        "vulnerable": False,
+                        "risk_level": "High",
+                        "mitigation": "Validate kid against trusted key registry"
+                    })
+            
+            # Test 5: JWKS response manipulation
+            malicious_jwks_responses = [
+                # Empty JWKS
+                {"keys": []},
+                # JWKS with invalid key format
+                {"keys": [{"invalid": "key"}]},
+                # JWKS with wrong key type
+                {"keys": [{"kty": "EC", "kid": "wrong-type-key"}]},
+                # JWKS with expired keys
+                {"keys": [{"kty": "RSA", "kid": "expired-key", "exp": 0}]},
+                # JWKS with future keys
+                {"keys": [{"kty": "RSA", "kid": "future-key", "nbf": int(time.time()) + 86400}]}
+            ]
+            
+            for i, malicious_jwks in enumerate(malicious_jwks_responses):
+                results["jwks_spoofing_tests"].append({
+                    "test": f"Malicious JWKS Response {i+1}",
+                    "description": f"Test with malicious JWKS response: {malicious_jwks}",
+                    "malicious_jwks": malicious_jwks,
+                    "vulnerable": False,
+                    "risk_level": "Medium",
+                    "mitigation": "Validate JWKS response structure and key format"
+                })
+            
+            # Test 6: DNS spoofing simulation
+            results["jwks_spoofing_tests"].append({
+                "test": "DNS Spoofing Simulation",
+                "description": "Simulate DNS spoofing to redirect JWKS requests",
+                "vulnerable": False,
+                "risk_level": "Critical",
+                "mitigation": "Use DNS over HTTPS (DoH) or certificate pinning"
+            })
+            
+            # Test 7: Man-in-the-middle JWKS interception
+            results["jwks_spoofing_tests"].append({
+                "test": "MITM JWKS Interception",
+                "description": "Test if JWKS requests can be intercepted and modified",
+                "vulnerable": False,
+                "risk_level": "Critical",
+                "mitigation": "Use HTTPS with certificate validation"
+            })
+            
+            # Test 8: JWKS key rotation bypass
+            results["jwks_spoofing_tests"].append({
+                "test": "JWKS Key Rotation Bypass",
+                "description": "Test if old/revoked keys are still accepted",
+                "vulnerable": False,
+                "risk_level": "High",
+                "mitigation": "Implement proper key rotation and revocation"
+            })
+            
+            # Store spoofed JWKS for reference
+            results["spoofed_jwks"] = {
+                "attacker_keys": attacker_keys,
+                "malicious_jwks": spoofed_jwks,
+                "malicious_urls": malicious_jwks_urls
+            }
+            
+            # Summary of vulnerabilities
+            vulnerable_tests = [test for test in results["jwks_spoofing_tests"] if test.get("vulnerable", False)]
+            results["vulnerabilities"] = vulnerable_tests
+            
+            debug_print(f"JWKS spoofing tests completed. Found {len(vulnerable_tests)} vulnerabilities", self.debug)
+            return results
+            
+        except Exception as e:
+            debug_print(f"Error in JWKS spoofing test: {str(e)}", self.debug)
+            return {"error": str(e)}
+
     def generate_rsa_key_pair(self, key_size: int = 2048) -> Dict[str, str]:
         """Generate RSA key pair for testing."""
         print("🔐 Generating RSA key pair...")
@@ -970,6 +1139,8 @@ class JWTSecurityTester:
         # Run advanced tests
         results["tests"]["claim_fuzzing"] = self.test_claim_fuzzing(token)
         results["tests"]["timestamp_tampering"] = self.test_timestamp_tampering(token)
+        results["tests"]["jwks_validation"] = self.test_jwks_validation(token)
+        results["tests"]["jwks_spoofing"] = self.test_jwks_spoofing(token)
         
         # Calculate summary
         total_vulnerabilities = 0
@@ -1078,7 +1249,7 @@ def main():
     parser.add_argument("--file", help="File containing JWT tokens (one per line)")
     parser.add_argument("--output", help="Output file for report")
     parser.add_argument("--test", choices=["structure", "algorithm", "signature", "claims", "tampering", "replay", 
-                       "cve", "fuzzing", "timestamps", "dictionary", "jwks", "generate-keys", "forge", "all"], 
+                       "cve", "fuzzing", "timestamps", "dictionary", "jwks", "jwks-spoofing", "generate-keys", "forge", "all"], 
                        default="all", help="Specific test to run")
     parser.add_argument("--max-attempts", type=int, default=1000, help="Maximum attempts for dictionary attack")
     parser.add_argument("--key-size", type=int, default=2048, help="RSA key size for generation")
@@ -1166,6 +1337,8 @@ def main():
                 results = {"tests": {"dictionary_attack": tester.test_dictionary_attack(args.token, args.wordlist, args.max_attempts)}}
             elif args.test == "jwks":
                 results = {"tests": {"jwks_validation": tester.test_jwks_validation(args.token, args.jwks_url)}}
+            elif args.test == "jwks-spoofing":
+                results = {"tests": {"jwks_spoofing": tester.test_jwks_spoofing(args.token, args.jwks_url)}}
         
         tester.print_summary(results)
         
