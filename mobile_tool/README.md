@@ -23,15 +23,148 @@ A comprehensive automated mobile client-side security testing tool similar to Dr
 ## 📋 Requirements
 
 ### System Requirements
-- Python 3.8+
-- Java 8+ (for APK analysis)
-- Android SDK Platform Tools (for dynamic analysis)
-- Android device or emulator (for dynamic analysis)
+- **Python 3.8+** (required)
+- **Java 8+** (required for APK analysis)
+- **Android SDK Platform Tools** (required for dynamic analysis)
+- **Android device or emulator** (required for dynamic analysis)
 
-### Dependencies
+### Additional Tools Required
+
+#### APK Analysis Tools
+- **apktool** - APK decompilation and analysis
+- **dex2jar** - Convert DEX to JAR files
+- **jadx** - DEX to Java decompiler
+
+#### Network Analysis Tools
+- **tcpdump** - Network packet capture
+- **wireshark** - Network protocol analyzer
+
+### Installation Instructions
+
+#### Option 1: Local Installation
+
+##### Install Python Dependencies
 ```bash
+# Navigate to the mobile tool directory
+cd mobile_tool
+
+# Install Python dependencies
 pip install -r requirements.txt
 ```
+
+##### Install System Tools
+
+**Ubuntu/Debian:**
+```bash
+# Install APK analysis tools
+sudo apt-get update
+sudo apt-get install apktool dex2jar jadx
+
+# Install network analysis tools
+sudo apt-get install tcpdump wireshark
+
+# Install Java (if not already installed)
+sudo apt-get install openjdk-11-jdk
+```
+
+**macOS:**
+```bash
+# Install using Homebrew
+brew install apktool dex2jar jadx
+brew install tcpdump wireshark
+brew install openjdk@11
+```
+
+**Windows:**
+```bash
+# Download and install manually:
+# - apktool: https://ibotpeaches.github.io/Apktool/
+# - dex2jar: https://github.com/pxb1988/dex2jar/releases
+# - jadx: https://github.com/skylot/jadx/releases
+# - Wireshark: https://www.wireshark.org/download.html
+```
+
+##### Install Android SDK Platform Tools
+```bash
+# Download from: https://developer.android.com/studio/releases/platform-tools
+# Add to PATH:
+# Linux/macOS: export PATH=$PATH:/path/to/platform-tools
+# Windows: Add to System Environment Variables
+```
+
+#### Option 2: Docker Installation (Recommended)
+```bash
+# Build the Docker image (includes all tools)
+docker build -t mobile-security-tester .
+
+# Or use docker-compose
+docker-compose build
+```
+
+### Verify Installation
+```bash
+# Test Python installation
+python src/mobile_security_tester.py --help
+
+# Test APK tools (if installed locally)
+apktool --version
+dex2jar --version
+jadx --version
+
+# Test Android tools
+adb version
+```
+
+### Troubleshooting
+
+#### Common Issues
+
+**Java Not Found:**
+```bash
+# Set JAVA_HOME environment variable
+export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+export PATH=$PATH:$JAVA_HOME/bin
+```
+
+**APK Tools Not Found:**
+```bash
+# Add tools to PATH
+export PATH=$PATH:/usr/local/bin/apktool
+export PATH=$PATH:/usr/local/bin/dex2jar
+export PATH=$PATH:/usr/local/bin/jadx
+```
+
+**Android SDK Not Found:**
+```bash
+# Set ANDROID_HOME environment variable
+export ANDROID_HOME=/path/to/android-sdk
+export PATH=$PATH:$ANDROID_HOME/platform-tools
+```
+
+**Permission Issues:**
+```bash
+# Fix permissions for APK tools
+sudo chmod +x /usr/local/bin/apktool
+sudo chmod +x /usr/local/bin/dex2jar
+sudo chmod +x /usr/local/bin/jadx
+```
+
+#### Platform-Specific Notes
+
+**Windows:**
+- Use Windows Subsystem for Linux (WSL) for better compatibility
+- Ensure all tools are in your system PATH
+- Use PowerShell or Command Prompt with administrator privileges
+
+**macOS:**
+- Install Xcode Command Line Tools: `xcode-select --install`
+- Use Homebrew for easier package management
+- Grant necessary permissions to tools in System Preferences
+
+**Linux:**
+- Use package manager for system tools
+- Ensure proper permissions for USB devices (for ADB)
+- Add udev rules for Android devices if needed
 
 ## 📖 Usage
 
