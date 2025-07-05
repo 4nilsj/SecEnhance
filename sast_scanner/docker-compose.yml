@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  sast-scanner:
+    build: .
+    container_name: sast-scanner
+    volumes:
+      # Mount source code to scan
+      - ./code:/code:ro
+      # Mount reports directory
+      - ./reports:/app/reports
+      # Mount logs directory
+      - ./logs:/app/logs
+      # Mount configuration (optional)
+      - ./config:/app/config:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+      - SAST_DEBUG=false
+      - SAST_LOG_LEVEL=INFO
+    working_dir: /app
+    command: ["scan", "directory", "/code", "--output", "html", "--max-workers", "4"]
+    
+  # Optional: Web interface service (for future development)
+  sast-web:
+    build: .
+    container_name: sast-web
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./reports:/app/reports
+      - ./logs:/app/logs
+    environment:
+      - PYTHONUNBUFFERED=1
+      - SAST_WEB_PORT=8000
+    command: ["python", "-m", "http.server", "8000", "--directory", "/app/reports"]
+    depends_on:
+      - sast-scanner
+    profiles:
+      - web
+
+  # Optional: Development service with debug enabled
+  sast-dev:
+    build: .
+    container_name: sast-dev
+    volumes:
+      - ./code:/code:ro
+      - ./reports:/app/reports
+      - ./logs:/app/logs
+      - ./src:/app/src
+    environment:
+      - PYTHONUNBUFFERED=1
+      - SAST_DEBUG=true
+      - SAST_LOG_LEVEL=DEBUG
+    working_dir: /app
+    command: ["scan", "directory", "/code", "--debug", "--verbose"]
+    profiles:
+      - dev 
