@@ -1,337 +1,308 @@
-# JWT Security Testing Tool
+# JWT Security Tester
 
-A comprehensive CLI tool for analyzing and testing JWT token security with advanced attack capabilities.
+A comprehensive, modern tool for analyzing and testing the security of JSON Web Tokens (JWTs). Supports CLI and REST API, advanced vulnerability detection (including CVEs), batch processing, parallel execution, and detailed reporting.
+
+---
 
 ## Features
+- **Comprehensive JWT analysis**: Structure, signature, claims, tampering, replay, fuzzing, and more
+- **CVE-specific tests**: Detects known JWT vulnerabilities (alg=none, RS/HS256 confusion, key injection, etc.)
+- **Batch processing**: Analyze multiple tokens in parallel with progress bars
+- **Dictionary attacks**: Test common and custom secrets
+- **Configurable**: JSON config, CLI overrides, environment variables
+- **Colorful, user-friendly CLI**: Progress bars, color output, clear errors
+- **HTML/JSON reporting**: Save and share detailed results
+- **REST API**: Analyze tokens programmatically
+- **Unit tested**: Robust, maintainable codebase
 
-### 🔍 Core Analysis
-- **Token Structure Analysis**: Decode and analyze JWT header, payload, and signature
-- **Algorithm Confusion Testing**: Test for algorithm switching vulnerabilities
-- **Signature Verification**: Test with various secrets and keys
-- **Claim Validation**: Check for missing or insecure claims
-- **Token Tampering**: Test various tampering techniques
-- **Replay Attack Testing**: Check for replay attack vulnerabilities
-
-### 🚨 CVE-Specific Tests
-- **CVE-2015-2951**: alg=none signature bypass vulnerability
-- **CVE-2016-10555**: RS/HS256 public key mismatch vulnerability
-- **CVE-2018-0114**: Key injection vulnerability
-- **CVE-2019-20933/CVE-2020-28637**: Blank password vulnerability
-- **CVE-2020-28042**: Null signature vulnerability
-- **CVE-2022-21449**: Psychic Signature ECDSA vulnerability
-
-### 🎯 Advanced Testing
-- **Claim Fuzzing**: Test claim values with various payloads
-- **Timestamp Tampering**: Test timestamp manipulation attacks
-- **Dictionary Attack**: High-speed secret cracking with wordlists
-- **JWKS Validation**: Test against JSON Web Key Sets
-- **JWKS Spoofing**: Test for JWKS spoofing and key injection attacks
-- **Key Generation**: Generate RSA and ECDSA key pairs
-- **Token Forging**: Create custom JWT tokens
-
-### 📊 Reporting
-- **Comprehensive Reports**: Detailed JSON reports with all test results
-- **Risk Assessment**: Categorized vulnerabilities by severity
-- **Batch Processing**: Test multiple tokens from files
-- **Interactive Mode**: Real-time testing with user input
+---
 
 ## Installation
 
-### Option 1: Local Installation
-```bash
-pip install -r requirements.txt
+1. **Clone the repo:**
+   ```sh
+   git clone https://github.com/your-org/jwt-security-tester.git
+   cd jwt-security-tester/jwt_tool
+   ```
+2. **Install dependencies:**
+   ```sh
+   pip install -r requirements.txt
+   ```
+3. *(Optional)*: Use the provided `install.py` for guided setup.
+
+---
+
+## Quick Start
+
+**Single token analysis:**
+```sh
+python src/jwt_security_tester.py --token "<your_jwt_here>"
 ```
 
-### Option 2: Docker Installation (Recommended)
-```bash
-# Build the Docker image
-docker build -t jwt-security-tester .
-
-# Or use docker-compose
-docker-compose build
+**Batch mode:**
+```sh
+python src/jwt_security_tester.py --file tokens.txt --output batch_report.html
 ```
 
-## Usage
-
-### Local Usage
-
-#### Basic Usage
-
-```bash
-# Test a single token
-python src/jwt_security_tester.py --token "your.jwt.token"
-
-# Test with secret
-python src/jwt_security_tester.py --token "your.jwt.token" --secret "your_secret"
-
-# Test with public key for RS/ES algorithms
-python src/jwt_security_tester.py --token "your.jwt.token" --public-key "path/to/public.pem"
+**Dictionary attack:**
+```sh
+python src/jwt_security_tester.py --token "<jwt>" --test dictionary --wordlist my_wordlist.txt
 ```
 
-### Docker Usage
-
-#### Basic Docker Commands
-```bash
-# Run with Docker
-docker run --rm jwt-security-tester --token "your.jwt.token"
-
-# Run with volume for output
-docker run --rm -v $(pwd)/output:/app/output jwt-security-tester \
-    --token "your.jwt.token" --output /app/output/report.json
-
-# Interactive mode
-docker run --rm -it jwt-security-tester
+**Generate keys:**
+```sh
+python src/jwt_security_tester.py --test generate-keys --key-size 2048
 ```
 
-#### Docker Compose Usage
-```bash
-# Basic test
-docker-compose run --rm jwt-tool --token "your.jwt.token"
+---
 
-# Interactive mode
-docker-compose run --rm jwt-tool-interactive
+## CLI Usage
 
-# Batch processing
-docker-compose run --rm jwt-tool-batch
+Run `python src/jwt_security_tester.py --help` for all options.
+
+**Key options:**
+- `--token <JWT>`: Analyze a single token
+- `--file <file>`: Analyze tokens from file (one per line)
+- `--test <type>`: Specify test (structure, cve, dictionary, all, ...)
+- `--output <file>`: Save report (HTML/JSON)
+- `--config <file>`: Use custom config
+- `--max-attempts <n>`: Max attempts for dictionary attack
+- `--workers <n>`: Parallel workers for batch
+- `--debug`: Enable debug logging
+- `--version`, `--help`: Info and help
+
+See [docs/USAGE.md](docs/USAGE.md) for advanced usage and examples.
+
+---
+
+## Configuration
+
+- **Default config:** `config/default_config.json`
+- **Override via:**
+  - CLI flags (e.g., `--max-attempts`)
+  - Environment variables (e.g., `JWT_DEBUG=true`)
+- **Secrets:** `config/common_secrets.txt` (used for dictionary attacks)
+
+See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for full details.
+
+---
+
+## Reporting
+
+- **HTML report:** Beautiful, detailed, color-coded
+- **JSON report:** For automation/integration
+- **Location:** Saved in `reports/` by default
+
+See [docs/REPORTS.md](docs/REPORTS.md) for report structure and interpretation.
+
+---
+
+## REST API
+
+### Basic API
+Start the basic API:
+```sh
+python src/jwt_api.py
 ```
 
-#### Advanced Docker Examples
-```bash
-# Test with secret and save output
-docker run --rm -v $(pwd)/output:/app/output jwt-security-tester \
-    --token "your.jwt.token" \
-    --secret "your_secret" \
-    --output /app/output/security_report.json
+**Default Port:** 5000
 
-# Run comprehensive test
-docker run --rm -v $(pwd)/output:/app/output jwt-security-tester \
-    --token "your.jwt.token" \
-    --test all \
-    --output /app/output/comprehensive_report.json
+**Endpoints:**
+- `POST /analyze` — Analyze a JWT (JSON: `{ "token": "..." }`)
+- `POST /batch` — Batch analysis
+- `POST /report` — Generate HTML report
+- `GET /status` — Health check
 
-# Test JWKS spoofing
-docker run --rm -v $(pwd)/output:/app/output jwt-security-tester \
-    --token "your.jwt.token" \
-    --test jwks-spoofing \
-    --output /app/output/jwks_spoofing_report.json
-
-# Generate keys
-docker run --rm -v $(pwd)/output:/app/output jwt-security-tester \
-    --test generate-keys \
-    --key-size 2048
+### Enhanced API (Recommended)
+Start the enhanced API with scan ID management:
+```sh
+python src/jwt_api_enhanced.py
 ```
 
-#### Docker with Custom Configuration
-```bash
-# Create directories for tokens and output
-mkdir -p tokens output
+**Default Port:** 5000
 
-# Add your tokens to tokens/tokens.txt
-echo "your.jwt.token" > tokens/tokens.txt
+### Port Configuration
 
-# Run batch processing
-docker run --rm \
-    -v $(pwd)/tokens:/app/tokens:ro \
-    -v $(pwd)/output:/app/output \
-    jwt-security-tester \
-    --file /app/tokens/tokens.txt \
-    --output /app/output/batch_report.json
+If port 5000 is already in use by another process, you can change the port in several ways:
+
+#### Method 1: Environment Variable
+```sh
+# Set port via environment variable
+export JWT_API_PORT=8080
+python src/jwt_api_enhanced.py
 ```
 
-### Specific Tests
-
-```bash
-# Run only CVE tests
-python src/jwt_security_tester.py --token "your.jwt.token" --test cve
-
-# Run claim fuzzing
-python src/jwt_security_tester.py --token "your.jwt.token" --test fuzzing
-
-# Run timestamp tampering tests
-python src/jwt_security_tester.py --token "your.jwt.token" --test timestamps
-
-# Run dictionary attack
-python src/jwt_security_tester.py --token "your.jwt.token" --test dictionary --wordlist wordlist.txt
-
-# Test JWKS validation
-python src/jwt_security_tester.py --token "your.jwt.token" --test jwks --jwks-url "https://example.com/.well-known/jwks.json"
+#### Method 2: Direct Code Modification
+Edit the API file and change the port:
+```python
+# In src/jwt_api_enhanced.py (line ~248)
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8080, debug=True)  # Change 5000 to your desired port
 ```
 
-### Key Generation
-
-```bash
-# Generate RSA and ECDSA key pairs
-python src/jwt_security_tester.py --test generate-keys --key-size 2048 --curve P-256
+#### Method 3: Command Line with Python
+```sh
+# Start API with custom port
+python -c "
+import sys
+sys.path.append('src')
+from jwt_api_enhanced import app
+app.run(host='0.0.0.0', port=8080, debug=True)
+"
 ```
 
-### Token Forging
-
-```bash
-# Forge a new token based on existing payload
-python src/jwt_security_tester.py --token "original.jwt.token" --test forge --secret "new_secret"
+#### Method 4: Using Flask CLI
+```sh
+# Set environment variable and use Flask
+export FLASK_APP=src/jwt_api_enhanced.py
+export FLASK_ENV=development
+flask run --host=0.0.0.0 --port=8080
 ```
 
-### Batch Processing
+#### Method 5: Using Helper Script (Recommended)
+```sh
+# Start enhanced API on port 8080
+python start_api.py --port 8080
 
-```bash
-# Test multiple tokens from file
-python src/jwt_security_tester.py --file tokens.txt --output batch_report.json
+# Start basic API on port 3000
+python start_api.py --api-type basic --port 3000
+
+# Start with environment variable
+JWT_API_PORT=8080 python start_api.py
 ```
 
-### Interactive Mode
+**Common Alternative Ports:**
+- `8080` - Common alternative for web services
+- `3000` - Popular for development servers
+- `8000` - Django default alternative
+- `9000` - Another common development port
 
-```bash
-# Run in interactive mode
-python src/jwt_security_tester.py
+**Note:** After changing the port, update your API calls to use the new port:
+```sh
+# Example: Using port 8080
+curl http://localhost:8080/status
 ```
 
-## Command Line Options
+### Troubleshooting Port Issues
 
-| Option | Description |
-|--------|-------------|
-| `--token` | JWT token to test |
-| `--secret` | Secret key for signature verification |
-| `--public-key` | Public key for RS/ES algorithm testing |
-| `--jwks-url` | JWKS URL for key validation |
-| `--wordlist` | Wordlist file for dictionary attack |
-| `--file` | File containing JWT tokens (one per line) |
-| `--output` | Output file for report |
-| `--test` | Specific test to run (see test options below) |
-| `--max-attempts` | Maximum attempts for dictionary attack (default: 1000) |
-| `--key-size` | RSA key size for generation (default: 2048) |
-| `--curve` | ECDSA curve for generation (default: P-256) |
-| `--debug` | Enable debug mode with detailed logging |
-
-### Docker Options
-| Option | Description |
-|--------|-------------|
-| `-v $(pwd)/output:/app/output` | Mount output directory |
-| `-v $(pwd)/tokens:/app/tokens:ro` | Mount tokens directory (read-only) |
-| `--rm` | Remove container after execution |
-| `-it` | Interactive mode with terminal |
-
-### Test Options
-
-- `structure`: Token structure analysis
-- `algorithm`: Algorithm confusion testing
-- `signature`: Signature verification
-- `claims`: Claim validation
-- `tampering`: Token tampering
-- `replay`: Replay attack testing
-- `cve`: All CVE-specific tests
-- `fuzzing`: Claim fuzzing
-- `timestamps`: Timestamp tampering
-- `dictionary`: Dictionary attack
-- `jwks`: JWKS validation
-- `jwks-spoofing`: JWKS spoofing attacks
-- `generate-keys`: Generate key pairs
-- `forge`: Forge new tokens
-- `all`: All tests (default)
-
-## Examples
-
-### Example 1: Basic Security Test
-```bash
-python src/jwt_security_tester.py --token "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+**Port Already in Use Error:**
+```
+OSError: [Errno 98] Address already in use
 ```
 
-### Example 2: CVE Testing with Public Key
-```bash
-python src/jwt_security_tester.py --token "your.jwt.token" --test cve --public-key "public.pem"
-```
+**Solutions:**
+1. **Find what's using the port:**
+   ```sh
+   # Linux/Mac
+   lsof -i :5000
+   
+   # Windows
+   netstat -ano | findstr :5000
+   ```
 
-### Example 3: Dictionary Attack
-```bash
-python src/jwt_security_tester.py --token "your.jwt.token" --test dictionary --wordlist common_passwords.txt --max-attempts 5000
-```
+2. **Kill the process using the port:**
+   ```sh
+   # Linux/Mac
+   kill -9 <PID>
+   
+   # Windows
+   taskkill /PID <PID> /F
+   ```
 
-### Example 4: Generate Keys and Test
-```bash
-# Generate keys
-python src/jwt_security_tester.py --test generate-keys
+3. **Use a different port:**
+   ```sh
+   python start_api.py --port 8080
+   ```
 
-# Test with generated public key
-python src/jwt_security_tester.py --token "your.jwt.token" --public-key "rsa_public_2048.pem"
-```
+**Common Port Conflicts:**
+- **Port 5000**: Often used by AirPlay, Docker, or other development servers
+- **Port 3000**: Used by React, Node.js development servers
+- **Port 8000**: Used by Django development server
+- **Port 8080**: Used by many web services and proxies
 
-### Example 5: JWKS Spoofing Test
-```bash
-# Test JWKS spoofing vulnerabilities
-python src/jwt_security_tester.py --token "your.jwt.token" --test jwks-spoofing
+**Enhanced Features:**
+- **Scan ID Management**: Track multiple concurrent scans
+- **Session Persistence**: Retrieve results later using scan ID
+- **Report Generation**: Generate reports for specific scans
+- **Scan Management**: List, monitor, and delete scan sessions
 
-# Test JWKS validation and spoofing together
-python src/jwt_security_tester.py --token "your.jwt.token" --test jwks --jwks-url "https://example.com/.well-known/jwks.json"
-```
+**Enhanced Endpoints:**
+- `POST /scan/start` — Start new scan session
+- `POST /scan/{scan_id}/analyze` — Analyze with scan tracking
+- `POST /scan/{scan_id}/batch` — Batch analysis with tracking
+- `GET /scan/{scan_id}/status` — Check scan status
+- `GET /scan/{scan_id}/results` — Get scan results
+- `GET /scan/{scan_id}/report` — Generate scan report
+- `GET /scans` — List all scans
+- `DELETE /scan/{scan_id}` — Delete scan session
 
-### Example 6: Docker Basic Test
-```bash
-# Simple token test with Docker
-docker run --rm jwt-security-tester --token "your.jwt.token"
+See [docs/API_REFERENCE.md](docs/API_REFERENCE.md) for basic API docs and [docs/ENHANCED_API_USAGE.md](docs/ENHANCED_API_USAGE.md) for enhanced API usage.
 
-# Test with output file
-docker run --rm -v $(pwd)/output:/app/output jwt-security-tester \
-    --token "your.jwt.token" --output /app/output/report.json
-```
+---
 
-### Example 7: Docker Comprehensive Test
-```bash
-# Run all tests with Docker
-docker run --rm -v $(pwd)/output:/app/output jwt-security-tester \
-    --token "your.jwt.token" --test all --output /app/output/comprehensive.json
+## Testing & Development
 
-# Test with secret and public key
-docker run --rm -v $(pwd)/output:/app/output jwt-security-tester \
-    --token "your.jwt.token" \
-    --secret "your_secret" \
-    --public-key "/app/keys/public.pem" \
-    --test cve
-```
+- **Run all tests:**
+  ```sh
+  pytest tests/
+  ```
+- **Add new tests:** Place in `tests/` directory
+- **Coverage:** All major features are unit tested
 
-### Example 8: Docker Batch Processing
-```bash
-# Create tokens file
-echo "token1.jwt" > tokens.txt
-echo "token2.jwt" >> tokens.txt
+---
 
-# Run batch processing with Docker
-docker run --rm \
-    -v $(pwd)/tokens.txt:/app/tokens.txt:ro \
-    -v $(pwd)/output:/app/output \
-    jwt-security-tester \
-    --file /app/tokens.txt --output /app/output/batch_report.json
-```
+## Contributing
 
-### Example 9: Docker Interactive Mode
-```bash
-# Start interactive session
-docker run --rm -it jwt-security-tester
+1. Fork and clone the repo
+2. Create a feature branch
+3. Add/fix code and tests
+4. Open a pull request
 
-# In the container, you can run:
-# Enter JWT token (or 'quit' to exit): your.jwt.token
-# Save report? (y/n): y
-# Enter output filename: report.json
-```
-
-## Output
-
-The tool generates comprehensive JSON reports including:
-
-- **Test Summary**: Overall risk assessment and vulnerability counts
-- **Detailed Results**: Results from each test category
-- **CVE Analysis**: Specific CVE test results with exploit details
-- **Recommendations**: Security recommendations and mitigations
-- **Timestamps**: Test execution timestamps
-
-## Security Considerations
-
-⚠️ **Important**: This tool is for security testing and research purposes only. Only use it on systems you own or have explicit permission to test.
-
-## Dependencies
-
-- `PyJWT`: JWT token handling
-- `cryptography`: Key generation and cryptographic operations
-- `requests`: HTTP requests for JWKS validation
+---
 
 ## License
+MIT
 
-This tool is provided for educational and security research purposes. 
+---
+
+## Authors
+QuickFix Security Team
+
+---
+
+## Docker Support
+
+The tool includes comprehensive Docker support with multiple services:
+
+### Quick Docker Setup
+```sh
+# Setup directories
+python setup_docker_dirs.py
+
+# Build and start enhanced API
+docker-compose up jwt-api-enhanced
+```
+
+### Available Docker Services
+- **jwt-api-enhanced**: Enhanced API with scan ID management (port 5001)
+- **jwt-api-basic**: Basic API (port 5000)
+- **jwt-api-enhanced-custom-port**: Enhanced API on port 8080
+- **jwt-tool**: CLI tool for analysis
+- **jwt-tests**: Unit tests
+
+### Docker Features
+- ✅ Separate CLI/API report directories
+- ✅ Port configuration support
+- ✅ Environment variable configuration
+- ✅ Volume mounts for data persistence
+- ✅ Non-root user security
+
+See [DOCKER_USAGE.md](DOCKER_USAGE.md) for complete Docker documentation.
+
+## More
+- [docs/USAGE.md](docs/USAGE.md): Advanced CLI usage
+- [docs/CONFIGURATION.md](docs/CONFIGURATION.md): Config reference
+- [docs/API_REFERENCE.md](docs/API_REFERENCE.md): API docs
+- [docs/ENHANCED_API_USAGE.md](docs/ENHANCED_API_USAGE.md): Enhanced API usage
+- [docs/REPORTS.md](docs/REPORTS.md): Report formats
+- [DOCKER_USAGE.md](DOCKER_USAGE.md): Docker usage guide 

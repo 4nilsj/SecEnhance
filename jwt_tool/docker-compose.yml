@@ -7,9 +7,14 @@ services:
     container_name: jwt-security-tester
     volumes:
       - ./output:/app/output
+      - ./reports:/app/reports
+      - ./reports/cli:/app/reports/cli
+      - ./reports/api:/app/reports/api
+      - ./config:/app/config
       - ./tokens:/app/tokens:ro  # Mount tokens directory for batch processing
     environment:
       - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app/src
     working_dir: /app
     # Example usage - override with your own commands
     command: ["--help"]
@@ -20,9 +25,14 @@ services:
     container_name: jwt-security-tester-interactive
     volumes:
       - ./output:/app/output
+      - ./reports:/app/reports
+      - ./reports/cli:/app/reports/cli
+      - ./reports/api:/app/reports/api
+      - ./config:/app/config
       - ./tokens:/app/tokens:ro
     environment:
       - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app/src
     working_dir: /app
     stdin_open: true
     tty: true
@@ -35,9 +45,90 @@ services:
     container_name: jwt-security-tester-batch
     volumes:
       - ./output:/app/output
+      - ./reports:/app/reports
+      - ./reports/cli:/app/reports/cli
+      - ./reports/api:/app/reports/api
+      - ./config:/app/config
       - ./tokens:/app/tokens:ro
     environment:
       - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app/src
     working_dir: /app
     # Batch processing example
-    command: ["--file", "/app/tokens/tokens.txt", "--output", "/app/output/batch_report.json"] 
+    command: ["--file", "/app/tokens/tokens.txt", "--output", "/app/reports/batch_report.html"]
+    
+  jwt-api-basic:
+    build: .
+    image: jwt-security-tester:latest
+    container_name: jwt-security-tester-api-basic
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./reports:/app/reports
+      - ./reports/cli:/app/reports/cli
+      - ./reports/api:/app/reports/api
+      - ./config:/app/config
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app/src
+      - JWT_API_HOST=0.0.0.0
+      - JWT_API_PORT=5000
+    working_dir: /app
+    # Basic API service
+    command: ["python", "-c", "import sys; sys.path.append('src'); from jwt_api import app; app.run(host='0.0.0.0', port=5000, debug=False)"]
+    
+  jwt-api-enhanced:
+    build: .
+    image: jwt-security-tester:latest
+    container_name: jwt-security-tester-api-enhanced
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./reports:/app/reports
+      - ./reports/cli:/app/reports/cli
+      - ./reports/api:/app/reports/api
+      - ./config:/app/config
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app/src
+      - JWT_API_HOST=0.0.0.0
+      - JWT_API_PORT=5000
+    working_dir: /app
+    # Enhanced API service with scan ID management
+    command: ["python", "-c", "import sys; sys.path.append('src'); from jwt_api_enhanced import app; app.run(host='0.0.0.0', port=5000, debug=False)"]
+    
+  jwt-api-enhanced-custom-port:
+    build: .
+    image: jwt-security-tester:latest
+    container_name: jwt-security-tester-api-enhanced-custom
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./reports:/app/reports
+      - ./reports/cli:/app/reports/cli
+      - ./reports/api:/app/reports/api
+      - ./config:/app/config
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app/src
+      - JWT_API_HOST=0.0.0.0
+      - JWT_API_PORT=8080
+    working_dir: /app
+    # Enhanced API service on custom port
+    command: ["python", "-c", "import sys; sys.path.append('src'); from jwt_api_enhanced import app; app.run(host='0.0.0.0', port=8080, debug=False)"]
+    
+  jwt-tests:
+    build: .
+    image: jwt-security-tester:latest
+    container_name: jwt-security-tester-tests
+    volumes:
+      - ./reports:/app/reports
+      - ./reports/cli:/app/reports/cli
+      - ./reports/api:/app/reports/api
+      - ./config:/app/config
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app/src
+    working_dir: /app
+    # Run unit tests
+    command: ["python", "-m", "pytest", "tests/", "-v"] 

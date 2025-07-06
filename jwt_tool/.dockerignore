@@ -30,13 +30,15 @@ Thumbs.db
 
 # Output files
 output/
+reports/
 *.json
 *.html
 *.pdf
 
-# Test files
+# Test files (but keep the tests directory)
 test_*.py
 *_test.py
+.pytest_cache/
 
 # Documentation build
 docs/_build/

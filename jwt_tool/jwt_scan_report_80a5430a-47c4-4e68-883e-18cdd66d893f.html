@@ -1,0 +1,159 @@
+
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='UTF-8'>
+<title>JWT Security Report</title>
+<style>
+body { font-family: Arial, sans-serif; background: #f8f9fa; color: #222; }
+.container { max-width: 1000px; margin: 30px auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 30px; }
+h1 { color: #4B6CB7; }
+h2 { border-bottom: 1px solid #eee; padding-bottom: 8px; margin-top: 30px; }
+table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+th, td { border: 1px solid #ddd; padding: 8px; }
+th { background: #f0f0f0; }
+.card-row { display: flex; gap: 20px; margin-bottom: 30px; }
+.card { flex: 1; background: #f0f0f0; border-radius: 8px; padding: 18px; text-align: center; box-shadow: 0 1px 3px #0001; }
+.card-title { font-size: 1.1em; color: #555; margin-bottom: 6px; }
+.card-value { font-size: 2em; font-weight: bold; }
+.card.critical { color: #dc3545; }
+.card.high { color: #fd7e14; }
+.card.medium { color: #ffc107; }
+.card.low { color: #28a745; }
+.card.error { color: #b71c1c; }
+.error-table { background: #fff0f0; border: 1px solid #f8d7da; border-radius: 8px; margin-top: 20px; }
+.error-table th { background: #f8d7da; color: #b71c1c; }
+.error-table td { color: #b71c1c; }
+details { margin-top: 5px; }
+summary { cursor: pointer; font-weight: bold; }
+</style>
+</head>
+<body><div class='container'>
+<h1>JWT Security Analysis Report</h1><p><b>Generated:</b> 2025-07-06T10:48:14.959516</p><div class='card-row'><div class='card critical'><div class='card-title'>Vulnerabilities</div><div class='card-value'>15</div></div><div class='card critical'><div class='card-title'>Critical</div><div class='card-value'>4</div></div><div class='card high'><div class='card-title'>High</div><div class='card-value'>6</div></div><div class='card medium'><div class='card-title'>Medium</div><div class='card-value'>4</div></div><div class='card low'><div class='card-title'>Low</div><div class='card-value'>1</div></div><div class='card critical'><div class='card-title'>Overall Risk</div><div class='card-value'>Critical</div></div></div><h2>Vulnerabilities</h2><table><tr><th>Risk</th><th>Test</th><th>Description</th><th>Recommendation</th><th>Steps to Reproduce</th></tr><tr><td class='risk-Critical'>Critical</td><td>Algorithm None Attack</td><td>Token with 'none' algorithm created</td><td></td><td>
+            <ol>
+            <li>Decode the JWT token to extract header and payload</li>
+            <li>Modify the 'alg' field in header to 'none'</li>
+            <li>Remove the signature (third part of JWT)</li>
+            <li>Re-encode the modified header and payload</li>
+            <li>Send the modified token to the application</li>
+            <li>If accepted, the application is vulnerable</li>
+            </ol>
+            <strong>Tools:</strong> jwt.io, Burp Suite, or custom script
+            </td></tr><tr><td class='risk-High'>High</td><td>Weak Algorithm</td><td>Using weak algorithm: HS256</td><td>Use RS256, RS384, RS512, ES256, ES384, or ES512</td><td>
+            <ol>
+            <li>Analyze the JWT structure and claims</li>
+            <li>Identify the specific vulnerability type</li>
+            <li>Use appropriate tools based on vulnerability</li>
+            <li>Verify the issue exists in the application</li>
+            </ol>
+            <strong>Tools:</strong> jwt.io, Burp Suite, custom scripts
+            </td></tr><tr><td class='risk-High'>High</td><td>No Signature Verification</td><td>Token can be decoded without signature verification</td><td>Always verify signatures</td><td>
+            <ol>
+            <li>Analyze the JWT structure and claims</li>
+            <li>Identify the specific vulnerability type</li>
+            <li>Use appropriate tools based on vulnerability</li>
+            <li>Verify the issue exists in the application</li>
+            </ol>
+            <strong>Tools:</strong> jwt.io, Burp Suite, custom scripts
+            </td></tr><tr><td class='risk-Medium'>Medium</td><td>Missing exp Claim</td><td>Required claim 'exp' is missing</td><td>Always include 'exp' claim</td><td>
+            <ol>
+            <li>Analyze the JWT structure and claims</li>
+            <li>Identify the specific vulnerability type</li>
+            <li>Use appropriate tools based on vulnerability</li>
+            <li>Verify the issue exists in the application</li>
+            </ol>
+            <strong>Tools:</strong> jwt.io, Burp Suite, custom scripts
+            </td></tr><tr><td class='risk-Medium'>Medium</td><td>Missing iss Claim</td><td>Required claim 'iss' is missing</td><td>Always include 'iss' claim</td><td>
+            <ol>
+            <li>Analyze the JWT structure and claims</li>
+            <li>Identify the specific vulnerability type</li>
+            <li>Use appropriate tools based on vulnerability</li>
+            <li>Verify the issue exists in the application</li>
+            </ol>
+            <strong>Tools:</strong> jwt.io, Burp Suite, custom scripts
+            </td></tr><tr><td class='risk-Medium'>Medium</td><td>Missing aud Claim</td><td>Required claim 'aud' is missing</td><td>Always include 'aud' claim</td><td>
+            <ol>
+            <li>Analyze the JWT structure and claims</li>
+            <li>Identify the specific vulnerability type</li>
+            <li>Use appropriate tools based on vulnerability</li>
+            <li>Verify the issue exists in the application</li>
+            </ol>
+            <strong>Tools:</strong> jwt.io, Burp Suite, custom scripts
+            </td></tr><tr><td class='risk-Critical'>Critical</td><td>User ID Tampering</td><td>User ID can be modified from '1234567890' to 'admin'</td><td>Validate user permissions server-side</td><td>
+            <ol>
+            <li>Decode the JWT to view payload</li>
+            <li>Modify user_id, sub, role, or permissions fields</li>
+            <li>Change values to 'admin', 'superadmin', etc.</li>
+            <li>Re-encode with the same signature</li>
+            <li>Send to application and check if privileges are elevated</li>
+            </ol>
+            <strong>Tools:</strong> jwt.io, Burp Suite, custom script
+            </td></tr><tr><td class='risk-Medium'>Medium</td><td>Missing JTI Claim</td><td>No JWT ID (jti) claim found</td><td>Include unique jti claim to prevent replay attacks</td><td>
+            <ol>
+            <li>Capture a valid JWT token</li>
+            <li>Reuse the same token multiple times</li>
+            <li>If accepted repeatedly, vulnerable to replay attacks</li>
+            <li>Check for jti (JWT ID) claim in payload</li>
+            </ol>
+            <strong>Tools:</strong> Burp Suite, curl, custom script
+            </td></tr><tr><td class='risk-Low'>Low</td><td>Missing Nonce</td><td>No nonce claim found</td><td>Include nonce claim for additional replay protection</td><td>
+            <ol>
+            <li>Analyze the JWT structure and claims</li>
+            <li>Identify the specific vulnerability type</li>
+            <li>Use appropriate tools based on vulnerability</li>
+            <li>Verify the issue exists in the application</li>
+            </ol>
+            <strong>Tools:</strong> jwt.io, Burp Suite, custom scripts
+            </td></tr><tr><td class='risk-High'>High</td><td>No Expiration</td><td>Token has no expiration time</td><td>Always set expiration time</td><td>
+            <ol>
+            <li>Check the 'exp' claim in JWT payload</li>
+            <li>Compare with current timestamp</li>
+            <li>If token is expired but still accepted, vulnerable</li>
+            <li>Try using expired tokens in requests</li>
+            </ol>
+            <strong>Tools:</strong> jwt.io, custom script, Burp Suite
+            </td></tr><tr><td class='risk-Critical'>Critical</td><td>Algorithm None Attack</td><td>Token with 'none' algorithm created - signature bypass possible</td><td></td><td>
+            <ol>
+            <li>Decode the JWT token to extract header and payload</li>
+            <li>Modify the 'alg' field in header to 'none'</li>
+            <li>Remove the signature (third part of JWT)</li>
+            <li>Re-encode the modified header and payload</li>
+            <li>Send the modified token to the application</li>
+            <li>If accepted, the application is vulnerable</li>
+            </ol>
+            <strong>Tools:</strong> jwt.io, Burp Suite, or custom script
+            </td></tr><tr><td class='risk-High'>High</td><td>Key Injection via jku</td><td>Header injection possible via jku</td><td></td><td>
+            <ol>
+            <li>Add 'jku', 'x5u', or 'kid' header fields</li>
+            <li>Point to attacker-controlled key sources</li>
+            <li>Create malicious keys matching the kid</li>
+            <li>Send the modified token to the application</li>
+            <li>Monitor if application fetches from malicious URLs</li>
+            </ol>
+            <strong>Tools:</strong> Burp Suite, custom web server
+            </td></tr><tr><td class='risk-High'>High</td><td>Key Injection via x5u</td><td>Header injection possible via x5u</td><td></td><td>
+            <ol>
+            <li>Add 'jku', 'x5u', or 'kid' header fields</li>
+            <li>Point to attacker-controlled key sources</li>
+            <li>Create malicious keys matching the kid</li>
+            <li>Send the modified token to the application</li>
+            <li>Monitor if application fetches from malicious URLs</li>
+            </ol>
+            <strong>Tools:</strong> Burp Suite, custom web server
+            </td></tr><tr><td class='risk-High'>High</td><td>Key Injection via kid</td><td>Header injection possible via kid</td><td></td><td>
+            <ol>
+            <li>Add 'jku', 'x5u', or 'kid' header fields</li>
+            <li>Point to attacker-controlled key sources</li>
+            <li>Create malicious keys matching the kid</li>
+            <li>Send the modified token to the application</li>
+            <li>Monitor if application fetches from malicious URLs</li>
+            </ol>
+            <strong>Tools:</strong> Burp Suite, custom web server
+            </td></tr><tr><td class='risk-Critical'>Critical</td><td>Null Signature Attack</td><td>Token with null signature accepted</td><td></td><td>
+            <ol>
+            <li>Remove the signature part from the JWT</li>
+            <li>Send the token ending with a dot (.)</li>
+            <li>If accepted without signature verification, vulnerable</li>
+            </ol>
+            <strong>Tools:</strong> Manual token manipulation, Burp Suite
+            </td></tr></table></div></body></html>

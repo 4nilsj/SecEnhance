@@ -18,10 +18,14 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy source code
+# Copy source code and configuration
 COPY src/ ./src/
 COPY examples/ ./examples/
 COPY docs/ ./docs/
+COPY config/ ./config/
+COPY tests/ ./tests/
+COPY install.py .
+COPY start_api.py .
 COPY README.md .
 
 # Create a non-root user
@@ -32,8 +36,8 @@ USER jwtuser
 ENV PYTHONPATH=/app/src
 ENV PYTHONUNBUFFERED=1
 
-# Create volume for output files
-VOLUME ["/app/output"]
+# Create volumes for output files and reports
+VOLUME ["/app/output", "/app/reports", "/app/reports/cli", "/app/reports/api"]
 
 # Default command
 ENTRYPOINT ["python", "src/jwt_security_tester.py"]

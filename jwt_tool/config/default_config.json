@@ -1,0 +1,39 @@
+{
+    "defaults": {
+        "debug": false,
+        "output_format": "html",
+        "max_attempts": 1000,
+        "workers": 4,
+        "timeout": 30,
+        "wordlist_file": null,
+        "public_key": null,
+        "jwks_url": null
+    },
+    "api": {
+        "host": "0.0.0.0",
+        "port": 5000,
+        "debug": false,
+        "cors_enabled": true
+    },
+    "testing": {
+        "enable_cve_tests": true,
+        "enable_dictionary_attack": true,
+        "enable_claim_fuzzing": true,
+        "enable_timestamp_tampering": true,
+        "enable_jwks_validation": true
+    },
+    "reporting": {
+        "include_poc": false,
+        "include_reproduction_steps": true,
+        "color_output": true,
+        "progress_bars": true,
+        "save_reports": true,
+        "reports_directory": "reports"
+    },
+    "security": {
+        "common_secrets_file": "config/common_secrets.txt",
+        "max_token_size": 8192,
+        "allowed_algorithms": ["HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "ES256", "ES384", "ES512"],
+        "forbidden_algorithms": ["none"]
+    }
+} 
