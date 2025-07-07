@@ -4,12 +4,12 @@ import sys
 def setup_debug_logging(debug: bool = False):
     """Set up debug logging for the tool."""
     if debug:
-        logging.basicConfig(
-            level=logging.DEBUG,
-            format='[%(levelname)s] %(asctime)s %(module)s: %(message)s',
-            stream=sys.stdout
-        )
-        logging.debug("Debug logging is enabled.")
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='[%(levelname)s] %(asctime)s %(module)s: %(message)s',
+        stream=sys.stdout
+    )
+    logging.debug("Debug logging is enabled.")
     else:
         logging.basicConfig(
             level=logging.INFO,

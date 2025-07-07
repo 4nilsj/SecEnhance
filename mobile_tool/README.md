@@ -168,110 +168,229 @@ sudo chmod +x /usr/local/bin/jadx
 
 ## 📖 Usage
 
-### Local Usage
+### CLI Mode
 
 #### Basic Usage
 
 #### Quick Security Analysis
 ```bash
 # Basic analysis of an APK file
-python src/mobile_security_tester.py app.apk
+python src/mobile_security_tester.py --apk app.apk
 
 # With debug output
-python src/mobile_security_tester.py app.apk --debug
+python src/mobile_security_tester.py --apk app.apk --debug
 
 # Save results to file
-python src/mobile_security_tester.py app.apk --output results.json
+python src/mobile_security_tester.py --apk app.apk --output results.json
+
+# Comprehensive analysis
+python src/mobile_security_tester.py --apk app.apk --comprehensive
+
+# Specific tests only
+python src/mobile_security_tester.py --apk app.apk --tests static,network,storage
+```
+
+#### iOS Analysis
+```bash
+# Analyze IPA file
+python src/mobile_security_tester.py --ipa app.ipa --comprehensive
+
+# Device analysis
+python src/mobile_security_tester.py --device ios --package com.example.app
+```
+
+#### Batch Analysis
+```bash
+# Analyze multiple APK files
+python src/mobile_security_tester.py --batch /path/to/apks --output batch_results.json
+```
+
+### API Mode
+
+#### Start API Server
+```bash
+# Start API server
+python start_api.py
+
+# Start with custom port
+python start_api.py --port 8080
+
+# Start with debug mode
+python start_api.py --debug
+
+# Using environment variable
+export MOBILE_API_PORT=8080
+python start_api.py
+```
+
+#### API Endpoints
+
+**Health Check:**
+```bash
+curl http://localhost:5001/api/v1/health
+```
+
+**Start Scan:**
+```bash
+curl -X POST http://localhost:5001/api/v1/scan \
+  -H "Content-Type: application/json" \
+  -d '{
+    "file_path": "/app/uploads/app.apk",
+    "tests": ["static", "network", "storage", "code"]
+  }'
+```
+
+**Get Scan Status:**
+```bash
+curl http://localhost:5001/api/v1/scan/{scan_id}/status
+```
+
+**Download Report:**
+```bash
+curl http://localhost:5001/api/v1/scan/{scan_id}/report \
+  -o mobile_scan_report.html
+```
+
+**List All Scans:**
+```bash
+curl http://localhost:5001/api/v1/scans
 ```
 
 ### Docker Usage
 
-#### Basic Docker Commands
-```bash
-# Run with Docker (mount APK file)
-docker run --rm -v $(pwd)/app.apk:/app/input/app.apk mobile-security-tester /app/input/app.apk
-
-# Run with volume for output
-docker run --rm \
-    -v $(pwd)/app.apk:/app/input/app.apk \
-    -v $(pwd)/output:/app/output \
-    mobile-security-tester \
-    /app/input/app.apk --output /app/output/results.json
-
-# Interactive mode
-docker run --rm -it mobile-security-tester
-```
-
-#### Docker Compose Usage
+#### CLI Mode with Docker
 ```bash
 # Basic analysis
-docker-compose run --rm mobile-tool /app/input/app.apk
-
-# Static analysis only
-docker-compose run --rm mobile-tool-static
+docker-compose run mobile-tool-cli \
+  python src/mobile_security_tester.py --apk /app/uploads/app.apk
 
 # Comprehensive analysis
-docker-compose run --rm mobile-tool-comprehensive
+docker-compose run mobile-tool-comprehensive
 
 # Interactive mode
-docker-compose run --rm mobile-tool-interactive
-
-# Batch processing
-docker-compose run --rm mobile-tool-batch
+docker-compose run mobile-tool-interactive
 ```
 
-#### Advanced Docker Examples
+#### API Mode with Docker
 ```bash
-# Static analysis with output
-docker run --rm \
-    -v $(pwd)/app.apk:/app/input/app.apk \
-    -v $(pwd)/output:/app/output \
-    mobile-security-tester \
-    /app/input/app.apk --analysis-type static --output /app/output/static_analysis.json
+# Start API server
+docker-compose up mobile-api
 
-# Comprehensive analysis with all reports
-docker run --rm \
-    -v $(pwd)/app.apk:/app/input/app.apk \
-    -v $(pwd)/output:/app/output \
-    -v $(pwd)/reports:/app/reports \
-    mobile-security-tester \
-    /app/input/app.apk \
-    --analysis-type comprehensive \
-    --output /app/output/comprehensive.json \
-    --report /app/reports/report.html \
-    --csv /app/output/results.csv
+# Start debug API server
+docker-compose up mobile-api-debug
 
-# Debug mode with detailed logging
-docker run --rm \
-    -v $(pwd)/app.apk:/app/input/app.apk \
-    -v $(pwd)/output:/app/output \
-    mobile-security-tester \
-    /app/input/app.apk --debug --output /app/output/debug_report.json
-
-# Batch processing multiple APKs
-docker run --rm \
-    -v $(pwd)/apks:/app/input \
-    -v $(pwd)/output:/app/output \
-    mobile-security-tester \
-    /app/input --output /app/output/batch_results.json --summary /app/output/summary.txt
+# Test API
+curl http://localhost:5001/api/v1/health
 ```
 
-#### Docker with Custom Configuration
+#### Custom Port Configuration
 ```bash
-# Create directories
-mkdir -p input output reports
+# Change API port
+export MOBILE_API_PORT=8080
+docker-compose up mobile-api
 
-# Copy APK to input directory
-cp your_app.apk input/
-
-# Run analysis
-docker run --rm \
-    -v $(pwd)/input:/app/input \
-    -v $(pwd)/output:/app/output \
-    -v $(pwd)/reports:/app/reports \
-    mobile-security-tester \
-    /app/input/your_app.apk \
-    --analysis-type comprehensive \
-    --output /app/output/analysis.json \
-    --report /app/reports/report.html
+# Or use docker-compose override
+echo "version: '3.8'\nservices:\n  mobile-api:\n    ports:\n      - '8080:5001'" > docker-compose.override.yml
+docker-compose up mobile-api
 ```
+
+## 📊 Report Organization
+
+### Directory Structure
+```
+mobile_tool/
+├── reports/
+│   ├── api/          # API-generated reports
+│   │   └── api_scan_{scan_id}_{timestamp}.html
+│   └── cli/          # CLI-generated reports
+│       └── cli_scan_{timestamp}.html
+├── uploads/          # Files for analysis
+├── logs/             # Log files
+└── config/           # Configuration files
+```
+
+### Report Naming Conventions
+
+#### CLI Reports
+- **Location**: `reports/cli/`
+- **Naming**: `cli_scan_{timestamp}.html` or custom names
+- **Formats**: JSON, HTML, PDF, CSV
+
+#### API Reports
+- **Location**: `reports/api/`
+- **Naming**: `api_scan_{scan_id}_{timestamp}.html`
+- **Format**: HTML (downloadable)
+
+### Report Features
+- **Separate Storage**: CLI and API reports are stored in different directories
+- **No Conflicts**: Different naming conventions prevent conflicts
+- **Timestamped**: All reports include timestamps for tracking
+- **Multiple Formats**: Support for JSON, HTML, PDF, and CSV formats
+- **Scan ID Tracking**: API reports include unique scan IDs
+
+## 🔧 Configuration
+
+### Environment Variables
+- `MOBILE_API_PORT`: API server port (default: 5001)
+- `MOBILE_API_DEBUG`: Enable debug mode (default: false)
+- `MOBILE_MAX_FILE_SIZE`: Maximum file size (default: 100MB)
+- `MOBILE_DEFAULT_TESTS`: Default tests to run
+- `MOBILE_TIMEOUT`: Analysis timeout (default: 300s)
+
+### Configuration Files
+```bash
+# Create custom configuration
+cat > config/custom_config.json << EOF
+{
+  "api": {
+    "port": 5001,
+    "debug": false
+  },
+  "analysis": {
+    "default_tests": ["static", "network", "storage", "code"],
+    "timeout": 300
+  }
+}
+EOF
+```
+
+## 🐛 Troubleshooting
+
+### Port Conflicts
+If port 5001 is already in use:
+```bash
+# Check what's using the port
+netstat -tulpn | grep 5001
+
+# Use a different port
+export MOBILE_API_PORT=5002
+python start_api.py
+```
+
+### Docker Issues
+```bash
+# Setup directories
+python setup_docker_dirs.py
+
+# Check container logs
+docker-compose logs mobile-api
+
+# Restart services
+docker-compose down && docker-compose up mobile-api
+```
+
+### File Permissions
+```bash
+# Fix permissions
+sudo chown -R $USER:$USER reports/ uploads/ logs/ config/
+
+# Or run with proper permissions
+docker-compose run --user $(id -u):$(id -g) mobile-tool-cli
+```
+
+## 📚 Additional Resources
+
+- [Docker Usage Guide](DOCKER_USAGE.md) - Comprehensive Docker documentation
+- [API Reference](docs/API_REFERENCE.md) - Detailed API documentation
+- [Configuration Guide](docs/CONFIGURATION.md) - Configuration options
+- [Reports Guide](docs/REPORTS.md) - Report generation and formats

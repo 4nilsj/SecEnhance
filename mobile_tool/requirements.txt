@@ -10,9 +10,9 @@ jinja2>=3.1.0
 
 # Mobile app analysis
 androguard>=3.4.0
-androguard-deobfuscator>=0.1.0
+# androguard-deobfuscator>=0.1.0
 apkutils2>=1.0.0
-androguard-cli>=3.4.0
+# androguard-cli>=3.4.0
 
 # Network analysis
 mitmproxy>=10.1.0
@@ -27,7 +27,7 @@ xmltodict>=0.13.0
 # Security testing
 bandit>=1.7.5
 safety>=2.3.0
-semgrep>=1.40.0
+# semgrep>=1.40.0
 
 # Report generation
 reportlab>=4.0.0
@@ -36,7 +36,7 @@ matplotlib>=3.7.0
 seaborn>=0.12.0
 
 # Database
-sqlite3
+# sqlite3
 sqlalchemy>=2.0.0
 
 # Utilities

@@ -49,7 +49,7 @@ class ConfigManager:
                 "enable_code": True
             },
             "reporting": {
-                "format": ["json", "html"],
+                "format": ["html", "json"],
                 "include_evidence": True,
                 "risk_threshold": "medium",
                 "output_directory": "reports"
@@ -288,7 +288,7 @@ class ConfigManager:
     
     def get_report_formats(self) -> List[str]:
         """Get report formats."""
-        formats = self.get("reporting.format", ["json"])
+        formats = self.get("reporting.format", ["html"])
         if isinstance(formats, str):
             formats = [formats]
         return formats

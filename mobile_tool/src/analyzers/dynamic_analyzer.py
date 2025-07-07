@@ -83,6 +83,7 @@ class DynamicAnalyzer:
         self.logger.info(f"Starting dynamic analysis of APK: {apk_path}")
         
         results = {
+            "device_info": {},
             "runtime_behavior": {},
             "network_activity": {},
             "file_system": {},
@@ -106,6 +107,9 @@ class DynamicAnalyzer:
                 results.update(self._perform_static_dynamic_analysis(apk_path))
                 return results
             
+            # Get device information
+            results["device_info"] = self._get_device_info()
+            
             # Install APK on device
             package_name = self._install_apk(apk_path)
             if not package_name:
@@ -113,6 +117,9 @@ class DynamicAnalyzer:
                 # Perform static dynamic analysis
                 results.update(self._perform_static_dynamic_analysis(apk_path))
                 return results
+            
+            # Launch the app for analysis
+            self._launch_app(package_name)
             
             # Perform dynamic analysis
             results["runtime_behavior"] = self._analyze_runtime_behavior(package_name)
@@ -124,6 +131,9 @@ class DynamicAnalyzer:
             results["root_detection"] = self._analyze_root_detection(package_name)
             results["memory_tampering"] = self._analyze_memory_tampering(package_name)
             results["runtime_security"] = self._analyze_runtime_security(package_name)
+            
+            # Stop the app
+            self._stop_app(package_name)
             
             # Uninstall APK
             self._uninstall_apk(package_name)
@@ -189,13 +199,154 @@ class DynamicAnalyzer:
             if result.returncode == 0:
                 lines = result.stdout.strip().split('\n')[1:]  # Skip header
                 connected_devices = [line for line in lines if line.strip() and 'device' in line]
-                return len(connected_devices) > 0
+                
+                if connected_devices:
+                    self.logger.info(f"Found {len(connected_devices)} connected device(s)")
+                    for device in connected_devices:
+                        self.logger.info(f"Device: {device}")
+                    return True
+                
+                # Try to connect to Nox emulator if no devices found
+                if self._connect_to_nox_emulator():
+                    return True
             
             return False
             
         except Exception as e:
             self.logger.error(f"Error checking device connection: {str(e)}")
             return False
+    
+    def _connect_to_nox_emulator(self) -> bool:
+        """Attempt to connect to Nox emulator."""
+        try:
+            # Common Nox emulator ports
+            nox_ports = [62001, 62025, 62026, 62027, 62028, 62029, 62030]
+            
+            for port in nox_ports:
+                try:
+                    self.logger.info(f"Attempting to connect to Nox emulator on port {port}")
+                    result = subprocess.run(
+                        ["adb", "connect", f"127.0.0.1:{port}"],
+                        capture_output=True,
+                        text=True,
+                        timeout=10
+                    )
+                    
+                    if result.returncode == 0 and "connected" in result.stdout.lower():
+                        self.logger.info(f"Successfully connected to Nox emulator on port {port}")
+                        return True
+                        
+                except Exception as e:
+                    self.logger.debug(f"Failed to connect to port {port}: {str(e)}")
+                    continue
+            
+            self.logger.warning("Could not connect to Nox emulator")
+            return False
+            
+        except Exception as e:
+            self.logger.error(f"Error connecting to Nox emulator: {str(e)}")
+            return False
+    
+    def _get_device_info(self) -> Dict[str, Any]:
+        """Get detailed device information."""
+        device_info = {
+            "manufacturer": "Unknown",
+            "model": "Unknown",
+            "android_version": "Unknown",
+            "api_level": "Unknown",
+            "is_emulator": False,
+            "emulator_type": "Unknown",
+            "root_status": "Unknown"
+        }
+        
+        try:
+            # Get device properties
+            props = [
+                "ro.product.manufacturer",
+                "ro.product.model", 
+                "ro.build.version.release",
+                "ro.build.version.sdk",
+                "ro.kernel.qemu",
+                "ro.product.brand",
+                "ro.product.name"
+            ]
+            
+            for prop in props:
+                result = subprocess.run(
+                    ["adb", "shell", "getprop", prop],
+                    capture_output=True,
+                    text=True,
+                    timeout=10
+                )
+                
+                if result.returncode == 0:
+                    value = result.stdout.strip()
+                    if prop == "ro.product.manufacturer":
+                        device_info["manufacturer"] = value
+                    elif prop == "ro.product.model":
+                        device_info["model"] = value
+                    elif prop == "ro.build.version.release":
+                        device_info["android_version"] = value
+                    elif prop == "ro.build.version.sdk":
+                        device_info["api_level"] = value
+                    elif prop == "ro.kernel.qemu":
+                        device_info["is_emulator"] = value == "1"
+                    elif prop == "ro.product.brand":
+                        if "nox" in value.lower():
+                            device_info["emulator_type"] = "Nox"
+                        elif "genymotion" in value.lower():
+                            device_info["emulator_type"] = "Genymotion"
+                        elif "google" in value.lower():
+                            device_info["emulator_type"] = "Google Emulator"
+            
+            # Check root status
+            device_info["root_status"] = self._check_root_status()
+            
+            self.logger.info(f"Device info: {device_info}")
+            return device_info
+            
+        except Exception as e:
+            self.logger.error(f"Error getting device info: {str(e)}")
+            return device_info
+    
+    def _check_root_status(self) -> str:
+        """Check if device is rooted."""
+        try:
+            # Check for su binary
+            result = subprocess.run(
+                ["adb", "shell", "which", "su"],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            if result.returncode == 0 and result.stdout.strip():
+                return "Rooted"
+            
+            # Check for common root indicators
+            root_indicators = [
+                "/system/app/Superuser.apk",
+                "/system/xbin/su",
+                "/system/bin/su",
+                "/sbin/su"
+            ]
+            
+            for indicator in root_indicators:
+                result = subprocess.run(
+                    ["adb", "shell", "ls", indicator],
+                    capture_output=True,
+                    text=True,
+                    timeout=10
+                )
+                
+                if result.returncode == 0:
+                    return "Rooted"
+            
+            return "Not Rooted"
+            
+        except Exception as e:
+            self.logger.error(f"Error checking root status: {str(e)}")
+            return "Unknown"
     
     def _install_apk(self, apk_path: str) -> Optional[str]:
         """Install APK on device and return package name."""
@@ -220,6 +371,70 @@ class DynamicAnalyzer:
         except Exception as e:
             self.logger.error(f"Error installing APK: {str(e)}")
             return None
+    
+    def _launch_app(self, package_name: str) -> bool:
+        """Launch the app for analysis."""
+        try:
+            # Get the main activity
+            result = subprocess.run(
+                ["adb", "shell", "cmd", "package", "resolve-activity", "--brief", package_name],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                lines = result.stdout.strip().split('\n')
+                for line in lines:
+                    if package_name in line and "activity" in line:
+                        activity = line.split()[1]
+                        break
+                else:
+                    # Fallback: try to launch with package name
+                    activity = f"{package_name}/.MainActivity"
+            else:
+                activity = f"{package_name}/.MainActivity"
+            
+            # Launch the app
+            result = subprocess.run(
+                ["adb", "shell", "am", "start", "-n", activity],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                self.logger.info(f"App launched successfully: {package_name}")
+                time.sleep(3)  # Wait for app to start
+                return True
+            else:
+                self.logger.warning(f"Failed to launch app: {result.stderr}")
+                return False
+                
+        except Exception as e:
+            self.logger.error(f"Error launching app: {str(e)}")
+            return False
+    
+    def _stop_app(self, package_name: str) -> bool:
+        """Stop the app."""
+        try:
+            result = subprocess.run(
+                ["adb", "shell", "am", "force-stop", package_name],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                self.logger.info(f"App stopped successfully: {package_name}")
+                return True
+            else:
+                self.logger.warning(f"Failed to stop app: {result.stderr}")
+                return False
+                
+        except Exception as e:
+            self.logger.error(f"Error stopping app: {str(e)}")
+            return False
     
     def _extract_package_name(self, apk_path: str) -> str:
         """Extract package name from APK."""
@@ -315,13 +530,24 @@ class DynamicAnalyzer:
             "cpu_usage": [],
             "memory_usage": [],
             "network_activity": [],
-            "file_access": []
+            "file_access": [],
+            "system_calls": [],
+            "permissions_used": [],
+            "logcat_output": []
         }
         
         try:
-            # Monitor for 30 seconds
+            # Start logcat monitoring in background
+            logcat_process = subprocess.Popen(
+                ["adb", "logcat", "-s", package_name],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            
+            # Monitor for 60 seconds (increased from 30)
             start_time = time.time()
-            while time.time() - start_time < 30:
+            while time.time() - start_time < 60:
                 # Get CPU usage
                 result = subprocess.run(
                     ["adb", "shell", "top", "-n", "1", "-p", package_name],
@@ -344,13 +570,102 @@ class DynamicAnalyzer:
                 if result.returncode == 0:
                     monitoring["memory_usage"].append(result.stdout.strip())
                 
-                time.sleep(5)  # Wait 5 seconds between checks
+                # Get network connections
+                result = subprocess.run(
+                    ["adb", "shell", "netstat", "-tuln"],
+                    capture_output=True,
+                    text=True,
+                    timeout=10
+                )
+                
+                if result.returncode == 0:
+                    monitoring["network_activity"].append(result.stdout.strip())
+                
+                # Get file access (using strace if available)
+                try:
+                    result = subprocess.run(
+                        ["adb", "shell", "strace", "-p", package_name, "-e", "trace=file", "-o", "/tmp/strace.log"],
+                        capture_output=True,
+                        text=True,
+                        timeout=5
+                    )
+                    if result.returncode == 0:
+                        # Read strace log
+                        result = subprocess.run(
+                            ["adb", "shell", "cat", "/tmp/strace.log"],
+                            capture_output=True,
+                            text=True,
+                            timeout=10
+                        )
+                        if result.returncode == 0:
+                            monitoring["file_access"].append(result.stdout.strip())
+                except:
+                    pass  # strace might not be available
+                
+                # Get system calls
+                try:
+                    result = subprocess.run(
+                        ["adb", "shell", "dumpsys", "activity", "top"],
+                        capture_output=True,
+                        text=True,
+                        timeout=10
+                    )
+                    if result.returncode == 0:
+                        monitoring["system_calls"].append(result.stdout.strip())
+                except:
+                    pass
+                
+                time.sleep(10)  # Wait 10 seconds between checks
+            
+            # Stop logcat
+            logcat_process.terminate()
+            logcat_output, _ = logcat_process.communicate(timeout=5)
+            monitoring["logcat_output"] = logcat_output.split('\n')
+            
+            # Get permissions used during runtime
+            monitoring["permissions_used"] = self._get_runtime_permissions(package_name)
             
         except Exception as e:
             self.logger.error(f"Error monitoring app behavior: {str(e)}")
             monitoring["error"] = str(e)
         
         return monitoring
+    
+    def _get_runtime_permissions(self, package_name: str) -> List[str]:
+        """Get permissions used by the app during runtime."""
+        permissions = []
+        
+        try:
+            # Get app permissions
+            result = subprocess.run(
+                ["adb", "shell", "dumpsys", "package", package_name],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                for line in result.stdout.split('\n'):
+                    if "permission" in line.lower() and package_name in line:
+                        permissions.append(line.strip())
+            
+            # Get runtime permissions
+            result = subprocess.run(
+                ["adb", "shell", "dumpsys", "package", package_name, "|", "grep", "runtimePermission"],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                for line in result.stdout.split('\n'):
+                    if "runtimePermission" in line:
+                        permissions.append(line.strip())
+            
+        except Exception as e:
+            self.logger.error(f"Error getting runtime permissions: {str(e)}")
+        
+        return permissions
     
     def _analyze_network_activity(self, package_name: str) -> Dict[str, Any]:
         """Analyze network activity of the app."""

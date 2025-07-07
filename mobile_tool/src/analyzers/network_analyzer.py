@@ -629,38 +629,138 @@ class NetworkAnalyzer:
         """Analyze API endpoints and their security."""
         api_endpoints = []
         
+        # Filter out non-API patterns
+        exclude_patterns = [
+            r'http://schemas\.android\.com',
+            r'http://www\.w3\.org',
+            r'http://xmlns\.com',
+            r'android\.app\.',
+            r'android\.content\.',
+            r'android\.view\.',
+            r'android\.widget\.',
+            r'android\.support\.',
+            r'androidx\.',
+            r'res/',
+            r'assets/',
+            r'META-INF/',
+            r'AndroidManifest\.xml',
+            r'\.xml$',
+            r'\.properties$'
+        ]
+        
         try:
-            with zipfile.ZipFile(apk_path, 'r') as apk_zip:
-                for filename in apk_zip.namelist():
-                    if filename.endswith(('.java', '.kt', '.xml', '.properties')):
-                        try:
-                            content = apk_zip.read(filename).decode('utf-8', errors='ignore')
-                            
-                            # Find API endpoints
-                            for pattern in self.api_endpoint_patterns:
-                                matches = re.finditer(pattern, content, re.IGNORECASE)
-                                for match in matches:
-                                    endpoint = match.group()
-                                    
-                                    # Analyze endpoint security
-                                    is_secure = endpoint.startswith('https://')
-                                    is_api = 'api' in endpoint.lower()
-                                    
-                                    api_endpoints.append({
-                                        "endpoint": endpoint,
-                                        "file": filename,
-                                        "secure": is_secure,
-                                        "is_api": is_api,
-                                        "risk": "Insecure endpoint" if not is_secure else "Secure endpoint"
-                                    })
-                            
-                        except Exception as e:
-                            continue
+            # Use APKTool to decompile the APK first
+            import tempfile
+            import subprocess
+            import os
+            
+            with tempfile.TemporaryDirectory() as temp_dir:
+                # Decompile APK using APKTool
+                try:
+                    # Check if apktool is available
+                    apktool_cmd = "apktool"
+                    try:
+                        subprocess.run([apktool_cmd, "--version"], capture_output=True, check=True)
+                    except (subprocess.CalledProcessError, FileNotFoundError):
+                        # Try with java -jar
+                        apktool_cmd = "java -jar C:\\Users\\DELL\\apktool\\apktool.jar"
+                    
+                    # Decompile APK
+                    if apktool_cmd.startswith("java -jar"):
+                        cmd = apktool_cmd.split() + ["d", apk_path, "-o", temp_dir, "-f"]
+                    else:
+                        cmd = [apktool_cmd, "d", apk_path, "-o", temp_dir, "-f"]
+                    
+                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+                    
+                    if result.returncode == 0:
+                        self.logger.info(f"APK decompiled successfully to {temp_dir}")
+                        
+                        # Now analyze the decompiled files
+                        for root, dirs, files in os.walk(temp_dir):
+                            for file in files:
+                                if file.endswith(('.java', '.kt', '.xml')):
+                                    file_path = os.path.join(root, file)
+                                    try:
+                                        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                                            content = f.read()
+                                            
+                                            # Find API endpoints with improved patterns
+                                            api_patterns = [
+                                                r'https?://[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:/[^\s\'"]*)?',
+                                                r'api\.[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:/[^\s\'"]*)?',
+                                                r'[a-zA-Z0-9.-]+\.com/api(?:/[^\s\'"]*)?',
+                                                r'[a-zA-Z0-9.-]+\.org/api(?:/[^\s\'"]*)?',
+                                                r'[a-zA-Z0-9.-]+\.net/api(?:/[^\s\'"]*)?',
+                                                r'baseUrl\s*[=:]\s*["\']([^"\']+)["\']',
+                                                r'BASE_URL\s*[=:]\s*["\']([^"\']+)["\']',
+                                                r'endpoint\s*[=:]\s*["\']([^"\']+)["\']',
+                                                r'url\s*[=:]\s*["\']([^"\']+)["\']',
+                                                r'URL\s*[=:]\s*["\']([^"\']+)["\']',
+                                                r'loadUrl\s*\(\s*["\']([^"\']+)["\']',
+                                                r'HttpURLConnection\s*\(\s*["\']([^"\']+)["\']',
+                                                r'OkHttpClient.*["\']([^"\']+)["\']',
+                                                r'Retrofit.*["\']([^"\']+)["\']'
+                                            ]
+                                            
+                                            for pattern in api_patterns:
+                                                matches = re.finditer(pattern, content, re.IGNORECASE)
+                                                for match in matches:
+                                                    endpoint = match.group(1) if len(match.groups()) > 0 else match.group()
+                                                    
+                                                    # Skip if matches exclude patterns
+                                                    should_exclude = False
+                                                    for exclude_pattern in exclude_patterns:
+                                                        if re.search(exclude_pattern, endpoint, re.IGNORECASE):
+                                                            should_exclude = True
+                                                            break
+                                                    
+                                                    if should_exclude:
+                                                        continue
+                                                    
+                                                    # Clean up endpoint
+                                                    endpoint = endpoint.strip('"\'')
+                                                    if not endpoint.startswith(('http://', 'https://')):
+                                                        continue
+                                                    
+                                                    # Analyze endpoint security
+                                                    is_secure = endpoint.startswith('https://')
+                                                    is_api = 'api' in endpoint.lower() or '/api/' in endpoint.lower()
+                                                    
+                                                    # Extract domain for grouping
+                                                    domain = re.search(r'https?://([^/]+)', endpoint)
+                                                    domain = domain.group(1) if domain else 'unknown'
+                                                    
+                                                    api_endpoints.append({
+                                                        "endpoint": endpoint,
+                                                        "file": os.path.relpath(file_path, temp_dir),
+                                                        "domain": domain,
+                                                        "secure": is_secure,
+                                                        "is_api": is_api,
+                                                        "category": "API" if is_api else "External",
+                                                        "risk": "Insecure endpoint" if not is_secure else "Secure endpoint"
+                                                    })
+                                            
+                                    except Exception as e:
+                                        continue
+                    else:
+                        self.logger.error(f"APKTool decompilation failed: {result.stderr}")
+                        
+                except Exception as e:
+                    self.logger.error(f"Error during APK decompilation: {str(e)}")
         
         except Exception as e:
             self.logger.error(f"Error in API endpoint analysis: {str(e)}")
         
-        return api_endpoints
+        # Remove duplicates and sort
+        unique_endpoints = []
+        seen_endpoints = set()
+        for ep in api_endpoints:
+            if ep["endpoint"] not in seen_endpoints:
+                unique_endpoints.append(ep)
+                seen_endpoints.add(ep["endpoint"])
+        
+        return sorted(unique_endpoints, key=lambda x: x["domain"])
     
     def _analyze_ios_api_endpoints(self, ipa_path: str) -> List[Dict[str, Any]]:
         """Analyze iOS API endpoints."""

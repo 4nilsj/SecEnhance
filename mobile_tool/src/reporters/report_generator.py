@@ -20,7 +20,7 @@ class ReportGenerator:
         self.debug = debug
         self.logger = logging.getLogger(__name__)
         
-    def generate_report(self, results: Dict[str, Any], output_file: str, format: str = "json") -> str:
+    def generate_report(self, results: Dict[str, Any], output_file: str, format: str = "html") -> str:
         """Generate security report in specified format."""
         self.logger.info(f"Generating {format.upper()} report: {output_file}")
         
@@ -28,10 +28,16 @@ class ReportGenerator:
             return self._generate_json_report(results, output_file)
         elif format.lower() == "html":
             return self._generate_html_report(results, output_file)
+        elif format.lower() == "dashboard" or format.lower() == "html_dashboard":
+            return self._generate_dashboard_report(results, output_file)
         elif format.lower() == "pdf":
             return self._generate_pdf_report(results, output_file)
         elif format.lower() == "csv":
             return self._generate_csv_report(results, output_file)
+        elif format.lower() == "xml":
+            return self._generate_xml_report(results, output_file)
+        elif format.lower() == "markdown":
+            return self._generate_markdown_report(results, output_file)
         else:
             raise ValueError(f"Unsupported format: {format}")
     
@@ -144,25 +150,216 @@ class ReportGenerator:
             self.logger.error(f"Error generating CSV report: {str(e)}")
             raise
     
+    def _generate_dashboard_report(self, results: Dict[str, Any], output_file: str) -> str:
+        """Generate interactive HTML dashboard report."""
+        try:
+            # Load dashboard template
+            template_path = Path(__file__).parent / "templates" / "dashboard_report.html"
+            with open(template_path, "r", encoding="utf-8") as f:
+                dashboard_template = f.read()
+            # Prepare data
+            summary = results.get("summary", {})
+            vulnerabilities = results.get("vulnerabilities", [])
+            ai_vulns = [v for v in vulnerabilities if v.get("type", "").startswith("AI-Predicted")]
+            template_data = {
+                "summary": summary,
+                "vulnerabilities": vulnerabilities,
+                "ai_vulns": ai_vulns
+            }
+            # Render template
+            template = jinja2.Template(dashboard_template)
+            html_content = template.render(**template_data)
+            with open(output_file, 'w', encoding='utf-8') as f:
+                f.write(html_content)
+            return output_file
+        except Exception as e:
+            self.logger.error(f"Error generating dashboard HTML report: {str(e)}")
+            raise
+    
+    def _generate_xml_report(self, results: Dict[str, Any], output_file: str) -> str:
+        """Generate XML report."""
+        import xml.etree.ElementTree as ET
+        try:
+            report = ET.Element("MobileSecurityReport")
+            info = ET.SubElement(report, "ReportInfo")
+            ET.SubElement(info, "GeneratedAt").text = datetime.now().isoformat()
+            ET.SubElement(info, "ToolVersion").text = "1.0.0"
+            ET.SubElement(info, "Format").text = "xml"
+
+            summary = results.get("summary", {})
+            summary_elem = ET.SubElement(report, "Summary")
+            for k, v in summary.items():
+                ET.SubElement(summary_elem, k.capitalize()).text = str(v)
+
+            vulns_elem = ET.SubElement(report, "Vulnerabilities")
+            for vuln in results.get("vulnerabilities", []):
+                vuln_elem = ET.SubElement(vulns_elem, "Vulnerability")
+                for k, v in vuln.items():
+                    ET.SubElement(vuln_elem, k.capitalize()).text = str(v)
+
+            tree = ET.ElementTree(report)
+            tree.write(output_file, encoding="utf-8", xml_declaration=True)
+            return output_file
+        except Exception as e:
+            self.logger.error(f"Error generating XML report: {str(e)}")
+            raise
+
+    def _generate_markdown_report(self, results: Dict[str, Any], output_file: str) -> str:
+        """Generate Markdown report."""
+        try:
+            summary = results.get("summary", {})
+            scan_info = results.get("scan_info", {})
+            vulns = results.get("vulnerabilities", [])
+            lines = [
+                f"# Mobile Security Analysis Report\n",
+                f"**File:** {scan_info.get('file_path', 'N/A')}  ",
+                f"**Type:** {scan_info.get('file_type', 'N/A')}  ",
+                f"**Date:** {scan_info.get('scan_date', 'N/A')}  ",
+                f"**Tests:** {', '.join(scan_info.get('tests_performed', []))}  \n",
+                f"## Summary\n",
+                f"- **Total Vulnerabilities:** {summary.get('total_vulnerabilities', 0)}",
+                f"- **Critical:** {summary.get('critical', 0)}",
+                f"- **High:** {summary.get('high', 0)}",
+                f"- **Medium:** {summary.get('medium', 0)}",
+                f"- **Low:** {summary.get('low', 0)}",
+                f"- **Overall Risk:** {summary.get('overall_risk', 'Unknown')}\n",
+                f"## Vulnerabilities\n"
+            ]
+            if not vulns:
+                lines.append("No vulnerabilities found.\n")
+            else:
+                for v in vulns:
+                    lines.append(f"### {v.get('title', v.get('type', 'Vulnerability'))}")
+                    lines.append(f"- **Type:** {v.get('type', '')}")
+                    lines.append(f"- **Severity:** {v.get('severity', '')}")
+                    lines.append(f"- **Description:** {v.get('description', '')}")
+                    lines.append(f"- **File:** {v.get('file', '')}")
+                    lines.append(f"- **Recommendation:** {v.get('recommendation', '')}\n")
+            with open(output_file, 'w', encoding='utf-8') as f:
+                f.write('\n'.join(lines))
+            return output_file
+        except Exception as e:
+            self.logger.error(f"Error generating Markdown report: {str(e)}")
+            raise
+    
     def _prepare_html_data(self, results: Dict[str, Any]) -> Dict[str, Any]:
-        """Prepare data for HTML template."""
+        """Prepare data for HTML template with false positive filtering."""
         # Extract summary information
         summary = results.get("summary", {})
         scan_info = results.get("scan_info", {})
         
-        # Categorize vulnerabilities by severity
-        vulnerabilities = results.get("vulnerabilities", [])
-        critical_vulns = [v for v in vulnerabilities if v.get("severity") == "critical"]
-        high_vulns = [v for v in vulnerabilities if v.get("severity") == "high"]
-        medium_vulns = [v for v in vulnerabilities if v.get("severity") == "medium"]
-        low_vulns = [v for v in vulnerabilities if v.get("severity") == "low"]
+        # Filter out false positives from Android framework files
+        def is_framework_file(file_path: str) -> bool:
+            """Check if file is from Android framework (false positive)."""
+            if not file_path:
+                return False
+            
+            # Android framework files to exclude
+            framework_patterns = [
+                'abc_', 'android_', 'support_', 'androidx_',  # Android support libraries
+                'res/drawable/abc_', 'res/layout/abc_', 'res/color/abc_',  # AppCompat resources
+                'res/drawable-v24/', 'res/drawable-v21/', 'res/layout-v21/',  # Version-specific resources
+                'res/color-v23/', 'res/color-v21/',  # Version-specific colors
+                'META-INF/', 'AndroidManifest.xml',  # APK metadata
+                'classes.dex', 'resources.arsc',  # APK core files
+                'res/anim/', 'res/transition/', 'res/interpolator/',  # Animation resources
+                'res/menu/', 'res/navigation/', 'res/xml/',  # Other resources
+                'res/values/', 'res/values-v',  # Values resources
+                'res/mipmap-', 'res/drawable-',  # Image resources
+                'assets/', 'lib/', 'libs/'  # Assets and libraries
+            ]
+            
+            file_path_lower = file_path.lower()
+            return any(pattern in file_path_lower for pattern in framework_patterns)
+        
+        def clean_vulnerability(vuln: Dict[str, Any]) -> Dict[str, Any]:
+            """Clean and enhance vulnerability data."""
+            # Skip framework files
+            if is_framework_file(vuln.get('file', '')):
+                return None
+            
+            # Clean up pattern data
+            pattern = vuln.get('pattern', '')
+            if pattern and len(pattern) > 100:
+                pattern = pattern[:100] + "..."
+            
+            # Enhance with better descriptions
+            vuln_type = vuln.get('type', '').lower()
+            descriptions = {
+                'root_detection': 'Application attempts to detect if device is rooted',
+                'emulator_detection': 'Application attempts to detect if running in emulator',
+                'insecure_crypto': 'Weak or deprecated cryptographic algorithm detected',
+                'input_validation': 'Potential input validation vulnerability',
+                'network_intercepting': 'HTTP traffic detected (should use HTTPS)',
+                'insecure_storage': 'Sensitive data stored insecurely',
+                'keyboard_cache': 'Keyboard cache not properly disabled',
+                'insecure_logging': 'Sensitive information logged insecurely',
+                'hardcoded_secrets': 'Hardcoded secrets found in code',
+                'sql_injection': 'Potential SQL injection vulnerability',
+                'path_traversal': 'Potential path traversal vulnerability',
+                'command_injection': 'Potential command injection vulnerability',
+                'webview_security': 'WebView security configuration issue',
+                'intent_injection': 'Potential intent injection vulnerability',
+                'certificate_bypass': 'SSL certificate validation bypass',
+                'clipboard_exposure': 'Sensitive data exposed to clipboard',
+                'sensitive_data_handling': 'Sensitive data handled insecurely'
+            }
+            
+            # Create enhanced vulnerability object
+            enhanced_vuln = {
+                'title': vuln.get('title') or vuln.get('type', 'Security Issue'),
+                'type': vuln.get('type', 'Unknown'),
+                'severity': vuln.get('severity', 'medium'),
+                'description': vuln.get('description') or descriptions.get(vuln_type, 'Security issue detected'),
+                'file': vuln.get('file', ''),
+                'line': vuln.get('line', ''),
+                'pattern': pattern,
+                'recommendation': vuln.get('recommendation', 'Review and fix this security issue')
+            }
+            
+            return enhanced_vuln
+        
+        # Get all vulnerabilities and filter
+        all_vulnerabilities = results.get("vulnerabilities", [])
+        all_security_issues = results.get("security_issues", [])
+        
+        # Combine and filter vulnerabilities
+        combined_vulns = all_vulnerabilities + all_security_issues
+        filtered_vulns = []
+        
+        for vuln in combined_vulns:
+            cleaned_vuln = clean_vulnerability(vuln)
+            if cleaned_vuln:
+                filtered_vulns.append(cleaned_vuln)
+        
+        # Categorize by severity
+        critical_vulns = [v for v in filtered_vulns if v.get("severity") == "critical"]
+        high_vulns = [v for v in filtered_vulns if v.get("severity") == "high"]
+        medium_vulns = [v for v in filtered_vulns if v.get("severity") == "medium"]
+        low_vulns = [v for v in filtered_vulns if v.get("severity") == "low"]
         
         # Get analysis results
-        static_analysis = results.get("static_analysis", {})
-        dynamic_analysis = results.get("dynamic_analysis", {})
-        network_analysis = results.get("network_analysis", {})
-        storage_analysis = results.get("storage_analysis", {})
-        code_analysis = results.get("code_analysis", {})
+        static_analysis = results.get("static_analysis", {}) or {"message": "No static analysis results."}
+        dynamic_analysis = results.get("dynamic_analysis", {}) or {"message": "No dynamic analysis results."}
+        network_analysis = results.get("network_analysis", {}) or {"message": "No network analysis results."}
+        storage_analysis = results.get("storage_analysis", {}) or {"message": "No storage analysis results."}
+        code_analysis = static_analysis.get("code_analysis", {}) or results.get("code_analysis", {}) or {"message": "No code analysis results."}
+        
+        # Generate recommendations
+        recommendations = results.get("recommendations", [])
+        if not recommendations:
+            recommendations = [
+                "Implement proper input validation for all user inputs",
+                "Use HTTPS for all network communications",
+                "Store sensitive data in encrypted storage",
+                "Implement certificate pinning for network communications",
+                "Disable keyboard cache for sensitive input fields",
+                "Use secure logging practices",
+                "Implement proper session management",
+                "Regular security audits and penetration testing",
+                "Use ProGuard/R8 for code obfuscation",
+                "Implement proper error handling"
+            ]
         
         return {
             "scan_info": scan_info,
@@ -176,367 +373,507 @@ class ReportGenerator:
             "network_analysis": network_analysis,
             "storage_analysis": storage_analysis,
             "code_analysis": code_analysis,
-            "recommendations": results.get("recommendations", []),
+            "recommendations": recommendations,
             "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
     
     def _get_html_template(self) -> str:
-        """Get HTML template for report."""
-        return """
+        """Get clean, modern HTML template for report."""
+        return '''
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mobile Security Analysis Report</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --success: #059669;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --info: #0891b2;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --white: #ffffff;
         }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 1.6;
+            color: var(--gray-800);
+            background: var(--gray-50);
+        }
+        
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            background-color: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            padding: 2rem;
         }
+        
         .header {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
             text-align: center;
-            border-bottom: 3px solid #007bff;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
         }
+        
         .header h1 {
-            color: #007bff;
-            margin: 0;
-            font-size: 2.5em;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 0.5rem;
         }
-        .summary {
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 30px;
+        
+        .header .subtitle {
+            color: var(--gray-600);
+            font-size: 1.1rem;
         }
+        
         .summary-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
         }
-        .summary-item {
-            text-align: center;
-            padding: 15px;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        .summary-item h3 {
-            margin: 0;
-            color: #007bff;
-        }
-        .summary-item p {
-            margin: 5px 0 0 0;
-            font-size: 1.5em;
-            font-weight: bold;
-        }
-        .critical { color: #dc3545; }
-        .high { color: #fd7e14; }
-        .medium { color: #ffc107; }
-        .low { color: #28a745; }
-        .section {
-            margin-bottom: 30px;
-        }
-        .section h2 {
-            color: #007bff;
-            border-bottom: 2px solid #007bff;
-            padding-bottom: 10px;
-        }
-        .vulnerability {
-            background-color: #f8f9fa;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 8px;
-            border-left: 5px solid #007bff;
-        }
-        .vulnerability.critical { border-left-color: #dc3545; }
-        .vulnerability.high { border-left-color: #fd7e14; }
-        .vulnerability.medium { border-left-color: #ffc107; }
-        .vulnerability.low { border-left-color: #28a745; }
-        .vulnerability h4 {
-            margin: 0 0 10px 0;
-            color: #333;
-        }
-        .vulnerability p {
-            margin: 5px 0;
-        }
-        .severity-badge {
-            display: inline-block;
-            padding: 3px 8px;
+        
+        .summary-card {
+            background: var(--white);
             border-radius: 12px;
-            font-size: 0.8em;
-            font-weight: bold;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid var(--primary);
+        }
+        
+        .summary-card.critical { border-left-color: var(--danger); }
+        .summary-card.high { border-left-color: var(--warning); }
+        .summary-card.medium { border-left-color: var(--info); }
+        .summary-card.low { border-left-color: var(--success); }
+        
+        .summary-card h3 {
+            font-size: 0.875rem;
+            font-weight: 600;
             text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--gray-500);
+            margin-bottom: 0.5rem;
         }
-        .severity-badge.critical { background-color: #dc3545; color: white; }
-        .severity-badge.high { background-color: #fd7e14; color: white; }
-        .severity-badge.medium { background-color: #ffc107; color: black; }
-        .severity-badge.low { background-color: #28a745; color: white; }
-        .analysis-details {
-            background-color: #f8f9fa;
-            padding: 15px;
+        
+        .summary-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+        
+        .summary-card .label {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+            margin-top: 0.25rem;
+        }
+        
+        .section {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .section h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .section h2 .icon {
+            font-size: 1.25rem;
+        }
+        
+        .vulnerability-item {
+            border: 1px solid var(--gray-200);
             border-radius: 8px;
-            margin: 10px 0;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            background: var(--gray-50);
         }
-        .recommendations {
-            background-color: #e7f3ff;
-            padding: 20px;
+        
+        .vulnerability-item.critical { border-left: 4px solid var(--danger); }
+        .vulnerability-item.high { border-left: 4px solid var(--warning); }
+        .vulnerability-item.medium { border-left: 4px solid var(--info); }
+        .vulnerability-item.low { border-left: 4px solid var(--success); }
+        
+        .vulnerability-header {
+            display: flex;
+            justify-content: between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+        
+        .vulnerability-title {
+            font-weight: 600;
+            color: var(--gray-900);
+            flex: 1;
+        }
+        
+        .severity-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .severity-badge.critical {
+            background: var(--danger);
+            color: var(--white);
+        }
+        
+        .severity-badge.high {
+            background: var(--warning);
+            color: var(--white);
+        }
+        
+        .severity-badge.medium {
+            background: var(--info);
+            color: var(--white);
+        }
+        
+        .severity-badge.low {
+            background: var(--success);
+            color: var(--white);
+        }
+        
+        .vulnerability-details {
+            margin-bottom: 1rem;
+        }
+        
+        .detail-row {
+            display: flex;
+            margin-bottom: 0.5rem;
+        }
+        
+        .detail-label {
+            font-weight: 500;
+            color: var(--gray-700);
+            min-width: 120px;
+        }
+        
+        .detail-value {
+            color: var(--gray-600);
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 0.875rem;
+        }
+        
+        .recommendation {
+            background: var(--primary);
+            color: var(--white);
+            padding: 1rem;
             border-radius: 8px;
-            border-left: 5px solid #007bff;
+            font-size: 0.875rem;
         }
-        .recommendations ul {
-            margin: 10px 0;
-            padding-left: 20px;
+        
+        .no-issues {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: var(--gray-500);
         }
-        .recommendations li {
-            margin: 5px 0;
+        
+        .no-issues .icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
         }
+        
+        .no-issues h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .no-issues p {
+            font-size: 0.875rem;
+        }
+        
         .footer {
             text-align: center;
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #ddd;
-            color: #666;
+            padding: 2rem;
+            color: var(--gray-500);
+            font-size: 0.875rem;
         }
-        @media print {
-            body { background-color: white; }
-            .container { box-shadow: none; }
+        
+        @media (max-width: 768px) {
+            .container { padding: 1rem; }
+            .header { padding: 1.5rem; }
+            .header h1 { font-size: 2rem; }
+            .summary-grid { grid-template-columns: 1fr; }
+            .section { padding: 1.5rem; }
+            .vulnerability-header { flex-direction: column; gap: 0.5rem; }
+            .detail-row { flex-direction: column; gap: 0.25rem; }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Mobile Security Analysis Report</h1>
-            <p>Generated on {{ generated_at }}</p>
+            <h1>🔒 Mobile Security Analysis Report</h1>
+            <p class="subtitle">{{ scan_info.file_path }} • {{ generated_at }}</p>
         </div>
-
-        <div class="summary">
-            <h2>Executive Summary</h2>
-            <div class="summary-grid">
-                <div class="summary-item">
-                    <h3>Overall Risk</h3>
-                    <p class="{{ summary.overall_risk.lower() }}">{{ summary.overall_risk }}</p>
-                </div>
-                <div class="summary-item">
-                    <h3>Critical</h3>
-                    <p class="critical">{{ summary.critical }}</p>
-                </div>
-                <div class="summary-item">
-                    <h3>High</h3>
-                    <p class="high">{{ summary.high }}</p>
-                </div>
-                <div class="summary-item">
-                    <h3>Medium</h3>
-                    <p class="medium">{{ summary.medium }}</p>
-                </div>
-                <div class="summary-item">
-                    <h3>Low</h3>
-                    <p class="low">{{ summary.low }}</p>
-                </div>
+        
+        <div class="summary-grid">
+            <div class="summary-card critical">
+                <h3>Critical Issues</h3>
+                <div class="value">{{ critical_vulnerabilities|length }}</div>
+                <div class="label">Immediate attention required</div>
+            </div>
+            <div class="summary-card high">
+                <h3>High Risk Issues</h3>
+                <div class="value">{{ high_vulnerabilities|length }}</div>
+                <div class="label">Address within 1 week</div>
+            </div>
+            <div class="summary-card medium">
+                <h3>Medium Risk Issues</h3>
+                <div class="value">{{ medium_vulnerabilities|length }}</div>
+                <div class="label">Address within 1 month</div>
+            </div>
+            <div class="summary-card low">
+                <h3>Low Risk Issues</h3>
+                <div class="value">{{ low_vulnerabilities|length }}</div>
+                <div class="label">Address when possible</div>
             </div>
         </div>
-
-        {% if scan_info %}
-        <div class="section">
-            <h2>Scan Information</h2>
-            <div class="analysis-details">
-                <p><strong>File:</strong> {{ scan_info.file_path or scan_info.package_name or 'N/A' }}</p>
-                <p><strong>Type:</strong> {{ scan_info.file_type or scan_info.device_type or 'N/A' }}</p>
-                <p><strong>Date:</strong> {{ scan_info.scan_date }}</p>
-                <p><strong>Tests:</strong> {{ scan_info.tests_performed | join(', ') if scan_info.tests_performed else 'N/A' }}</p>
-            </div>
-        </div>
-        {% endif %}
-
+        
         {% if critical_vulnerabilities %}
         <div class="section">
-            <h2>Critical Vulnerabilities</h2>
+            <h2><span class="icon">🚨</span>Critical Security Issues</h2>
             {% for vuln in critical_vulnerabilities %}
-            <div class="vulnerability critical">
-                <h4>
+            <div class="vulnerability-item critical">
+                <div class="vulnerability-header">
+                    <div class="vulnerability-title">{{ vuln.title or vuln.type }}</div>
                     <span class="severity-badge critical">Critical</span>
-                    {{ vuln.type }}
-                </h4>
-                <p><strong>Description:</strong> {{ vuln.description }}</p>
-                {% if vuln.file %}<p><strong>File:</strong> {{ vuln.file }}</p>{% endif %}
-                {% if vuln.recommendation %}<p><strong>Recommendation:</strong> {{ vuln.recommendation }}</p>{% endif %}
+                </div>
+                <div class="vulnerability-details">
+                    {% if vuln.description %}
+                    <div class="detail-row">
+                        <span class="detail-label">Description:</span>
+                        <span class="detail-value">{{ vuln.description }}</span>
+                    </div>
+                    {% endif %}
+                    {% if vuln.file %}
+                    <div class="detail-row">
+                        <span class="detail-label">File:</span>
+                        <span class="detail-value">{{ vuln.file }}</span>
+                    </div>
+                    {% endif %}
+                    {% if vuln.line %}
+                    <div class="detail-row">
+                        <span class="detail-label">Line:</span>
+                        <span class="detail-value">{{ vuln.line }}</span>
+                    </div>
+                    {% endif %}
+                    {% if vuln.pattern %}
+                    <div class="detail-row">
+                        <span class="detail-label">Pattern:</span>
+                        <span class="detail-value">{{ vuln.pattern }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% if vuln.recommendation %}
+                <div class="recommendation">
+                    <strong>Recommendation:</strong> {{ vuln.recommendation }}
+                </div>
+                {% endif %}
             </div>
             {% endfor %}
         </div>
         {% endif %}
-
+        
         {% if high_vulnerabilities %}
         <div class="section">
-            <h2>High Severity Vulnerabilities</h2>
+            <h2><span class="icon">⚠️</span>High Risk Security Issues</h2>
             {% for vuln in high_vulnerabilities %}
-            <div class="vulnerability high">
-                <h4>
+            <div class="vulnerability-item high">
+                <div class="vulnerability-header">
+                    <div class="vulnerability-title">{{ vuln.title or vuln.type }}</div>
                     <span class="severity-badge high">High</span>
-                    {{ vuln.type }}
-                </h4>
-                <p><strong>Description:</strong> {{ vuln.description }}</p>
-                {% if vuln.file %}<p><strong>File:</strong> {{ vuln.file }}</p>{% endif %}
-                {% if vuln.recommendation %}<p><strong>Recommendation:</strong> {{ vuln.recommendation }}</p>{% endif %}
+                </div>
+                <div class="vulnerability-details">
+                    {% if vuln.description %}
+                    <div class="detail-row">
+                        <span class="detail-label">Description:</span>
+                        <span class="detail-value">{{ vuln.description }}</span>
+                    </div>
+                    {% endif %}
+                    {% if vuln.file %}
+                    <div class="detail-row">
+                        <span class="detail-label">File:</span>
+                        <span class="detail-value">{{ vuln.file }}</span>
+                    </div>
+                    {% endif %}
+                    {% if vuln.line %}
+                    <div class="detail-row">
+                        <span class="detail-label">Line:</span>
+                        <span class="detail-value">{{ vuln.line }}</span>
+                    </div>
+                    {% endif %}
+                    {% if vuln.pattern %}
+                    <div class="detail-row">
+                        <span class="detail-label">Pattern:</span>
+                        <span class="detail-value">{{ vuln.pattern }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% if vuln.recommendation %}
+                <div class="recommendation">
+                    <strong>Recommendation:</strong> {{ vuln.recommendation }}
+                </div>
+                {% endif %}
             </div>
             {% endfor %}
         </div>
         {% endif %}
-
+        
         {% if medium_vulnerabilities %}
         <div class="section">
-            <h2>Medium Severity Vulnerabilities</h2>
+            <h2><span class="icon">🔍</span>Medium Risk Security Issues</h2>
             {% for vuln in medium_vulnerabilities %}
-            <div class="vulnerability medium">
-                <h4>
+            <div class="vulnerability-item medium">
+                <div class="vulnerability-header">
+                    <div class="vulnerability-title">{{ vuln.title or vuln.type }}</div>
                     <span class="severity-badge medium">Medium</span>
-                    {{ vuln.type }}
-                </h4>
-                <p><strong>Description:</strong> {{ vuln.description }}</p>
-                {% if vuln.file %}<p><strong>File:</strong> {{ vuln.file }}</p>{% endif %}
-                {% if vuln.recommendation %}<p><strong>Recommendation:</strong> {{ vuln.recommendation }}</p>{% endif %}
+                </div>
+                <div class="vulnerability-details">
+                    {% if vuln.description %}
+                    <div class="detail-row">
+                        <span class="detail-label">Description:</span>
+                        <span class="detail-value">{{ vuln.description }}</span>
+                    </div>
+                    {% endif %}
+                    {% if vuln.file %}
+                    <div class="detail-row">
+                        <span class="detail-label">File:</span>
+                        <span class="detail-value">{{ vuln.file }}</span>
+                    </div>
+                    {% endif %}
+                    {% if vuln.line %}
+                    <div class="detail-row">
+                        <span class="detail-label">Line:</span>
+                        <span class="detail-value">{{ vuln.line }}</span>
+                    </div>
+                    {% endif %}
+                    {% if vuln.pattern %}
+                    <div class="detail-row">
+                        <span class="detail-label">Pattern:</span>
+                        <span class="detail-value">{{ vuln.pattern }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% if vuln.recommendation %}
+                <div class="recommendation">
+                    <strong>Recommendation:</strong> {{ vuln.recommendation }}
+                </div>
+                {% endif %}
             </div>
             {% endfor %}
         </div>
         {% endif %}
-
+        
         {% if low_vulnerabilities %}
         <div class="section">
-            <h2>Low Severity Vulnerabilities</h2>
+            <h2><span class="icon">ℹ️</span>Low Risk Security Issues</h2>
             {% for vuln in low_vulnerabilities %}
-            <div class="vulnerability low">
-                <h4>
+            <div class="vulnerability-item low">
+                <div class="vulnerability-header">
+                    <div class="vulnerability-title">{{ vuln.title or vuln.type }}</div>
                     <span class="severity-badge low">Low</span>
-                    {{ vuln.type }}
-                </h4>
-                <p><strong>Description:</strong> {{ vuln.description }}</p>
-                {% if vuln.file %}<p><strong>File:</strong> {{ vuln.file }}</p>{% endif %}
-                {% if vuln.recommendation %}<p><strong>Recommendation:</strong> {{ vuln.recommendation }}</p>{% endif %}
+                </div>
+                <div class="vulnerability-details">
+                    {% if vuln.description %}
+                    <div class="detail-row">
+                        <span class="detail-label">Description:</span>
+                        <span class="detail-value">{{ vuln.description }}</span>
+                    </div>
+                    {% endif %}
+                    {% if vuln.file %}
+                    <div class="detail-row">
+                        <span class="detail-label">File:</span>
+                        <span class="detail-value">{{ vuln.file }}</span>
+                    </div>
+                    {% endif %}
+                    {% if vuln.line %}
+                    <div class="detail-row">
+                        <span class="detail-label">Line:</span>
+                        <span class="detail-value">{{ vuln.line }}</span>
+                    </div>
+                    {% endif %}
+                    {% if vuln.pattern %}
+                    <div class="detail-row">
+                        <span class="detail-label">Pattern:</span>
+                        <span class="detail-value">{{ vuln.pattern }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% if vuln.recommendation %}
+                <div class="recommendation">
+                    <strong>Recommendation:</strong> {{ vuln.recommendation }}
+                </div>
+                {% endif %}
             </div>
             {% endfor %}
         </div>
         {% endif %}
-
-        {% if static_analysis %}
+        
+        {% if not critical_vulnerabilities and not high_vulnerabilities and not medium_vulnerabilities and not low_vulnerabilities %}
         <div class="section">
-            <h2>Static Analysis Results</h2>
-            <div class="analysis-details">
-                {% if static_analysis.file_info %}
-                <h4>File Information</h4>
-                <p><strong>File Size:</strong> {{ static_analysis.file_info.file_size | filesizeformat }}</p>
-                <p><strong>File Type:</strong> {{ static_analysis.file_info.file_type }}</p>
-                {% endif %}
-                
-                {% if static_analysis.permissions %}
-                <h4>Permissions Analysis</h4>
-                <p><strong>Total Permissions:</strong> {{ static_analysis.permissions | length }}</p>
-                {% for perm in static_analysis.permissions[:5] %}
-                <p>- {{ perm.permission }} ({{ perm.severity }})</p>
-                {% endfor %}
-                {% endif %}
-                
-                {% if static_analysis.components %}
-                <h4>Components Analysis</h4>
-                <p><strong>Activities:</strong> {{ static_analysis.components.activities | length }}</p>
-                <p><strong>Services:</strong> {{ static_analysis.components.services | length }}</p>
-                <p><strong>Receivers:</strong> {{ static_analysis.components.receivers | length }}</p>
-                <p><strong>Providers:</strong> {{ static_analysis.components.providers | length }}</p>
-                {% endif %}
+            <div class="no-issues">
+                <div class="icon">✅</div>
+                <h3>No Security Issues Found</h3>
+                <p>Great job! No security vulnerabilities were detected in this analysis.</p>
             </div>
         </div>
         {% endif %}
-
-        {% if network_analysis %}
-        <div class="section">
-            <h2>Network Analysis Results</h2>
-            <div class="analysis-details">
-                {% if network_analysis.api_endpoints %}
-                <h4>API Endpoints</h4>
-                <p><strong>Total Endpoints:</strong> {{ network_analysis.api_endpoints | length }}</p>
-                {% for endpoint in network_analysis.api_endpoints[:5] %}
-                <p>- {{ endpoint.url }} ({{ endpoint.type }})</p>
-                {% endfor %}
-                {% endif %}
-                
-                {% if network_analysis.ssl_tls_analysis %}
-                <h4>SSL/TLS Analysis</h4>
-                <p><strong>Certificate Validation:</strong> {{ "Enabled" if network_analysis.ssl_tls_analysis.certificate_validation else "Disabled" }}</p>
-                {% endif %}
-            </div>
-        </div>
-        {% endif %}
-
-        {% if storage_analysis %}
-        <div class="section">
-            <h2>Storage Analysis Results</h2>
-            <div class="analysis-details">
-                {% if storage_analysis.encryption_analysis %}
-                <h4>Encryption Analysis</h4>
-                <p><strong>Encryption Used:</strong> {{ "Yes" if storage_analysis.encryption_analysis.encryption_used else "No" }}</p>
-                {% if storage_analysis.encryption_analysis.encryption_methods %}
-                <p><strong>Methods:</strong> {{ storage_analysis.encryption_analysis.encryption_methods | join(', ') }}</p>
-                {% endif %}
-                {% endif %}
-                
-                {% if storage_analysis.backup_analysis %}
-                <h4>Backup Analysis</h4>
-                <p><strong>Backup Enabled:</strong> {{ "Yes" if storage_analysis.backup_analysis.backup_enabled else "No" }}</p>
-                {% endif %}
-            </div>
-        </div>
-        {% endif %}
-
-        {% if code_analysis %}
-        <div class="section">
-            <h2>Code Analysis Results</h2>
-            <div class="analysis-details">
-                {% if code_analysis.code_quality %}
-                <h4>Code Quality</h4>
-                <p><strong>Total Files:</strong> {{ code_analysis.code_quality.total_files }}</p>
-                <p><strong>Java Files:</strong> {{ code_analysis.code_quality.java_files }}</p>
-                <p><strong>Kotlin Files:</strong> {{ code_analysis.code_quality.kotlin_files }}</p>
-                {% endif %}
-                
-                {% if code_analysis.hardcoded_secrets %}
-                <h4>Hardcoded Secrets</h4>
-                <p><strong>Total Secrets:</strong> {{ code_analysis.hardcoded_secrets | length }}</p>
-                {% endif %}
-            </div>
-        </div>
-        {% endif %}
-
+        
         {% if recommendations %}
         <div class="section">
-            <h2>Security Recommendations</h2>
-            <div class="recommendations">
-                <ul>
-                    {% for rec in recommendations %}
-                    <li>{{ rec }}</li>
-                    {% endfor %}
-                </ul>
-            </div>
+            <h2><span class="icon">💡</span>General Security Recommendations</h2>
+            <ul style="list-style: none; padding: 0;">
+                {% for rec in recommendations %}
+                <li style="padding: 0.75rem 0; border-bottom: 1px solid var(--gray-200); color: var(--gray-700);">
+                    • {{ rec }}
+                </li>
+                {% endfor %}
+            </ul>
         </div>
         {% endif %}
-
+        
         <div class="footer">
-            <p>Report generated by Mobile Security Testing Tool</p>
-            <p>For questions or support, please contact your security team</p>
+            <p>Report generated by Mobile Security Tool • {{ generated_at }}</p>
         </div>
     </div>
 </body>
 </html>
-        """ 
+        ''' 

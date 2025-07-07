@@ -1,74 +1,120 @@
 version: '3.8'
 
 services:
-  mobile-tool:
+  # CLI Mode Services
+  mobile-tool-cli:
     build: .
     image: mobile-security-tester:latest
-    container_name: mobile-security-tester
+    container_name: mobile-security-tester-cli
     volumes:
-      - ./output:/app/output
-      - ./input:/app/input
-      - ./reports:/app/reports
+      - ./reports/cli:/app/reports/cli
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+      - ./config:/app/config
     environment:
       - PYTHONUNBUFFERED=1
+      - MOBILE_API_PORT=5001
     working_dir: /app
-    # Example usage - override with your own commands
-    command: ["--help"]
+    command: ["python", "src/mobile_security_tester.py", "--help"]
     
   mobile-tool-interactive:
     build: .
     image: mobile-security-tester:latest
     container_name: mobile-security-tester-interactive
     volumes:
-      - ./output:/app/output
-      - ./input:/app/input
-      - ./reports:/app/reports
+      - ./reports/cli:/app/reports/cli
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+      - ./config:/app/config
     environment:
       - PYTHONUNBUFFERED=1
+      - MOBILE_API_PORT=5001
     working_dir: /app
     stdin_open: true
     tty: true
-    # Interactive mode
     command: []
     
+  # API Mode Services
+  mobile-api:
+    build: .
+    image: mobile-security-tester:latest
+    container_name: mobile-security-api
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./reports/api:/app/reports/api
+      - ./reports/cli:/app/reports/cli
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+      - ./config:/app/config
+    environment:
+      - PYTHONUNBUFFERED=1
+      - MOBILE_API_PORT=5001
+      - MOBILE_API_DEBUG=false
+    working_dir: /app
+    command: ["python", "src/mobile_api_enhanced.py"]
+    
+  mobile-api-debug:
+    build: .
+    image: mobile-security-tester:latest
+    container_name: mobile-security-api-debug
+    ports:
+      - "5002:5001"
+    volumes:
+      - ./reports/api:/app/reports/api
+      - ./reports/cli:/app/reports/cli
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+      - ./config:/app/config
+    environment:
+      - PYTHONUNBUFFERED=1
+      - MOBILE_API_PORT=5001
+      - MOBILE_API_DEBUG=true
+    working_dir: /app
+    command: ["python", "src/mobile_api_enhanced.py", "--debug"]
+    
+  # Analysis Services
   mobile-tool-static:
     build: .
     image: mobile-security-tester:latest
     container_name: mobile-security-tester-static
     volumes:
-      - ./output:/app/output
-      - ./input:/app/input
-      - ./reports:/app/reports
+      - ./reports/cli:/app/reports/cli
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+      - ./config:/app/config
     environment:
       - PYTHONUNBUFFERED=1
+      - MOBILE_API_PORT=5001
     working_dir: /app
-    # Static analysis example
-    command: ["/app/input/app.apk", "--analysis-type", "static", "--output", "/app/output/static_analysis.json"]
+    command: ["python", "src/mobile_security_tester.py", "--apk", "/app/uploads/app.apk", "--tests", "static", "--output", "/app/reports/cli/static_analysis.json"]
     
   mobile-tool-comprehensive:
     build: .
     image: mobile-security-tester:latest
     container_name: mobile-security-tester-comprehensive
     volumes:
-      - ./output:/app/output
-      - ./input:/app/input
-      - ./reports:/app/reports
+      - ./reports/cli:/app/reports/cli
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+      - ./config:/app/config
     environment:
       - PYTHONUNBUFFERED=1
+      - MOBILE_API_PORT=5001
     working_dir: /app
-    # Comprehensive analysis example
-    command: ["/app/input/app.apk", "--analysis-type", "comprehensive", "--output", "/app/output/comprehensive_analysis.json", "--report", "/app/reports/report.html"]
+    command: ["python", "src/mobile_security_tester.py", "--apk", "/app/uploads/app.apk", "--comprehensive", "--output", "/app/reports/cli/comprehensive_analysis.json"]
     
   mobile-tool-batch:
     build: .
     image: mobile-security-tester:latest
     container_name: mobile-security-tester-batch
     volumes:
-      - ./output:/app/output
-      - ./input:/app/input
-      - ./reports:/app/reports
+      - ./reports/cli:/app/reports/cli
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+      - ./config:/app/config
     environment:
       - PYTHONUNBUFFERED=1
+      - MOBILE_API_PORT=5001
     working_dir: /app
-    # Batch processing example
-    command: ["/app/input/", "--output", "/app/output/batch_results.json", "--summary", "/app/reports/summary.txt"] 
+    command: ["python", "src/mobile_security_tester.py", "--batch", "/app/uploads", "--output", "/app/reports/cli/batch_results.json"] 

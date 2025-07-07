@@ -905,8 +905,8 @@ class JWTSecurityTester:
             import concurrent.futures
             def try_secrets(secret_list):
                 for secret in secret_list:
-                    try:
-                        jwt.decode(token, secret, algorithms=['HS256', 'HS384', 'HS512'])
+                try:
+                    jwt.decode(token, secret, algorithms=['HS256', 'HS384', 'HS512'])
                         return secret, None
                     except jwt.InvalidSignatureError:
                         continue
@@ -920,13 +920,13 @@ class JWTSecurityTester:
                     results["attempts_made"] += chunk_size
                     if secret:
                         found_secret = secret
-                        results["cracked_secret"] = secret
-                        results["attack_successful"] = True
+                    results["cracked_secret"] = secret
+                    results["attack_successful"] = True
                         self.print_success(f"Secret found: '{secret}'")
                         # Cancel all other futures
                         for fut in futures:
                             fut.cancel()
-                        break
+                    break
                     if error:
                         results["errors"].append(error)
             if not found_secret:
@@ -1434,18 +1434,18 @@ class JWTSecurityTester:
         # Check if this is a comprehensive test result or a specific test result
         if "summary" in results:
             # Comprehensive test result
-            summary = results["summary"]
-            print(f"🔍 Total Vulnerabilities: {summary['total_vulnerabilities']}")
-            print(f"🚨 Critical: {summary['critical']}")
-            print(f"⚠️ High: {summary['high']}")
-            print(f"🔶 Medium: {summary['medium']}")
-            print(f"🔵 Low: {summary['low']}")
-            print(f"🎯 Overall Risk: {summary['overall_risk']}")
-            
-            if summary['total_vulnerabilities'] == 0:
-                print("\n✅ No vulnerabilities found! JWT appears secure.")
-            else:
-                print(f"\n❌ {summary['total_vulnerabilities']} vulnerabilities found. Review detailed results.")
+        summary = results["summary"]
+        print(f"🔍 Total Vulnerabilities: {summary['total_vulnerabilities']}")
+        print(f"🚨 Critical: {summary['critical']}")
+        print(f"⚠️ High: {summary['high']}")
+        print(f"🔶 Medium: {summary['medium']}")
+        print(f"🔵 Low: {summary['low']}")
+        print(f"🎯 Overall Risk: {summary['overall_risk']}")
+        
+        if summary['total_vulnerabilities'] == 0:
+            print("\n✅ No vulnerabilities found! JWT appears secure.")
+        else:
+            print(f"\n❌ {summary['total_vulnerabilities']} vulnerabilities found. Review detailed results.")
         else:
             # Specific test result
             print("🔍 Specific Test Results:")
@@ -1850,53 +1850,53 @@ For more information, visit: https://github.com/your-repo/jwt-security-tester
     
     # Main execution logic
     try:
-        if args.token:
+    if args.token:
             # Validate JWT token format
             if not tester.validate_jwt_token(args.token):
                 tester.print_error("Invalid JWT token format provided")
                 sys.exit(1)
             
-            # Test single token
+        # Test single token
             tester.print_header("🔒 JWT Security Testing Tool")
-            
-            if args.test == "all":
-                results = tester.comprehensive_test(args.token, args.secret, args.public_key)
-            elif args.test == "generate-keys":
-                # Generate key pairs
+        
+        if args.test == "all":
+            results = tester.comprehensive_test(args.token, args.secret, args.public_key)
+        elif args.test == "generate-keys":
+            # Generate key pairs
                 tester.print_info("🔐 Generating key pairs...")
-                rsa_keys = tester.generate_rsa_key_pair(args.key_size)
-                ecdsa_keys = tester.generate_ecdsa_key_pair(args.curve)
-                
-                if "error" not in rsa_keys:
+            rsa_keys = tester.generate_rsa_key_pair(args.key_size)
+            ecdsa_keys = tester.generate_ecdsa_key_pair(args.curve)
+            
+            if "error" not in rsa_keys:
                     tester.print_success(f"RSA {args.key_size}-bit key pair generated")
-                    with open(f"rsa_private_{args.key_size}.pem", "w") as f:
-                        f.write(rsa_keys["private_key"])
-                    with open(f"rsa_public_{args.key_size}.pem", "w") as f:
-                        f.write(rsa_keys["public_key"])
-                
-                if "error" not in ecdsa_keys:
+                with open(f"rsa_private_{args.key_size}.pem", "w") as f:
+                    f.write(rsa_keys["private_key"])
+                with open(f"rsa_public_{args.key_size}.pem", "w") as f:
+                    f.write(rsa_keys["public_key"])
+            
+            if "error" not in ecdsa_keys:
                     tester.print_success(f"ECDSA {args.curve} key pair generated")
-                    with open(f"ecdsa_private_{args.curve}.pem", "w") as f:
-                        f.write(ecdsa_keys["private_key"])
-                    with open(f"ecdsa_public_{args.curve}.pem", "w") as f:
-                        f.write(ecdsa_keys["public_key"])
-                
-                return
-            elif args.test == "forge":
-                # Forge token with custom payload
-                if not args.token:
+                with open(f"ecdsa_private_{args.curve}.pem", "w") as f:
+                    f.write(ecdsa_keys["private_key"])
+                with open(f"ecdsa_public_{args.curve}.pem", "w") as f:
+                    f.write(ecdsa_keys["public_key"])
+            
+            return
+        elif args.test == "forge":
+            # Forge token with custom payload
+            if not args.token:
                     tester.print_error("Token required for forging")
                     sys.exit(1)
-                
-                header, payload, signature = tester.decode_token_without_verification(args.token)
-                forged = tester.forge_token(payload, "HS256", args.secret)
-                if "error" not in forged:
+            
+            header, payload, signature = tester.decode_token_without_verification(args.token)
+            forged = tester.forge_token(payload, "HS256", args.secret)
+            if "error" not in forged:
                     tester.print_success(f"Forged token: {forged['forged_token']}")
-                else:
-                    tester.print_error(f"Forging failed: {forged['error']}")
-                return
             else:
-                # Run specific test
+                    tester.print_error(f"Forging failed: {forged['error']}")
+            return
+        else:
+            # Run specific test
                 test_mapping = {
                     "structure": ("structure_analysis", tester.analyze_token_structure),
                     "algorithm": ("algorithm_confusion", tester.test_algorithm_confusion),
@@ -1926,28 +1926,28 @@ For more information, visit: https://github.com/your-repo/jwt-security-tester
                 else:
                     tester.print_error(f"Unknown test type: {args.test}")
                     sys.exit(1)
-            
-            tester.print_summary(results)
+        
+        tester.print_summary(results)
             tester.print_vulnerabilities(results)
-            
-            if args.output:
+        
+        if args.output:
                 if args.output.endswith(".json"):
-                    tester.generate_report(results, args.output)
+            tester.generate_report(results, args.output)
                 else:
                     tester.generate_html_report(results, args.output)
             else:
                 # Default: always generate HTML report
                 tester.generate_html_report(results, None)
-        
-        elif args.file:
+    
+    elif args.file:
             tester.print_header("🔒 JWT Security Testing Tool - Batch Mode")
-            try:
-                with open(args.file, 'r') as f:
-                    tokens = [line.strip() for line in f if line.strip()]
+        try:
+            with open(args.file, 'r') as f:
+                tokens = [line.strip() for line in f if line.strip()]
                 tester.print_info(f"📁 Testing {len(tokens)} tokens from {args.file}")
                 valid_tokens = []
                 invalid_tokens = []
-                for i, token in enumerate(tokens, 1):
+            for i, token in enumerate(tokens, 1):
                     if tester.validate_jwt_token(token):
                         valid_tokens.append(token)
                     else:
@@ -1978,10 +1978,10 @@ For more information, visit: https://github.com/your-repo/jwt-security-tester
                         all_results.append(result)
                         if "error" in result:
                             errors.append(result)
-                combined_report = {
-                    "batch_report": {
-                        "title": "JWT Security Batch Analysis",
-                        "generated_date": datetime.now().isoformat(),
+            combined_report = {
+                "batch_report": {
+                    "title": "JWT Security Batch Analysis",
+                    "generated_date": datetime.now().isoformat(),
                         "tokens_tested": len(valid_tokens),
                         "invalid_tokens": len(invalid_tokens),
                         "results": all_results,
@@ -1990,48 +1990,48 @@ For more information, visit: https://github.com/your-repo/jwt-security-tester
                 }
                 output_file = args.output or f"jwt_batch_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
                 if output_file.endswith(".json"):
-                    with open(output_file, 'w') as f:
-                        json.dump(combined_report, f, indent=2)
+            with open(output_file, 'w') as f:
+                json.dump(combined_report, f, indent=2)
                 else:
                     tester.generate_html_report(combined_report, output_file)
                 tester.print_success(f"Batch report saved: {output_file}")
-            except FileNotFoundError:
+        except FileNotFoundError:
                 tester.print_error(f"File not found: {args.file}")
-                sys.exit(1)
-        
-        else:
-            # Interactive mode
+            sys.exit(1)
+    
+    else:
+        # Interactive mode
             tester.print_header("🔒 JWT Security Testing Tool - Interactive Mode")
-            
-            while True:
+        
+        while True:
                 token = input(f"\n{Fore.CYAN}Enter JWT token (or 'quit' to exit): {Style.RESET_ALL}").strip()
-                if token.lower() == 'quit':
-                    break
-                
-                if not token:
+            if token.lower() == 'quit':
+                break
+            
+            if not token:
                     tester.print_error("Please enter a valid JWT token")
                     continue
                 
                 if not tester.validate_jwt_token(token):
                     tester.print_error("Invalid JWT token format")
-                    continue
-                
-                try:
-                    results = tester.comprehensive_test(token)
-                    tester.print_summary(results)
+                continue
+            
+            try:
+                results = tester.comprehensive_test(token)
+                tester.print_summary(results)
                     tester.print_vulnerabilities(results)
-                    
+                
                     save_choice = input(f"\n{Fore.YELLOW}Save report? (y/n): {Style.RESET_ALL}").lower().strip()
-                    if save_choice == 'y':
+                if save_choice == 'y':
                         output_file = input(f"{Fore.CYAN}Enter output filename (or press Enter for default): {Style.RESET_ALL}").strip()
-                        if not output_file:
-                            output_file = None
+                    if not output_file:
+                        output_file = None
                         if output_file and output_file.endswith(".json"):
-                            tester.generate_report(results, output_file)
+                    tester.generate_report(results, output_file)
                         else:
                             tester.generate_html_report(results, output_file)
-                    
-                except Exception as e:
+                
+            except Exception as e:
                     tester.print_error(f"Error testing token: {str(e)}")
             
             tester.print_success("Thank you for using JWT Security Testing Tool!")

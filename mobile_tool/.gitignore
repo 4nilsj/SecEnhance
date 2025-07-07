@@ -1,0 +1,125 @@
+# Mobile Security Testing Tool - .gitignore
+
+# Generated reports and output files
+reports/
+output/
+*.html
+*.json
+*.pdf
+*.csv
+*.apk
+*.ipa
+*.aab
+
+# Test files and temporary files
+test_*.apk
+test_*.ipa
+test_*.aab
+downloaded_report_*.html
+mobile_scan_report_*.html
+cli_scan_*.html
+api_scan_*.html
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+mobile_security_debug.log
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Docker
+.dockerignore
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Mobile app files
+*.dex
+*.smali
+*.xml
+*.manifest
+*.plist
+*.ipa
+*.apk
+*.aab
+
+# Analysis artifacts
+decompiled/
+extracted/
+temp_analysis/
+analysis_cache/
+
+# Device files
+device_logs/
+adb_logs/
+ios_logs/
+
+# Upload files
+uploads/
+*.upload
+
+# Configuration backups
+config/*.backup
+config/*.old 
