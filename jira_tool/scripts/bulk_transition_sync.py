@@ -6,7 +6,7 @@ from utils.data_sync_utils import read_excel, write_excel, read_sqlite, write_sq
 from utils.debug_utils import set_debug, debug_log, error_log, safe_run, info_log
 
 def get_transition_id(url, token, ticket_id, target_status):
-    api_url = f"{url}/rest/api/2/issue/{ticket_id}/transitions"
+    api_url = f"{url}/rest/api/latest/issue/{ticket_id}/transitions"
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"
@@ -26,7 +26,7 @@ def get_transition_id(url, token, ticket_id, target_status):
     return None
 
 def transition_ticket(url, token, ticket_id, transition_id):
-    api_url = f"{url}/rest/api/2/issue/{ticket_id}/transitions"
+    api_url = f"{url}/rest/api/latest/issue/{ticket_id}/transitions"
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"

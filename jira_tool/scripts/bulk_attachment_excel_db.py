@@ -14,7 +14,7 @@ def extract_ticket_id(filename, pattern):
     return None
 
 def upload_attachment(url, token, ticket_id, file_path):
-    api_url = f"{url}/rest/api/2/issue/{ticket_id}/attachments"
+    api_url = f"{url}/rest/api/latest/issue/{ticket_id}/attachments"
     headers = {
         "Authorization": f"Bearer {token}",
         "X-Atlassian-Token": "no-check"

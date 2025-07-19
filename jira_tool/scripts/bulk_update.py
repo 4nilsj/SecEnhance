@@ -4,7 +4,7 @@ import requests
 
 
 def update_jira_ticket(url, token, ticket_id, fields):
-    api_url = f"{url}/rest/api/2/issue/{ticket_id}"
+    api_url = f"{url}/rest/api/latest/issue/{ticket_id}"
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"

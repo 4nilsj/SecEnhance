@@ -1,6 +1,6 @@
 # Jira Tool
 
-This tool provides scripts for bulk creating, updating, commenting, transitioning, and attaching files to Jira tickets using data from Excel files, with full sync to a SQLite database for backup and recovery.
+This tool provides scripts and a web interface for bulk creating, updating, commenting, transitioning, and attaching files to Jira tickets using data from Excel files, with full sync to a SQLite database for backup and recovery.
 
 ## Folder Structure
 
@@ -25,6 +25,8 @@ jira_tool/
 ├── logs/                   # All log files
 │   └── error.log
 │
+├── jira_tool.py            # Unified CLI entry point (Typer-based)
+├── web_app.py              # Streamlit web interface
 ├── requirements.txt
 ├── README.md
 └── sample_input.xlsx
@@ -46,18 +48,26 @@ jira_tool/
    python scripts/excel_to_sqlite.py --excel sample_input.xlsx --sheet Sheet1 --db tickets.db --table tickets
    ```
 
-4. **Run a script (example: bulk create):**
+4. **Run operations via the unified CLI:**
    ```bash
-   python scripts/bulk_create_sync.py --excel sample_input.xlsx --sheet Sheet1 --url <JIRA_URL> --token <API_TOKEN> --project <PROJECT_KEY> --db tickets.db
+   python jira_tool.py create --excel sample_input.xlsx --sheet Sheet1 --url <JIRA_URL> --token <API_TOKEN> --project <PROJECT_KEY> --db tickets.db
+   python jira_tool.py update --excel sample_input.xlsx --sheet Sheet1 --url <JIRA_URL> --token <API_TOKEN> --fields summary description --db tickets.db
+   # ... and so on for other subcommands (see below)
    ```
 
-5. **Check logs:**
+5. **Or use the web interface:**
+   ```bash
+   streamlit run web_app.py
+   ```
+   - Upload your Excel file, select operation, enter parameters, and view logs/results in the browser.
+
+6. **Check logs:**
    - All info, debug, and error logs are written to `logs/error.log`.
    - Use the `--debug` flag for verbose output and stack traces.
 
-6. **Sync Excel and SQLite at any time:**
+7. **Sync Excel and SQLite at any time:**
    ```bash
-   python scripts/sync_excel_sqlite.py --excel sample_input.xlsx --sheet Sheet1 --db tickets.db --table tickets --direction sqlite_to_excel
+   python jira_tool.py sync --excel sample_input.xlsx --sheet Sheet1 --db tickets.db --table tickets --direction sqlite_to_excel
    ```
 
 ## Usage Tips
@@ -70,46 +80,35 @@ jira_tool/
 - **If you add new columns to Excel,** they will be automatically handled and synced with SQLite.
 - **Restore Excel from SQLite** if your Excel file is lost or corrupted using the sync script.
 - **Review the README table** for script-specific usage examples and arguments.
-
----
-
-## Features
-- Bulk create Jira tickets from Excel
-- Write created ticket IDs back to Excel and SQLite
-- Bulk update ticket fields from Excel
-- Bulk add comments to tickets from Excel
-- Bulk fetch and update ticket status
-- Bulk change ticket status (transition)
-- Bulk upload attachments and update Evidence column
-- Bulk delete tickets
-- Full two-way sync between Excel and SQLite (backup/restore)
-- All logs (info, debug, error) are written to `logs/error.log`
-
-## Requirements
-- Python 3.7+
-- requests
-- pandas
-- openpyxl
-
-Install dependencies:
-```bash
-pip install -r requirements.txt
-```
+- **All scripts are accessible via the unified CLI (`jira_tool.py`) or the web UI (`web_app.py`).**
 
 ---
 
 ## 📋 Script Summary Table
 
-| Script Name                | Purpose                                                      | Key Arguments / Usage Example                                                                                   |
-|----------------------------|--------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
-| **scripts/excel_to_sqlite.py**     | Import all Excel data into SQLite (initial setup)            | `python scripts/excel_to_sqlite.py --excel input.xlsx --sheet Sheet1 --db tickets.db --table tickets`            |
-| **scripts/bulk_create_sync.py**    | Bulk create tickets, sync to Excel & SQLite                  | `python scripts/bulk_create_sync.py --excel input.xlsx --sheet Sheet1 --url <JIRA_URL> --token <API_TOKEN> --project <KEY> --db tickets.db`         |
-| **scripts/bulk_update_sync.py**    | Bulk update ticket fields, sync to Excel & SQLite            | `python scripts/bulk_update_sync.py --excel input.xlsx --sheet Sheet1 --url <JIRA_URL> --token <API_TOKEN> --fields summary description ... --db tickets.db` |
-| **scripts/bulk_comment_sync.py**   | Bulk add comments, sync to Excel & SQLite                    | `python scripts/bulk_comment_sync.py --excel input.xlsx --sheet Sheet1 --url <JIRA_URL> --token <API_TOKEN> --comment_col comment --db tickets.db`   |
-| **scripts/bulk_status_sync.py**    | Fetch ticket status, sync to Excel & SQLite                  | `python scripts/bulk_status_sync.py --excel input.xlsx --sheet Sheet1 --url <JIRA_URL> --token <API_TOKEN> --status_col status --db tickets.db`     |
-| **scripts/bulk_transition_sync.py**| Change ticket status, sync to Excel & SQLite                 | `python scripts/bulk_transition_sync.py --excel input.xlsx --sheet Sheet1 --url <JIRA_URL> --token <API_TOKEN> --status_col new_status --db tickets.db` |
-| **scripts/bulk_attachment_sync.py**| Upload attachments, update Evidence column, sync to both      | `python scripts/bulk_attachment_sync.py --dir ./attachments --excel input.xlsx --sheet Sheet1 --url <JIRA_URL> --token <API_TOKEN> --db tickets.db`     |
-| **scripts/bulk_delete_sync.py**    | Delete tickets in Jira, Excel, and SQLite                    | `python scripts/bulk_delete_sync.py --excel input.xlsx --sheet Sheet1 --url <JIRA_URL> --token <API_TOKEN> --db tickets.db`                         |
-| **scripts/sync_excel_sqlite.py**   | Restore/sync Excel from SQLite or vice versa                 | `python scripts/sync_excel_sqlite.py --excel input.xlsx --sheet Sheet1 --db tickets.db --table tickets --direction excel_to_sqlite`<br>or<br>`--direction sqlite_to_excel` |
+| CLI Command / Script                | Purpose                                                      | Key Arguments / Usage Example                                                                                   |
+|-------------------------------------|--------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
+| **jira_tool.py create**             | Bulk create tickets, sync to Excel & SQLite                  | `python jira_tool.py create --excel input.xlsx --sheet Sheet1 --url <JIRA_URL> --token <API_TOKEN> --project <KEY> --db tickets.db`         |
+| **jira_tool.py update**             | Bulk update ticket fields, sync to Excel & SQLite            | `python jira_tool.py update --excel input.xlsx --sheet Sheet1 --url <JIRA_URL> --token <API_TOKEN> --fields summary description ... --db tickets.db` |
+| **jira_tool.py comment**            | Bulk add comments, sync to Excel & SQLite                    | `python jira_tool.py comment --excel input.xlsx --sheet Sheet1 --url <JIRA_URL> --token <API_TOKEN> --comment_col comment --db tickets.db`   |
+| **jira_tool.py status**             | Fetch ticket status, sync to Excel & SQLite                  | `python jira_tool.py status --excel input.xlsx --sheet Sheet1 --url <JIRA_URL> --token <API_TOKEN> --status_col status --db tickets.db`     |
+| **jira_tool.py transition**         | Change ticket status, sync to Excel & SQLite                 | `python jira_tool.py transition --excel input.xlsx --sheet Sheet1 --url <JIRA_URL> --token <API_TOKEN> --status_col new_status --db tickets.db` |
+| **jira_tool.py attach**             | Upload attachments, update Evidence column, sync to both      | `python jira_tool.py attach --dir ./attachments --excel input.xlsx --sheet Sheet1 --url <JIRA_URL> --token <API_TOKEN> --db tickets.db`     |
+| **jira_tool.py delete**             | Delete tickets in Jira, Excel, and SQLite                    | `python jira_tool.py delete --excel input.xlsx --sheet Sheet1 --url <JIRA_URL> --token <API_TOKEN> --db tickets.db`                         |
+| **jira_tool.py sync**               | Restore/sync Excel from SQLite or vice versa                 | `python jira_tool.py sync --excel input.xlsx --sheet Sheet1 --db tickets.db --table tickets --direction excel_to_sqlite`<br>or<br>`--direction sqlite_to_excel` |
+| **web_app.py**                      | Web interface for all operations                             | `streamlit run web_app.py` (use browser UI)                                                                    |
+
+---
+
+## GitHub & Branch Info
+
+- This project is versioned with Git and pushed to GitHub.
+- Main development is on the `security-tools` branch. To merge to `main`, open a pull request or merge locally and push.
+- To push changes:
+  ```bash
+  git add jira_tool
+  git commit -m "Describe your change"
+  git push origin security-tools
+  ```
 
 --- 

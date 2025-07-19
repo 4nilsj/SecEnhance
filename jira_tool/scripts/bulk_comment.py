@@ -4,7 +4,7 @@ import requests
 
 
 def add_jira_comment(url, token, ticket_id, comment):
-    api_url = f"{url}/rest/api/2/issue/{ticket_id}/comment"
+    api_url = f"{url}/rest/api/latest/issue/{ticket_id}/comment"
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"

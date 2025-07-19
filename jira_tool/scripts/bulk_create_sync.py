@@ -7,7 +7,7 @@ from utils.debug_utils import set_debug, debug_log, error_log, safe_run, info_lo
 
 
 def create_jira_ticket(url, token, project_key, summary, description):
-    api_url = f"{url}/rest/api/2/issue"
+    api_url = f"{url}/rest/api/latest/issue"
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"

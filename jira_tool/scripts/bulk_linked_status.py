@@ -4,7 +4,7 @@ import requests
 
 
 def get_jira_linked_status(url, token, ticket_id):
-    api_url = f"{url}/rest/api/2/issue/{ticket_id}"
+    api_url = f"{url}/rest/api/latest/issue/{ticket_id}"
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"
@@ -33,7 +33,7 @@ def get_jira_linked_status(url, token, ticket_id):
         return None, None
 
 def get_jira_status(url, token, ticket_id):
-    api_url = f"{url}/rest/api/2/issue/{ticket_id}"
+    api_url = f"{url}/rest/api/latest/issue/{ticket_id}"
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"
