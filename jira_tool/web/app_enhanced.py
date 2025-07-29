@@ -20,6 +20,7 @@ sys.path.append(parent_dir)
 from core.headers import get_jira_headers, get_jira_attachment_headers
 from core.urls import get_create_issue_url, get_issue_url, get_issue_comment_url, get_issue_transitions_url, get_issue_attachments_url
 from config.settings import get_jira_config
+from utils.excel_metrics import display_unified_excel_metrics, UnifiedExcelMetrics
 
 # Enhanced page configuration
 st.set_page_config(
@@ -234,12 +235,13 @@ except ImportError:
     use_unified_excel = False
 
 # Enhanced main content area with analytics
-main_tab1, main_tab2, main_tab3, main_tab4, main_tab5 = st.tabs([
+main_tab1, main_tab2, main_tab3, main_tab4, main_tab5, main_tab6 = st.tabs([
     "📊 Bulk Operations", 
     "🎯 Single Operations", 
     "📁 File Management", 
     "📈 Status & Reports",
-    "📊 Analytics Dashboard"
+    "📊 Analytics Dashboard",
+    "📊 Unified Excel Metrics"
 ])
 
 with main_tab1:
@@ -765,6 +767,58 @@ with main_tab5:
             with col3:
                 min_duration = df_perf["duration"].min()
                 st.metric("Fastest Operation", f"{min_duration:.2f}s")
+
+# Unified Excel Metrics Tab
+with main_tab6:
+    st.header("📊 Unified Excel Metrics Dashboard")
+    st.subheader("Focusing on First 15 Vulnerability-Specific Columns")
+    
+    # File upload for metrics analysis
+    metrics_file = st.file_uploader(
+        "Upload Excel File for Metrics Analysis",
+        type=["xlsx", "xls"],
+        help="Upload your unified Excel file to analyze the first 15 vulnerability-specific columns"
+    )
+    
+    if metrics_file:
+        # Save uploaded file for metrics analysis
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+            tmp_file.write(metrics_file.getvalue())
+            metrics_excel_path = tmp_file.name
+        
+        st.success(f"✅ File uploaded for metrics analysis: {metrics_file.name}")
+        
+        # Display unified Excel metrics
+        display_unified_excel_metrics(metrics_excel_path, "Sheet1")
+    else:
+        st.info("📊 Upload an Excel file to analyze the first 15 vulnerability-specific columns")
+        st.markdown("""
+        ### 📋 First 15 Columns Analyzed:
+        1. **File Name (FullPath)** - File path analysis
+        2. **Vulnerability Name** - Vulnerability type patterns
+        3. **Line Number(s)** - Code location analysis
+        4. **Severity** - Risk level distribution
+        5. **Description** - Content completeness
+        6. **Impact** - Impact assessment
+        7. **Vulnerable Code Snippet** - Code analysis
+        8. **Potential Fix(Text+Code)** - Fix availability
+        9. **More Info** - Additional information
+        10. **True Positive (%)** - Confidence analysis
+        11. **Exploitable(%)** - Risk assessment
+        12. **Status** - Current status distribution
+        13. **Security Ticket** - Ticket creation metrics
+        14. **Security Ticket Status** - Ticket workflow analysis
+        15. **dev ticket** - Development ticket linking
+        
+        ### 📊 Metrics Provided:
+        - **Severity Distribution** - Risk level analysis
+        - **True Positive vs Exploitable** - Confidence vs risk correlation
+        - **File Extension Analysis** - Technology stack insights
+        - **Line Number Patterns** - Code location trends
+        - **Ticket Completion Rates** - Workflow efficiency
+        - **Data Completeness** - Quality assessment
+        - **Vulnerability Type Patterns** - Security focus areas
+        """)
 
 # Enhanced footer
 st.markdown("---")

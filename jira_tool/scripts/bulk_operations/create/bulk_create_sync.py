@@ -2,6 +2,10 @@ import argparse
 import pandas as pd
 import requests
 import os
+import sys
+
+# Add the parent directory to the path to import core modules
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 from utils.data_sync_utils import read_excel, write_excel, read_sqlite, write_sqlite, add_row, sync_resources
 from utils.debug_utils import set_debug, debug_log, error_log, safe_run, info_log
 from core.headers import get_jira_headers
