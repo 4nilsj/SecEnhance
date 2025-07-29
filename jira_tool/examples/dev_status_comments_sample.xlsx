@@ -1,0 +1,15 @@
+# This is a placeholder for a sample Excel file
+# The actual file would contain columns like:
+# - Security Ticket (with Jira ticket IDs)
+# - dev ticket status (with status values like "Acceptance", "In Progress", etc.)
+# - summary (ticket summary)
+# - description (ticket description)
+
+# Sample data structure:
+# | Security Ticket | dev ticket status | summary | description |
+# |----------------|------------------|---------|-------------|
+# | SEC-123 | Acceptance | SQL Injection in Login | Critical vulnerability found in login form... |
+# | SEC-124 | In Progress | XSS Alert | Cross-site scripting alert from scanner... |
+# | SEC-125 | Acceptance | CSRF Vulnerability | CSRF token missing in form submission... |
+# | SEC-126 | Review | Weak Password Policy | Password policy allows weak passwords... |
+# | SEC-127 | Acceptance | Missing Security Headers | Security headers not configured properly... | 

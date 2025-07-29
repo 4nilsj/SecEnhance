@@ -57,9 +57,14 @@ jira_tool/
 
 5. **Or use the web interface:**
    ```bash
-   streamlit run web_app.py
+   # Easy launcher
+   python launch_web.py
+   
+   # Or directly with streamlit
+   streamlit run web/app.py
    ```
    - Upload your Excel file, select operation, enter parameters, and view logs/results in the browser.
+   - The web interface provides access to ALL features including bulk operations, single operations, file management, and status monitoring.
 
 6. **Check logs:**
    - All info, debug, and error logs are written to `logs/error.log`.
@@ -89,14 +94,21 @@ jira_tool/
 | CLI Command / Script                | Purpose                                                      | Key Arguments / Usage Example                                                                                   |
 |-------------------------------------|--------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
 | **jira_tool.py create**             | Bulk create tickets, sync to Excel & SQLite                  | `python jira_tool.py create --excel input.xlsx --sheet Sheet1 --url <JIRA_URL> --token <API_TOKEN> --project <KEY> --db tickets.db`         |
+| **jira_tool.py true-positive**      | Create tickets only for true positive findings with empty Security Ticket | `python jira_tool.py true-positive --excel findings.xlsx --project SEC --status-col status --security-ticket-col "Security Ticket" --url <JIRA_URL> --token <API_TOKEN>` |
 | **jira_tool.py update**             | Bulk update ticket fields, sync to Excel & SQLite            | `python jira_tool.py update --excel input.xlsx --sheet Sheet1 --url <JIRA_URL> --token <API_TOKEN> --fields summary description ... --db tickets.db` |
+| **jira_tool.py custom-fields**      | Update custom fields for tickets using Security Ticket column | `python jira_tool.py custom-fields --excel tickets.xlsx --custom-fields "Risk Level:customfield_10002,Environment:customfield_10003" --url <JIRA_URL> --token <API_TOKEN>` |
 | **jira_tool.py comment**            | Bulk add comments, sync to Excel & SQLite                    | `python jira_tool.py comment --excel input.xlsx --sheet Sheet1 --url <JIRA_URL> --token <API_TOKEN> --comment_col comment --db tickets.db`   |
-| **jira_tool.py status**             | Fetch ticket status, sync to Excel & SQLite                  | `python jira_tool.py status --excel input.xlsx --sheet Sheet1 --url <JIRA_URL> --token <API_TOKEN> --status_col status --db tickets.db`     |
-| **jira_tool.py transition**         | Change ticket status, sync to Excel & SQLite                 | `python jira_tool.py transition --excel input.xlsx --sheet Sheet1 --url <JIRA_URL> --token <API_TOKEN> --status_col new_status --db tickets.db` |
-| **jira_tool.py attach**             | Upload attachments, update Evidence column, sync to both      | `python jira_tool.py attach --dir ./attachments --excel input.xlsx --sheet Sheet1 --url <JIRA_URL> --token <API_TOKEN> --db tickets.db`     |
+| **jira_tool.py dev-status-comment** | Add comments based on dev ticket status (Acceptance = "QE Testing in Dev Completed") | `python jira_tool.py dev-status-comment --excel tickets.xlsx --security-ticket-col "Security Ticket" --dev-status-col "dev ticket status" --url <JIRA_URL> --token <API_TOKEN>` |
+| **jira_tool.py status**              | Bulk fetch ticket status, sync to Excel & SQLite              | `python jira_tool.py status --excel input.xlsx --sheet Sheet1 --url <JIRA_URL> --token <API_TOKEN> --status-columns status priority --db tickets.db` |
+| **jira_tool.py fetch-linked-tickets** | Fetch linked tickets and their status using Security Ticket column | `python jira_tool.py fetch-linked-tickets --excel tickets.xlsx --dev-keywords "dev,fix,implementation" --url <JIRA_URL> --token <API_TOKEN>` |
+| **jira_tool.py transition**            | Bulk transition ticket status, sync to Excel & SQLite              | `python jira_tool.py transition --excel input.xlsx --sheet Sheet1 --url <JIRA_URL> --token <API_TOKEN> --status "In Progress" --db tickets.db` |
+| **jira_tool.py security-workflow**     | Transition security tickets: New→Analysing→Refining→Refined Backlog→Inprogress | `python jira_tool.py security-workflow --excel tickets.xlsx --url <JIRA_URL> --token <API_TOKEN>` |
+| **jira_tool.py dev-workflow**          | Transition dev tickets: Inprogress→Review→Acceptance→Done (with validation) | `python jira_tool.py dev-workflow --excel tickets.xlsx --url <JIRA_URL> --token <API_TOKEN>` |
+| **jira_tool.py attach**                | Upload attachments, update Evidence column, sync to both      | `python jira_tool.py attach --dir ./attachments --excel input.xlsx --sheet Sheet1 --url <JIRA_URL> --token <API_TOKEN> --db tickets.db`     |
+| **jira_tool.py poc-upload**         | Upload POC files based on Security Ticket column              | `python jira_tool.py poc-upload --excel security_tickets.xlsx --poc-dir ./poc_files --url <JIRA_URL> --token <API_TOKEN> --db tickets.db` |
 | **jira_tool.py delete**             | Delete tickets in Jira, Excel, and SQLite                    | `python jira_tool.py delete --excel input.xlsx --sheet Sheet1 --url <JIRA_URL> --token <API_TOKEN> --db tickets.db`                         |
 | **jira_tool.py sync**               | Restore/sync Excel from SQLite or vice versa                 | `python jira_tool.py sync --excel input.xlsx --sheet Sheet1 --db tickets.db --table tickets --direction excel_to_sqlite`<br>or<br>`--direction sqlite_to_excel` |
-| **web_app.py**                      | Web interface for all operations                             | `streamlit run web_app.py` (use browser UI)                                                                    |
+| **web/app.py**                      | Complete web interface for all operations                   | `python launch_web.py` or `streamlit run web/app.py` (use browser UI)                                          |
 
 ---
 

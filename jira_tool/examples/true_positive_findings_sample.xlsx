@@ -1,0 +1,17 @@
+# This is a placeholder for a sample Excel file
+# The actual file would contain columns like:
+# - status (with values like "true positive", "false positive")
+# - Security Ticket (empty for new findings)
+# - summary (ticket summary)
+# - description (ticket description)
+# - priority (Low, Medium, High, Critical)
+# - assignee (username)
+# - issue_type (Task, Bug, Story, Epic)
+
+# Sample data structure:
+# | status | Security Ticket | summary | description | priority | assignee | issue_type |
+# |--------|----------------|---------|-------------|----------|----------|------------|
+# | true positive | | SQL Injection in Login | Critical vulnerability found in login form... | High | john.doe | Bug |
+# | false positive | | XSS Alert | False positive alert from scanner... | Medium | | Task |
+# | true positive | | CSRF Vulnerability | CSRF token missing in form... | Critical | jane.smith | Bug |
+# | true positive | | Weak Password Policy | Password policy allows weak passwords... | Medium | | Task | 
