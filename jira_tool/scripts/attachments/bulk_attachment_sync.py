@@ -4,9 +4,28 @@ import re
 import pandas as pd
 import requests
 import sys
+from pathlib import Path
 
-# Add the parent directory to the path to import core modules
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+# Generic import setup - works on any system
+def setup_imports():
+    """Set up import paths for the current script."""
+    current_script = Path(__file__).resolve()
+    project_root = find_project_root(current_script)
+    if project_root not in sys.path:
+        sys.path.insert(0, project_root)
+    return project_root
+
+def find_project_root(start_path):
+    """Find the project root by looking for jira_tool.py."""
+    current_dir = start_path.parent
+    while current_dir != current_dir.parent:  # Stop at root
+        if (current_dir / "jira_tool.py").exists():
+            return str(current_dir)
+        current_dir = current_dir.parent
+    return str(start_path.parent.parent)
+
+setup_imports()
+
 from utils.data_sync_utils import read_excel, write_excel, read_sqlite, write_sqlite, update_row, sync_resources
 from utils.debug_utils import set_debug, debug_log, error_log, safe_run, info_log
 from core.headers import get_jira_attachment_headers

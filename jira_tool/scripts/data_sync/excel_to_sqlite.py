@@ -1,12 +1,17 @@
 import argparse
+import pandas as pd
+import sqlite3
+import sys
+import os
+
+# Add the parent directory to the path to import utils modules
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from utils.data_sync_utils import read_excel, write_sqlite
 
 
 def excel_to_sqlite(excel_path, sheet, db_path, table_name):
-    df = pd.read_excel(excel_path, sheet_name=sheet)
-    conn = sqlite3.connect(db_path)
-    df.to_sql(table_name, conn, if_exists='replace', index=False)
-    conn.close()
+    df = read_excel(excel_path, sheet)
+    write_sqlite(df, db_path, table_name)
     print(f"Imported {len(df)} rows from {excel_path} to {db_path} (table: {table_name})")
 
 

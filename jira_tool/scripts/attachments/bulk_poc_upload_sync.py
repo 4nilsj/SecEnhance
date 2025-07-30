@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 # Add the parent directory to the path to import core modules
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from core.headers import get_jira_headers, get_jira_attachment_headers
 from core.urls import get_issue_attachments_url
 from utils.data_sync_utils import read_excel, write_excel, read_sqlite, write_sqlite, add_row, sync_resources
