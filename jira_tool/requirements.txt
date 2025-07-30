@@ -1,5 +1,22 @@
+# Core dependencies
 requests
 pandas
 openpyxl
 typer
-streamlit 
+streamlit
+
+# Data visualization and analytics
+plotly
+numpy
+scikit-learn
+
+# Optional dependencies for enhanced features
+# Uncomment if you need these features:
+# nltk
+# spacy
+# sentence-transformers
+# networkx
+# joblib
+# jinja2
+# rich
+# click 
