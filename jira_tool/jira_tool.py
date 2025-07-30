@@ -13,44 +13,216 @@ def run_script(script_name: str, args: list):
     subprocess.run(cmd)
 
 @app.command()
-def create(args: typer.Argument(..., help="Arguments for bulk_create_sync.py", nargs=-1)):
+def create(
+    excel: str = typer.Argument(..., help="Excel file path"),
+    url: str = typer.Argument(..., help="Jira URL"),
+    token: str = typer.Argument(..., help="Jira token"),
+    project: str = typer.Argument(..., help="Project key"),
+    sheet: str = typer.Option("0", help="Sheet name or index"),
+    summary_col: str = typer.Option("summary", help="Summary column"),
+    desc_col: str = typer.Option("description", help="Description column"),
+    id_col: str = typer.Option("ticket_id", help="ID column"),
+    db: str = typer.Option("tickets.db", help="SQLite DB path"),
+    table: str = typer.Option("tickets", help="Table name"),
+    debug: bool = typer.Option(False, help="Enable debug")
+):
     """Bulk create Jira tickets."""
-    run_script("bulk_create_sync.py", list(args))
+    args = [
+        "--excel", excel,
+        "--url", url,
+        "--token", token,
+        "--project", project,
+        "--sheet", sheet,
+        "--summary_col", summary_col,
+        "--desc_col", desc_col,
+        "--id_col", id_col,
+        "--db", db,
+        "--table", table
+    ]
+    if debug:
+        args.append("--debug")
+    run_script("bulk_create_sync.py", args)
 
 @app.command()
-def update(args: typer.Argument(..., help="Arguments for bulk_update_sync.py", nargs=-1)):
+def update(
+    excel: str = typer.Argument(..., help="Excel file path"),
+    url: str = typer.Argument(..., help="Jira URL"),
+    token: str = typer.Argument(..., help="Jira token"),
+    fields: str = typer.Argument(..., help="Fields to update (space-separated)"),
+    sheet: str = typer.Option("0", help="Sheet name or index"),
+    id_col: str = typer.Option("ticket_id", help="ID column"),
+    db: str = typer.Option("tickets.db", help="SQLite DB path"),
+    table: str = typer.Option("tickets", help="Table name"),
+    debug: bool = typer.Option(False, help="Enable debug")
+):
     """Bulk update Jira tickets."""
-    run_script("bulk_update_sync.py", list(args))
+    args = [
+        "--excel", excel,
+        "--url", url,
+        "--token", token,
+        "--sheet", sheet,
+        "--id_col", id_col,
+        "--db", db,
+        "--table", table
+    ] + fields.split()
+    if debug:
+        args.append("--debug")
+    run_script("bulk_update_sync.py", args)
 
 @app.command()
-def comment(args: typer.Argument(..., help="Arguments for bulk_comment_sync.py", nargs=-1)):
+def comment(
+    excel: str = typer.Argument(..., help="Excel file path"),
+    url: str = typer.Argument(..., help="Jira URL"),
+    token: str = typer.Argument(..., help="Jira token"),
+    sheet: str = typer.Option("0", help="Sheet name or index"),
+    id_col: str = typer.Option("ticket_id", help="ID column"),
+    comment_col: str = typer.Option("comment", help="Comment column"),
+    db: str = typer.Option("tickets.db", help="SQLite DB path"),
+    table: str = typer.Option("tickets", help="Table name"),
+    debug: bool = typer.Option(False, help="Enable debug")
+):
     """Bulk add comments to Jira tickets."""
-    run_script("bulk_comment_sync.py", list(args))
+    args = [
+        "--excel", excel,
+        "--url", url,
+        "--token", token,
+        "--sheet", sheet,
+        "--id_col", id_col,
+        "--comment_col", comment_col,
+        "--db", db,
+        "--table", table
+    ]
+    if debug:
+        args.append("--debug")
+    run_script("bulk_comment_sync.py", args)
 
 @app.command()
-def status(args: typer.Argument(..., help="Arguments for bulk_status_sync.py", nargs=-1)):
+def status(
+    excel: str = typer.Argument(..., help="Excel file path"),
+    url: str = typer.Argument(..., help="Jira URL"),
+    token: str = typer.Argument(..., help="Jira token"),
+    sheet: str = typer.Option("0", help="Sheet name or index"),
+    id_col: str = typer.Option("ticket_id", help="ID column"),
+    status_col: str = typer.Option("status", help="Status column"),
+    db: str = typer.Option("tickets.db", help="SQLite DB path"),
+    table: str = typer.Option("tickets", help="Table name"),
+    debug: bool = typer.Option(False, help="Enable debug")
+):
     """Fetch Jira ticket status."""
-    run_script("bulk_status_sync.py", list(args))
+    args = [
+        "--excel", excel,
+        "--url", url,
+        "--token", token,
+        "--sheet", sheet,
+        "--id_col", id_col,
+        "--status_col", status_col,
+        "--db", db,
+        "--table", table
+    ]
+    if debug:
+        args.append("--debug")
+    run_script("bulk_status_sync.py", args)
 
 @app.command()
-def transition(args: typer.Argument(..., help="Arguments for bulk_transition_sync.py", nargs=-1)):
+def transition(
+    excel: str = typer.Argument(..., help="Excel file path"),
+    url: str = typer.Argument(..., help="Jira URL"),
+    token: str = typer.Argument(..., help="Jira token"),
+    sheet: str = typer.Option("0", help="Sheet name or index"),
+    id_col: str = typer.Option("ticket_id", help="ID column"),
+    status_col: str = typer.Option("new_status", help="Status column"),
+    db: str = typer.Option("tickets.db", help="SQLite DB path"),
+    table: str = typer.Option("tickets", help="Table name"),
+    debug: bool = typer.Option(False, help="Enable debug")
+):
     """Change Jira ticket status."""
-    run_script("bulk_transition_sync.py", list(args))
+    args = [
+        "--excel", excel,
+        "--url", url,
+        "--token", token,
+        "--sheet", sheet,
+        "--id_col", id_col,
+        "--status_col", status_col,
+        "--db", db,
+        "--table", table
+    ]
+    if debug:
+        args.append("--debug")
+    run_script("bulk_transition_sync.py", args)
 
 @app.command()
-def attach(args: typer.Argument(..., help="Arguments for bulk_attachment_sync.py", nargs=-1)):
+def attach(
+    dir: str = typer.Argument(..., help="Directory with files"),
+    excel: str = typer.Argument(..., help="Excel file path"),
+    url: str = typer.Argument(..., help="Jira URL"),
+    token: str = typer.Argument(..., help="Jira token"),
+    sheet: str = typer.Option("0", help="Sheet name or index"),
+    id_col: str = typer.Option("ticket_id", help="ID column"),
+    evidence_col: str = typer.Option("Evidence", help="Evidence column"),
+    pattern: str = typer.Option(r"([A-Z]+-\d+)$", help="Regex pattern"),
+    db: str = typer.Option("tickets.db", help="SQLite DB path"),
+    table: str = typer.Option("tickets", help="Table name"),
+    debug: bool = typer.Option(False, help="Enable debug")
+):
     """Upload attachments to Jira tickets."""
-    run_script("bulk_attachment_sync.py", list(args))
+    args = [
+        "--dir", dir,
+        "--excel", excel,
+        "--url", url,
+        "--token", token,
+        "--sheet", sheet,
+        "--id_col", id_col,
+        "--evidence_col", evidence_col,
+        "--pattern", pattern,
+        "--db", db,
+        "--table", table
+    ]
+    if debug:
+        args.append("--debug")
+    run_script("bulk_attachment_sync.py", args)
 
 @app.command()
-def delete(args: typer.Argument(..., help="Arguments for bulk_delete_sync.py", nargs=-1)):
+def delete(
+    excel: str = typer.Argument(..., help="Excel file path"),
+    url: str = typer.Argument(..., help="Jira URL"),
+    token: str = typer.Argument(..., help="Jira token"),
+    sheet: str = typer.Option("0", help="Sheet name or index"),
+    id_col: str = typer.Option("ticket_id", help="ID column"),
+    db: str = typer.Option("tickets.db", help="SQLite DB path"),
+    table: str = typer.Option("tickets", help="Table name"),
+    debug: bool = typer.Option(False, help="Enable debug")
+):
     """Delete Jira tickets."""
-    run_script("bulk_delete_sync.py", list(args))
+    args = [
+        "--excel", excel,
+        "--url", url,
+        "--token", token,
+        "--sheet", sheet,
+        "--id_col", id_col,
+        "--db", db,
+        "--table", table
+    ]
+    if debug:
+        args.append("--debug")
+    run_script("bulk_delete_sync.py", args)
 
 @app.command()
-def sync(args: typer.Argument(..., help="Arguments for sync_excel_sqlite.py", nargs=-1)):
+def sync(
+    excel: str = typer.Argument(..., help="Excel file path"),
+    db: str = typer.Argument(..., help="SQLite DB path"),
+    table: str = typer.Option("tickets", help="Table name"),
+    sheet: str = typer.Option("0", help="Sheet name or index"),
+    direction: str = typer.Option("both", help="Sync direction (excel-to-db, db-to-excel, both)")
+):
     """Sync Excel and SQLite in either direction."""
-    run_script("sync_excel_sqlite.py", list(args))
+    args = [
+        "--excel", excel,
+        "--db", db,
+        "--table", table,
+        "--sheet", sheet,
+        "--direction", direction
+    ]
+    run_script("sync_excel_sqlite.py", args)
 
 if __name__ == "__main__":
     app() 
