@@ -7,6 +7,20 @@ import pandas as pd
 import tempfile
 import json
 
+# Python version check - ensure Python 3.8+
+def check_python_version():
+    """Check if running on Python 3.8 or higher."""
+    if sys.version_info < (3, 8):
+        st.error("❌ This application requires Python 3.8 or higher!")
+        st.error(f"Current version: {sys.version}")
+        st.error("Please upgrade your Python installation.")
+        st.stop()
+    else:
+        st.success(f"✅ Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro} detected")
+
+# Check Python version on startup
+check_python_version()
+
 # Generic import setup - works on any system
 def setup_imports():
     """Set up import paths for the current script."""
@@ -386,7 +400,7 @@ with main_tab1:
                             st.stop()
                         
                         # Build command arguments
-                        cmd = ["python", script_path, "--excel", excel_path]
+                        cmd = ["python3", script_path, "--excel", excel_path]
                         
                         if jira_url:
                             cmd.extend(["--url", jira_url])

@@ -4,13 +4,20 @@
 
 The Jira Tool web interface provides **complete access** to all Jira tool features through a modern, user-friendly web application. No command-line knowledge required!
 
+## 🐍 **Python 3 Requirement**
+
+**All web modules require Python 3.8 or higher** for optimal performance and security features.
+
 ## 🚀 **Quick Start**
 
 ```bash
 # Navigate to jira_tool directory
 cd jira_tool
 
-# Launch the web interface
+# Launch the web interface (Python 3 specific)
+python3 launch_web_python3.py
+
+# Or launch with standard launcher
 python launch_web.py
 
 # Or launch directly

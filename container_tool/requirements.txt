@@ -19,13 +19,13 @@ pillow>=10.0.0
 imageio>=2.31.0
 
 # File analysis
-python-magic>=0.4.27
+python-magic>=0.4.27  # Requires libmagic
 chardet>=5.2.0
 filetype>=1.2.0
 
 # Network analysis
 scapy>=2.5.0
-pyshark>=0.6.0
+pyshark>=0.6.0  # Requires tshark/Wireshark
 
 # Report generation
 rich>=13.7.0

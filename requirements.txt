@@ -1,4 +1,5 @@
 # QuickFix - Security Tools Suite
+# Python 3.8+ required
 # Main requirements for the entire project
 
 # Core dependencies used across multiple tools
@@ -23,8 +24,8 @@ cryptography>=41.0.0
 pyjwt>=2.8.0
 
 # Mobile and APK analysis
-androguard>=3.4.0
-apkleaks>=2.6.0
+androguard>=3.4.0  # Python 3.8+ compatible
+apkleaks>=2.6.0  # Verify Python 3 compatibility
 
 # Container and vulnerability scanning
 docker>=6.1.0

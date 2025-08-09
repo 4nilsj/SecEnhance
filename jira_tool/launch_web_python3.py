@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Jira Tool Web Interface Launcher
-Simple script to launch the web interface with proper configuration.
+Jira Tool Web Interface Launcher - Python 3 Specific
+Ensures all web modules run with Python 3.8+
 """
 
 import os
@@ -10,11 +10,37 @@ import subprocess
 from pathlib import Path
 
 
+def check_python_version():
+    """Check if running on Python 3.8 or higher."""
+    if sys.version_info < (3, 8):
+        print("❌ Error: This application requires Python 3.8 or higher!")
+        print(f"Current version: {sys.version}")
+        print("Please upgrade your Python installation.")
+        sys.exit(1)
+    else:
+        print(f"✅ Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro} detected")
+
+
+def check_python_executable():
+    """Check if python3 is available."""
+    try:
+        result = subprocess.run(["python3", "--version"], 
+                              capture_output=True, text=True, check=True)
+        print(f"✅ python3 found: {result.stdout.strip()}")
+        return True
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print("❌ python3 not found in PATH")
+        return False
+
+
 def main():
-    """Launch the Jira Tool web interface."""
+    """Launch the Jira Tool web interface with Python 3."""
     
-    print("🔧 Jira Tool Web Interface Launcher")
-    print("=" * 40)
+    print("🔧 Jira Tool Web Interface Launcher - Python 3")
+    print("=" * 50)
+    
+    # Check Python version
+    check_python_version()
     
     # Check if we're in the right directory
     current_dir = Path.cwd()
@@ -24,14 +50,8 @@ def main():
         print("Expected to find: web/app.py")
         sys.exit(1)
     
-    # Check Python version first
-    if sys.version_info < (3, 8):
-        print("❌ Error: This application requires Python 3.8 or higher!")
-        print(f"Current version: {sys.version}")
-        print("Please upgrade your Python installation.")
-        sys.exit(1)
-    else:
-        print(f"✅ Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro} detected")
+    # Check if python3 is available
+    python3_available = check_python_executable()
     
     # Check if streamlit is installed
     try:
@@ -55,15 +75,18 @@ def main():
         print("✅ Requirements installed")
     
     # Launch the web interface
-    print("\n🚀 Launching Jira Tool Web Interface...")
+    print("\n🚀 Launching Jira Tool Web Interface with Python 3...")
     print("The interface will open in your browser at: http://localhost:8501")
     print("Press Ctrl+C to stop the server")
-    print("=" * 40)
+    print("=" * 50)
     
     try:
-        # Run streamlit
+        # Use python3 if available, otherwise use sys.executable
+        python_cmd = "python3" if python3_available else sys.executable
+        
+        # Run streamlit with Python 3
         subprocess.run([
-            sys.executable, "-m", "streamlit", "run", "web/app.py",
+            python_cmd, "-m", "streamlit", "run", "web/app.py",
             "--server.port", "8501",
             "--server.address", "localhost",
             "--browser.gatherUsageStats", "false"

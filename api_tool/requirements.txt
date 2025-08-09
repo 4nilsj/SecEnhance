@@ -20,9 +20,9 @@ fuzzing>=0.0.1
 radamsa>=0.1.0
 
 # Network analysis
-mitmproxy>=10.1.0
+mitmproxy>=10.1.0  # Python 3.8+ compatible
 scapy>=2.5.0
-pyshark>=0.6.0
+pyshark>=0.6.0  # Requires tshark/Wireshark
 
 # Report generation
 rich>=13.7.0
