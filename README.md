@@ -7,6 +7,11 @@ A suite of advanced security automation tools for application, API, and mobile s
 - **Automated Security Scanner**
 - **Security Checklist Generator**
 
+## 🐍 Requirements
+
+- **Python 3.8 or higher** (Python 2 is not supported)
+- All tools require Python 3.8+ for optimal performance and security features
+
 ## 📦 Tools Overview
 
 | Tool         | Description                                      | Location         |
@@ -25,14 +30,20 @@ A suite of advanced security automation tools for application, API, and mobile s
    cd SecEnhance
    ```
 
-2. **Choose a tool and install its dependencies**
+2. **Verify Python version**
+   ```bash
+   python --version
+   # Should show Python 3.8 or higher
+   ```
+
+3. **Choose a tool and install its dependencies**
    ```bash
    cd mobile_tool
    pip install -r requirements.txt
    # or for jwt_tool, oauth_tool, etc.
    ```
 
-3. **Run the tool**
+4. **Run the tool**
    ```bash
    python src/mobile_security_tester.py --help
    # or see the tool's README for usage
@@ -46,6 +57,14 @@ A suite of advanced security automation tools for application, API, and mobile s
 - [Scanner Tool Documentation](scanner_tool/README.md)
 - [Checklist Tool Documentation](checklist_tool/README.md)
 - [General Docs](docs/)
+
+## 🛠️ Editor setup (Pylance/Pyright)
+
+If your editor reports unresolved imports for shared modules (e.g., `utils` inside tool folders), this repository includes a `pyrightconfig.json` that adds the necessary source paths for analysis. Most users won't need to change anything.
+
+- Pyright/Pylance: `pyrightconfig.json` contains `extraPaths` such as `burp_automation_tool/src`.
+- VS Code: `.vscode/settings.json` sets `python.analysis.extraPaths` accordingly.
+- Alternative: set `PYTHONPATH` to include the tool's `src` directory when running scripts manually.
 
 ## 🗂️ Repository Structure
 
