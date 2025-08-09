@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """
 Burp Suite Automation Framework
-Main automation engine for BChecks, Extensions, and Bambdas
+Main automation engine for BChecks, Extensions, and Bambdas (no REST API required)
 """
 
 import os
 import sys
+import yaml
+import json
 import logging
 from pathlib import Path
 from typing import Dict, List, Optional, Any
-from dataclasses import dataclass
 from datetime import datetime
 
 # Add src to path for imports
@@ -23,15 +24,9 @@ from analyzers.bambda_analyzer import BambdaAnalyzer
 from reporters.report_generator import ReportGenerator
 
 
-@dataclass
-class BurpConfig:
-    """Local configuration (no REST/Enterprise API usage)."""
-    timeout: int = 30
-
-
 class BurpAutomation:
     """
-    Main automation class for Burp Suite integration
+    Main automation class for Burp Suite components (no REST API required)
     """
     
     def __init__(self, config_path: str = "config/burp_config.yaml"):
@@ -53,14 +48,17 @@ class BurpAutomation:
         # Initialize reporter
         self.report_generator = ReportGenerator()
         
-        # Burp Suite REST connection disabled (no Enterprise API usage)
-        self.burp_config = BurpConfig(**self.config.get("burp_suite", {}))
-        
-        self.logger.info("Burp Suite Automation initialized")
+        # No REST API connection required
+        self.logger.info("Burp Suite Automation initialized (no REST API required)")
     
     def connect_to_burp(self) -> bool:
-        """No-op. REST/Enterprise API is not used."""
-        self.logger.info("Skipping Burp REST API connection (feature disabled).")
+        """
+        Placeholder for compatibility (no REST API connection required)
+        
+        Returns:
+            bool: Always True since no connection needed
+        """
+        self.logger.info("No REST API connection required for this toolkit")
         return True
     
     def load_bchecks(self, bcheck_dir: str = "bchecks/") -> List[Dict[str, Any]]:
@@ -185,7 +183,8 @@ class BurpAutomation:
         """
         self.logger.info(f"Starting security scan for: {target_url}")
         
-        # No REST connection required
+        # No REST API connection required
+        self.logger.info("Proceeding with local component analysis (no REST API needed)")
         
         # Load all components
         bchecks = self.load_bchecks()
@@ -302,7 +301,7 @@ def main():
     """Main function for command-line usage"""
     import argparse
     
-    parser = argparse.ArgumentParser(description="Burp Suite Automation Tool")
+    parser = argparse.ArgumentParser(description="Burp Suite Automation Tool (no REST API required)")
     parser.add_argument("--target", "-t", required=True, help="Target URL to scan")
     parser.add_argument("--config", "-c", default="config/burp_config.yaml", help="Configuration file")
     parser.add_argument("--report-format", "-r", default="html", choices=["html", "json", "pdf"], help="Report format")
