@@ -1,0 +1,12 @@
+# Note: This project avoids Burp REST/Enterprise API usage.
+# The following settings are preserved only for local tooling context and logging.
+burp:
+  # No REST API host/port/api_key required.
+  timeout: 30
+paths:
+  bchecks_dir: bchecks/vulnerability_checks
+  bambdas_dir: bambdas/request_bambdas
+  extensions_dir: extensions/python_extensions
+logging:
+  level: INFO
+  file: logs/automation.log

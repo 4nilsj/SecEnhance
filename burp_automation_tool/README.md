@@ -25,24 +25,12 @@ pip install -r requirements.txt
 
 ## Configuration
 
-If you will integrate with Burp's REST API or centralize settings, copy the sample config:
+This toolkit does not use the Burp REST/Enterprise API. No API host/port/key setup is required.
+You may optionally copy the example for local paths/logging defaults:
 
 - Create `config/burp_config.yaml` from the example:
 ```bash
 copy config\burp_config.example.yaml config\burp_config.yaml
-```
-
-Edit values:
-```yaml
-burp:
-  host: localhost
-  port: 1337
-  api_key: "YOUR_BURP_API_KEY"
-  timeout: 30
-paths:
-  bchecks_dir: bchecks\vulnerability_checks
-  bambdas_dir: bambdas\request_bambdas
-  extensions_dir: extensions\python_extensions
 ```
 
 ## Using BChecks
@@ -102,6 +90,5 @@ Tip: Apply Bambdas in Repeater to a baseline request, then replay to observe eff
 
 ## Roadmap
 
-- CLI to batch-load BChecks and scripts via Burp REST API
 - gRPC/WebSocket deeper active tests
-- Race condition and business-logic testing helpers 
+- Race condition and business-logic testing helpers
