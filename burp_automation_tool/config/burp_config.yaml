@@ -1,0 +1,55 @@
+burp:
+  concurrent_scans: 5
+  max_requests: 1000
+  retry_attempts: 3
+  timeout: 30
+logging:
+  backup_count: 5
+  file: logs/automation.log
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  level: INFO
+  max_size: 10MB
+paths:
+  bambdas_dir: bambdas/request_bambdas
+  bchecks_dir: bchecks/vulnerability_checks
+  extensions_dir: extensions/python_extensions
+  logs_dir: logs
+  reports_dir: reports
+  temp_dir: temp
+reporting:
+  custom_templates: []
+  format: html
+  include_evidence: true
+  include_recommendations: true
+  severity_levels:
+  - low
+  - medium
+  - high
+  - critical
+scanning:
+  authentication:
+    credentials: {}
+    enabled: false
+    type: bearer
+  custom_headers: {}
+  default_timeout: 30
+  exclude_paths:
+  - /admin
+  - /internal
+  - /api/v1/admin
+  include_paths:
+  - /api
+  - /public
+  max_depth: 10
+security:
+  allowed_hosts:
+  - localhost
+  - 127.0.0.1
+  blocked_patterns:
+  - admin
+  - internal
+  - secret
+  encrypt_sensitive: false
+  rate_limit:
+    burst_size: 10
+    requests_per_minute: 60

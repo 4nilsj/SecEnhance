@@ -1,0 +1,77 @@
+{
+  "metadata": {
+    "scan_name": "BCheck Security Scan",
+    "target_url": "https://example.com",
+    "scan_date": "2024-01-15",
+    "scanner_version": "1.0.0",
+    "bchecks_used": [
+      "sql_injection_bcheck",
+      "xss_bcheck",
+      "ssrf_bcheck"
+    ],
+    "timestamp": "2025-08-14T20:51:22.867765",
+    "total_vulnerabilities": 2,
+    "critical_count": 0,
+    "high_count": 1,
+    "medium_count": 1,
+    "low_count": 0,
+    "info_count": 0
+  },
+  "vulnerabilities": [
+    {
+      "id": "be0c27b2",
+      "title": "SQL Injection Vulnerability",
+      "description": "SQL injection detected in login form parameter",
+      "severity": "High",
+      "cvss_score": 8.5,
+      "cwe_id": "CWE-89",
+      "cve_id": null,
+      "evidence": "Payload: ' OR 1=1--",
+      "location": "/login",
+      "request_data": {},
+      "response_data": {},
+      "recommendations": [
+        "Use parameterized queries",
+        "Implement input validation",
+        "Apply proper output encoding"
+      ],
+      "references": [
+        "https://owasp.org/www-community/attacks/SQL_Injection",
+        "https://portswigger.net/web-security/sql-injection"
+      ],
+      "timestamp": "2025-08-14T20:51:22.867168"
+    },
+    {
+      "id": "22d20e05",
+      "title": "Cross-Site Scripting (XSS)",
+      "description": "Reflected XSS vulnerability in search parameter",
+      "severity": "Medium",
+      "cvss_score": 6.1,
+      "cwe_id": "CWE-79",
+      "cve_id": null,
+      "evidence": "Payload: <script>alert('XSS')</script>",
+      "location": "/search",
+      "request_data": {},
+      "response_data": {},
+      "recommendations": [
+        "Implement proper output encoding",
+        "Use Content Security Policy (CSP)",
+        "Validate and sanitize all inputs"
+      ],
+      "references": [
+        "https://owasp.org/www-project-top-ten/2017/A7_2017-Cross-Site_Scripting_(XSS)",
+        "https://portswigger.net/web-security/cross-site-scripting"
+      ],
+      "timestamp": "2025-08-14T20:51:22.867733"
+    }
+  ],
+  "summary": {
+    "total_findings": 2,
+    "severity_distribution": {
+      "high": 1,
+      "medium": 1
+    },
+    "top_vulnerability_types": {},
+    "risk_score": 11
+  }
+}

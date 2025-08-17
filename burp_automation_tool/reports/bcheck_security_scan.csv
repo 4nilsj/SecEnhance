@@ -1,0 +1,3 @@
+id,title,severity,cvss_score,cwe_id,cve_id,location,description,evidence,recommendations,timestamp
+be0c27b2,SQL Injection Vulnerability,High,8.5,CWE-89,,/login,SQL injection detected in login form parameter,Payload: ' OR 1=1--,Use parameterized queries; Implement input validation; Apply proper output encoding,2025-08-14T20:51:22.867168
+22d20e05,Cross-Site Scripting (XSS),Medium,6.1,CWE-79,,/search,Reflected XSS vulnerability in search parameter,Payload: <script>alert('XSS')</script>,Implement proper output encoding; Use Content Security Policy (CSP); Validate and sanitize all inputs,2025-08-14T20:51:22.867733

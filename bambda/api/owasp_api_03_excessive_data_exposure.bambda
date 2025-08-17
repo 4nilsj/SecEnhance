@@ -1,0 +1,214 @@
+# OWASP API Top 10 #3: Excessive Data Exposure Bambda
+# Detects excessive data exposure vulnerabilities in APIs
+
+metadata:
+  name: "OWASP API #3: Excessive Data Exposure"
+  description: "Detects excessive data exposure vulnerabilities where APIs return more data than necessary"
+  author: "Burp Automation Tool"
+  version: "1.0.0"
+  tags: ["owasp", "api", "data-exposure", "information-disclosure", "over-exposure"]
+
+rules:
+  - name: "Sensitive Data Exposure"
+    description: "Detects exposure of sensitive data in responses"
+    severity: "High"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.body"
+        matches:
+          - pattern: "password.*[a-zA-Z0-9]{8,}"
+            flags: "i"
+          - pattern: "ssn.*[0-9]{3}-[0-9]{2}-[0-9]{4}"
+            flags: "i"
+          - pattern: "credit_card.*[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{4}"
+            flags: "i"
+          - pattern: "api_key.*[a-zA-Z0-9]{20,}"
+            flags: "i"
+          - pattern: "secret.*[a-zA-Z0-9]{20,}"
+            flags: "i"
+        then:
+          - issue: "Sensitive Data Exposure"
+            detail: "Sensitive data exposed in response"
+            severity: "High"
+            confidence: "High"
+
+  - name: "Internal System Information"
+    description: "Detects exposure of internal system information"
+    severity: "Medium"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.body"
+        matches:
+          - pattern: "internal.*error"
+            flags: "i"
+          - pattern: "stack.*trace"
+            flags: "i"
+          - pattern: "database.*error"
+            flags: "i"
+          - pattern: "server.*error"
+            flags: "i"
+        then:
+          - issue: "Internal System Information"
+            detail: "Internal system information exposed"
+            severity: "Medium"
+            confidence: "High"
+
+  - name: "User Data Over-Exposure"
+    description: "Detects over-exposure of user data"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    passive:
+      - when: "response"
+        where: "response.body"
+        matches:
+          - pattern: "email.*[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+            flags: "i"
+          - pattern: "phone.*[0-9]{3}-[0-9]{3}-[0-9]{4}"
+            flags: "i"
+          - pattern: "address.*[0-9]+.*[a-zA-Z]+.*[a-zA-Z]{2,}"
+            flags: "i"
+        then:
+          - issue: "User Data Over-Exposure"
+            detail: "User data over-exposed in response"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "Business Logic Data Exposure"
+    description: "Detects exposure of business logic data"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    passive:
+      - when: "response"
+        where: "response.body"
+        matches:
+          - pattern: "profit.*margin"
+            flags: "i"
+          - pattern: "cost.*price"
+            flags: "i"
+          - pattern: "discount.*rate"
+            flags: "i"
+          - pattern: "commission.*rate"
+            flags: "i"
+        then:
+          - issue: "Business Logic Data Exposure"
+            detail: "Business logic data exposed"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "Configuration Data Exposure"
+    description: "Detects exposure of configuration data"
+    severity: "High"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.body"
+        matches:
+          - pattern: "database.*url"
+            flags: "i"
+          - pattern: "redis.*url"
+            flags: "i"
+          - pattern: "mongodb.*url"
+            flags: "i"
+          - pattern: "aws.*key"
+            flags: "i"
+          - pattern: "azure.*key"
+            flags: "i"
+        then:
+          - issue: "Configuration Data Exposure"
+            detail: "Configuration data exposed"
+            severity: "High"
+            confidence: "High"
+
+  - name: "Debug Information Exposure"
+    description: "Detects exposure of debug information"
+    severity: "Medium"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.body"
+        matches:
+          - pattern: "debug.*info"
+            flags: "i"
+          - pattern: "development.*mode"
+            flags: "i"
+          - pattern: "test.*data"
+            flags: "i"
+          - pattern: "localhost"
+            flags: "i"
+        then:
+          - issue: "Debug Information Exposure"
+            detail: "Debug information exposed"
+            severity: "Medium"
+            confidence: "High"
+
+  - name: "Version Information Exposure"
+    description: "Detects exposure of version information"
+    severity: "Low"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.headers"
+        matches:
+          - pattern: "server.*version"
+            flags: "i"
+          - pattern: "x-powered-by"
+            flags: "i"
+          - pattern: "x-aspnet-version"
+            flags: "i"
+        then:
+          - issue: "Version Information Exposure"
+            detail: "Version information exposed in headers"
+            severity: "Low"
+            confidence: "High"
+
+  - name: "Error Message Over-Exposure"
+    description: "Detects over-exposure in error messages"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    passive:
+      - when: "response"
+        where: "response.body"
+        matches:
+          - pattern: "sql.*syntax"
+            flags: "i"
+          - pattern: "table.*does.*not.*exist"
+            flags: "i"
+          - pattern: "column.*does.*not.*exist"
+            flags: "i"
+          - pattern: "file.*not.*found"
+            flags: "i"
+        then:
+          - issue: "Error Message Over-Exposure"
+            detail: "Detailed error messages exposed"
+            severity: "Medium"
+            confidence: "Medium"
+
+filters:
+  - name: "API Endpoints"
+    when: "request"
+    where: "request.url"
+    include:
+      - pattern: "/api/"
+        flags: "i"
+      - pattern: "/users/"
+        flags: "i"
+      - pattern: "/profile/"
+        flags: "i"
+      - pattern: "/account/"
+        flags: "i"
+
+settings:
+  max_payloads_per_parameter: 8
+  timeout: 10000
+  follow_redirects: false
+  respect_robots_txt: false

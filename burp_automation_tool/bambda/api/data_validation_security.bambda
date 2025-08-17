@@ -1,0 +1,247 @@
+# Data Validation Security Bambda
+# Detects data validation and type confusion vulnerabilities in APIs
+
+metadata:
+  name: "Data Validation Security"
+  description: "Detects data validation bypasses, type confusion, and boundary testing vulnerabilities"
+  author: "Burp Automation Tool"
+  version: "1.0.0"
+  tags: ["validation", "input-sanitization", "type-confusion", "boundary-testing"]
+
+rules:
+  - name: "Type Confusion"
+    description: "Detects type confusion vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: '{"id":"1"}'
+          - payload: '{"amount":"-1"}'
+          - payload: '{"email":123}'
+          - payload: '{"phone":true}'
+          - payload: '{"age":"twenty"}'
+        then:
+          - if: "response.body contains type_error"
+            issue: "Type Confusion"
+            detail: "Type confusion vulnerability detected"
+            severity: "High"
+            confidence: "High"
+
+  - name: "Boundary Testing"
+    description: "Detects boundary testing vulnerabilities"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: '{"limit":-1}'
+          - payload: '{"offset":999999999}'
+          - payload: '{"size":0}'
+          - payload: '{"count":-999999999}'
+        then:
+          - if: "response.body contains boundary_error"
+            issue: "Boundary Testing"
+            detail: "Boundary testing vulnerability detected"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "Input Sanitization Bypass"
+    description: "Detects input sanitization bypass vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "<script>alert('XSS')</script>"
+          - payload: "'; DROP TABLE users; --"
+          - payload: "../../../etc/passwd"
+          - payload: "{{7*7}}"
+          - payload: "${7*7}"
+        then:
+          - if: "response.body contains payload"
+            issue: "Input Sanitization Bypass"
+            detail: "Input sanitization bypass vulnerability detected"
+            severity: "High"
+            confidence: "High"
+
+  - name: "Length Validation Bypass"
+    description: "Detects length validation bypass vulnerabilities"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: '{"name":"A" * 1000}'
+          - payload: '{"description":"A" * 10000}'
+          - payload: '{"comment":"A" * 100000}'
+        then:
+          - if: "response.body contains length_error"
+            issue: "Length Validation Bypass"
+            detail: "Length validation bypass vulnerability detected"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "Format Validation Bypass"
+    description: "Detects format validation bypass vulnerabilities"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: '{"email":"invalid-email"}'
+          - payload: '{"phone":"not-a-phone"}'
+          - payload: '{"date":"invalid-date"}'
+          - payload: '{"url":"not-a-url"}'
+        then:
+          - if: "response.body contains format_error"
+            issue: "Format Validation Bypass"
+            detail: "Format validation bypass vulnerability detected"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "Null Byte Injection"
+    description: "Detects null byte injection vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "test%00.jpg"
+          - payload: "file%00.txt"
+          - payload: "name%00"
+        then:
+          - if: "response.body contains null_byte"
+            issue: "Null Byte Injection"
+            detail: "Null byte injection vulnerability detected"
+            severity: "High"
+            confidence: "High"
+
+  - name: "Unicode Normalization Bypass"
+    description: "Detects Unicode normalization bypass vulnerabilities"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "test\u0000.jpg"
+          - payload: "file\u0000.txt"
+          - payload: "name\u0000"
+        then:
+          - if: "response.body contains unicode_bypass"
+            issue: "Unicode Normalization Bypass"
+            detail: "Unicode normalization bypass vulnerability detected"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "Case Sensitivity Bypass"
+    description: "Detects case sensitivity bypass vulnerabilities"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: '{"type":"ADMIN"}'
+          - payload: '{"role":"SUPERUSER"}'
+          - payload: '{"status":"ACTIVE"}'
+        then:
+          - if: "response.body contains case_bypass"
+            issue: "Case Sensitivity Bypass"
+            detail: "Case sensitivity bypass vulnerability detected"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "Whitespace Bypass"
+    description: "Detects whitespace bypass vulnerabilities"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: '{"name":" admin "}'
+          - payload: '{"role":" user "}'
+          - payload: '{"status":" active "}'
+        then:
+          - if: "response.body contains whitespace_bypass"
+            issue: "Whitespace Bypass"
+            detail: "Whitespace bypass vulnerability detected"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "Encoding Bypass"
+    description: "Detects encoding bypass vulnerabilities"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "admin%20user"
+          - payload: "user%2Badmin"
+          - payload: "test%3Dvalue"
+        then:
+          - if: "response.body contains encoding_bypass"
+            issue: "Encoding Bypass"
+            detail: "Encoding bypass vulnerability detected"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "Validation Information Disclosure"
+    description: "Detects validation information disclosure"
+    severity: "Medium"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.body"
+        matches:
+          - pattern: "validation.*error"
+            flags: "i"
+          - pattern: "invalid.*format"
+            flags: "i"
+          - pattern: "must.*be"
+            flags: "i"
+        then:
+          - issue: "Validation Information Disclosure"
+            detail: "Validation information exposed in response"
+            severity: "Medium"
+            confidence: "High"
+
+filters:
+  - name: "Validation Endpoints"
+    when: "request"
+    where: "request.url"
+    include:
+      - pattern: "/validate"
+        flags: "i"
+      - pattern: "/check"
+        flags: "i"
+      - pattern: "/verify"
+        flags: "i"
+      - pattern: "/test"
+        flags: "i"
+
+settings:
+  max_payloads_per_parameter: 15
+  timeout: 10000
+  follow_redirects: false
+  respect_robots_txt: false

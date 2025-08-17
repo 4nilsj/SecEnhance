@@ -1,0 +1,80 @@
+# Advanced GraphQL Security Bambda
+# Detects advanced GraphQL vulnerabilities
+
+metadata:
+  name: "Advanced GraphQL Security"
+  description: "Detects advanced GraphQL vulnerabilities including depth limit bypass, batch queries, and introspection abuse"
+  author: "Burp Automation Tool"
+  version: "1.0.0"
+  tags: ["graphql", "introspection", "depth", "batch"]
+
+rules:
+  - name: "GraphQL Depth Limit Bypass"
+    description: "Detects GraphQL depth limit bypass"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.body"
+        inject:
+          - payload: '{"query":"query{user{posts{author{posts{author{posts{author}}}}}}}"}'
+          - payload: '{"query":"query{user{profile{details{info{data{value}}}}}}}"}'
+        then:
+          - if: "response.body contains depth_error"
+            issue: "GraphQL Depth Limit Bypass"
+            detail: "GraphQL depth limit bypass successful"
+            severity: "High"
+            confidence: "High"
+
+  - name: "GraphQL Batch Queries"
+    description: "Detects GraphQL batch query vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.body"
+        inject:
+          - payload: '[{"query":"query{user(id:1){name}}"},{"query":"query{user(id:2){name}}"}'
+          - payload: '[{"query":"query{user{id}}"},{"query":"query{admin{id}}"}'
+        then:
+          - if: "response.body contains batch_result"
+            issue: "GraphQL Batch Queries"
+            detail: "GraphQL batch queries successful"
+            severity: "High"
+            confidence: "High"
+
+  - name: "GraphQL Field Suggestion"
+    description: "Detects GraphQL field suggestion vulnerabilities"
+    severity: "Medium"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.body"
+        matches:
+          - pattern: "field.*suggestion"
+            flags: "i"
+          - pattern: "did.*you.*mean"
+            flags: "i"
+        then:
+          - issue: "GraphQL Field Suggestion"
+            detail: "GraphQL field suggestions exposed"
+            severity: "Medium"
+            confidence: "High"
+
+filters:
+  - name: "GraphQL Endpoints"
+    when: "request"
+    where: "request.url"
+    include:
+      - pattern: "/graphql"
+        flags: "i"
+      - pattern: "/gql"
+        flags: "i"
+
+settings:
+  max_payloads_per_parameter: 8
+  timeout: 15000
+  follow_redirects: false

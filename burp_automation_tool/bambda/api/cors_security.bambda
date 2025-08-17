@@ -1,0 +1,237 @@
+# CORS Security Bambda
+# Detects CORS misconfiguration vulnerabilities
+
+metadata:
+  name: "CORS Security Bambda"
+  description: "Detects CORS misconfiguration vulnerabilities including wildcard origins, credentials exposure, and method exposure"
+  author: "Burp Automation Tool"
+  version: "1.0.0"
+  tags: ["cors", "cross-origin", "origin-validation", "credentials-exposure", "method-exposure"]
+
+rules:
+  - name: "Wildcard Origin CORS"
+    description: "Detects CORS wildcard origin misconfiguration"
+    severity: "High"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.headers"
+        matches:
+          - pattern: "Access-Control-Allow-Origin: \\*"
+            flags: "i"
+        then:
+          - issue: "Wildcard Origin CORS"
+            detail: "CORS wildcard origin misconfiguration detected"
+            severity: "High"
+            confidence: "High"
+
+  - name: "Credentials with Wildcard CORS"
+    description: "Detects CORS credentials with wildcard origin"
+    severity: "High"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.headers"
+        matches:
+          - pattern: "Access-Control-Allow-Origin: \\*"
+            flags: "i"
+          - pattern: "Access-Control-Allow-Credentials: true"
+            flags: "i"
+        then:
+          - issue: "Credentials with Wildcard CORS"
+            detail: "CORS credentials enabled with wildcard origin"
+            severity: "High"
+            confidence: "High"
+
+  - name: "Reflected Origin CORS"
+    description: "Detects CORS reflected origin vulnerability"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "Origin: evil.com"
+          - payload: "Origin: attacker.com"
+          - payload: "Origin: malicious.com"
+          - payload: "Origin: hacker.com"
+          - payload: "Origin: exploit.com"
+        then:
+          - if: "response.headers contains 'Access-Control-Allow-Origin: evil.com'"
+            issue: "Reflected Origin CORS"
+            detail: "CORS reflected origin vulnerability detected"
+            severity: "High"
+            confidence: "Medium"
+
+  - name: "Null Origin CORS"
+    description: "Detects CORS null origin vulnerability"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "Origin: null"
+        then:
+          - if: "response.headers contains 'Access-Control-Allow-Origin: null'"
+            issue: "Null Origin CORS"
+            detail: "CORS null origin vulnerability detected"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "Method Exposure CORS"
+    description: "Detects CORS method exposure vulnerability"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    passive:
+      - when: "response"
+        where: "response.headers"
+        matches:
+          - pattern: "Access-Control-Allow-Methods: \\*"
+            flags: "i"
+        then:
+          - issue: "Method Exposure CORS"
+            detail: "CORS method exposure vulnerability detected"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "Header Exposure CORS"
+    description: "Detects CORS header exposure vulnerability"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    passive:
+      - when: "response"
+        where: "response.headers"
+        matches:
+          - pattern: "Access-Control-Allow-Headers: \\*"
+            flags: "i"
+        then:
+          - issue: "Header Exposure CORS"
+            detail: "CORS header exposure vulnerability detected"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "Credentials Exposure CORS"
+    description: "Detects CORS credentials exposure vulnerability"
+    severity: "High"
+    confidence: "Medium"
+    
+    passive:
+      - when: "response"
+        where: "response.headers"
+        matches:
+          - pattern: "Access-Control-Allow-Credentials: true"
+            flags: "i"
+        then:
+          - issue: "Credentials Exposure CORS"
+            detail: "CORS credentials exposure vulnerability detected"
+            severity: "High"
+            confidence: "Medium"
+
+  - name: "Preflight Bypass CORS"
+    description: "Detects CORS preflight bypass vulnerability"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.method"
+        inject:
+          - payload: "OPTIONS"
+        then:
+          - if: "response.status == 200"
+            issue: "Preflight Bypass CORS"
+            detail: "CORS preflight bypass vulnerability detected"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "Origin Validation Bypass"
+    description: "Detects CORS origin validation bypass"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "Origin: https://evil.com"
+          - payload: "Origin: https://attacker.com"
+          - payload: "Origin: https://malicious.com"
+          - payload: "Origin: https://hacker.com"
+          - payload: "Origin: https://exploit.com"
+        then:
+          - if: "response.headers contains 'Access-Control-Allow-Origin'"
+            issue: "Origin Validation Bypass"
+            detail: "CORS origin validation bypass detected"
+            severity: "High"
+            confidence: "Medium"
+
+  - name: "Subdomain CORS Bypass"
+    description: "Detects CORS subdomain bypass vulnerability"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "Origin: https://subdomain.evil.com"
+          - payload: "Origin: https://api.attacker.com"
+          - payload: "Origin: https://admin.malicious.com"
+          - payload: "Origin: https://test.hacker.com"
+          - payload: "Origin: https://dev.exploit.com"
+        then:
+          - if: "response.headers contains 'Access-Control-Allow-Origin'"
+            issue: "Subdomain CORS Bypass"
+            detail: "CORS subdomain bypass vulnerability detected"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "Protocol Downgrade CORS"
+    description: "Detects CORS protocol downgrade vulnerability"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "Origin: http://evil.com"
+          - payload: "Origin: http://attacker.com"
+          - payload: "Origin: http://malicious.com"
+          - payload: "Origin: http://hacker.com"
+          - payload: "Origin: http://exploit.com"
+        then:
+          - if: "response.headers contains 'Access-Control-Allow-Origin'"
+            issue: "Protocol Downgrade CORS"
+            detail: "CORS protocol downgrade vulnerability detected"
+            severity: "Medium"
+            confidence: "Medium"
+
+filters:
+  - name: "API Endpoints"
+    when: "request"
+    where: "request.url"
+    include:
+      - pattern: "/api/"
+        flags: "i"
+      - pattern: "/rest/"
+        flags: "i"
+      - pattern: "/v[0-9]+/"
+        flags: "i"
+      - pattern: "/auth/"
+        flags: "i"
+      - pattern: "/login/"
+        flags: "i"
+
+settings:
+  max_payloads_per_parameter: 8
+  timeout: 10000
+  follow_redirects: true
+  respect_robots_txt: false

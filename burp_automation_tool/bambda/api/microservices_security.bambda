@@ -1,0 +1,84 @@
+# Microservices Security Bambda
+# Detects microservices-specific vulnerabilities
+
+metadata:
+  name: "Microservices Security"
+  description: "Detects microservices vulnerabilities including service discovery bypass and inter-service authentication"
+  author: "Burp Automation Tool"
+  version: "1.0.0"
+  tags: ["microservices", "service-mesh", "inter-service"]
+
+rules:
+  - name: "Service Discovery Bypass"
+    description: "Detects service discovery bypass vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "X-Service-Name: internal-service"
+          - payload: "X-Service-Name: admin-service"
+          - payload: "X-Service-Name: system-service"
+        then:
+          - if: "response.status == 200"
+            issue: "Service Discovery Bypass"
+            detail: "Service discovery bypass successful"
+            severity: "High"
+            confidence: "High"
+
+  - name: "Inter-Service Authentication"
+    description: "Detects inter-service authentication bypass"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "X-Internal-Token: bypass"
+          - payload: "X-Service-Token: bypass"
+          - payload: "X-Mesh-Token: bypass"
+        then:
+          - if: "response.status == 200"
+            issue: "Inter-Service Authentication Bypass"
+            detail: "Inter-service authentication bypass successful"
+            severity: "High"
+            confidence: "High"
+
+  - name: "Service Mesh Bypass"
+    description: "Detects service mesh bypass vulnerabilities"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "X-Mesh-Bypass: true"
+          - payload: "X-Sidecar-Bypass: true"
+          - payload: "X-Proxy-Bypass: true"
+        then:
+          - if: "response.status == 200"
+            issue: "Service Mesh Bypass"
+            detail: "Service mesh bypass successful"
+            severity: "Medium"
+            confidence: "Medium"
+
+filters:
+  - name: "Microservices Endpoints"
+    when: "request"
+    where: "request.url"
+    include:
+      - pattern: "/service/"
+        flags: "i"
+      - pattern: "/internal/"
+        flags: "i"
+      - pattern: "/mesh/"
+        flags: "i"
+
+settings:
+  max_payloads_per_parameter: 6
+  timeout: 10000
+  follow_redirects: false

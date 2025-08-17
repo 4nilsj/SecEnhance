@@ -1,0 +1,203 @@
+# OWASP API Top 10 #4: Lack of Resources & Rate Limiting Bambda
+# Detects lack of resources and rate limiting vulnerabilities in APIs
+
+metadata:
+  name: "OWASP API #4: Lack of Resources & Rate Limiting"
+  description: "Detects lack of resources and rate limiting vulnerabilities that can lead to DoS attacks"
+  author: "Burp Automation Tool"
+  version: "1.0.0"
+  tags: ["owasp", "api", "rate-limiting", "dos", "resources", "throttling"]
+
+rules:
+  - name: "Rate Limiting Bypass"
+    description: "Detects rate limiting bypass vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "X-Forwarded-For: 192.168.1.1"
+          - payload: "X-Real-IP: 192.168.1.1"
+          - payload: "X-Client-IP: 192.168.1.1"
+          - payload: "CF-Connecting-IP: 192.168.1.1"
+        then:
+          - if: "response.status == 200"
+            issue: "Rate Limiting Bypass"
+            detail: "Rate limiting bypass vulnerability detected"
+            severity: "High"
+            confidence: "Medium"
+
+  - name: "Resource Exhaustion"
+    description: "Detects resource exhaustion vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.body"
+        inject:
+          - payload: '{"data":"' + 'A' * 1000000 + '"}'
+          - payload: '{"array":[' + ','.join(['1'] * 10000) + ']}'
+          - payload: '{"nested":{"level1":{"level2":{"level3":{"level4":{"level5":{"data":"test"}}}}}}}'
+        then:
+          - if: "response.status == 200"
+            issue: "Resource Exhaustion"
+            detail: "Resource exhaustion vulnerability detected"
+            severity: "High"
+            confidence: "Medium"
+
+  - name: "Memory Exhaustion"
+    description: "Detects memory exhaustion vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "size=999999999"
+          - payload: "limit=999999999"
+          - payload: "count=999999999"
+          - payload: "page_size=999999999"
+        then:
+          - if: "response.status == 200"
+            issue: "Memory Exhaustion"
+            detail: "Memory exhaustion vulnerability detected"
+            severity: "High"
+            confidence: "Medium"
+
+  - name: "CPU Exhaustion"
+    description: "Detects CPU exhaustion vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "search=*" + "*" * 1000
+          - payload: "query=SELECT * FROM users WHERE 1=1" + " AND 1=1" * 100
+          - payload: "filter=.*" + ".*" * 100
+        then:
+          - if: "response.status == 200"
+            issue: "CPU Exhaustion"
+            detail: "CPU exhaustion vulnerability detected"
+            severity: "High"
+            confidence: "Medium"
+
+  - name: "Database Connection Exhaustion"
+    description: "Detects database connection exhaustion vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "sleep=30"
+          - payload: "delay=30"
+          - payload: "timeout=30"
+        then:
+          - if: "response.status == 200"
+            issue: "Database Connection Exhaustion"
+            detail: "Database connection exhaustion vulnerability detected"
+            severity: "High"
+            confidence: "Medium"
+
+  - name: "File Upload Exhaustion"
+    description: "Detects file upload exhaustion vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.body"
+        inject:
+          - payload: '{"file_size":"999999999"}'
+          - payload: '{"file_count":"999999999"}'
+          - payload: '{"upload_limit":"999999999"}'
+        then:
+          - if: "response.status == 200"
+            issue: "File Upload Exhaustion"
+            detail: "File upload exhaustion vulnerability detected"
+            severity: "High"
+            confidence: "Medium"
+
+  - name: "Rate Limit Header Manipulation"
+    description: "Detects rate limit header manipulation"
+    severity: "Medium"
+    confidence: "High"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "X-RateLimit-Remaining: 999999"
+          - payload: "X-RateLimit-Reset: 0"
+          - payload: "X-RateLimit-Limit: 999999"
+        then:
+          - if: "response.status == 200"
+            issue: "Rate Limit Header Manipulation"
+            detail: "Rate limit header manipulation vulnerability detected"
+            severity: "Medium"
+            confidence: "High"
+
+  - name: "Session Exhaustion"
+    description: "Detects session exhaustion vulnerabilities"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "Cookie: session=attacker_session_1"
+          - payload: "Cookie: session=attacker_session_2"
+          - payload: "Cookie: session=attacker_session_3"
+        then:
+          - if: "response.status == 200"
+            issue: "Session Exhaustion"
+            detail: "Session exhaustion vulnerability detected"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "API Key Rotation Bypass"
+    description: "Detects API key rotation bypass vulnerabilities"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "X-API-Key: old_key_1"
+          - payload: "X-API-Key: old_key_2"
+          - payload: "X-API-Key: old_key_3"
+        then:
+          - if: "response.status == 200"
+            issue: "API Key Rotation Bypass"
+            detail: "API key rotation bypass vulnerability detected"
+            severity: "Medium"
+            confidence: "Medium"
+
+filters:
+  - name: "API Endpoints"
+    when: "request"
+    where: "request.url"
+    include:
+      - pattern: "/api/"
+        flags: "i"
+      - pattern: "/upload/"
+        flags: "i"
+      - pattern: "/search/"
+        flags: "i"
+      - pattern: "/query/"
+        flags: "i"
+
+settings:
+  max_payloads_per_parameter: 10
+  timeout: 15000
+  follow_redirects: false
+  respect_robots_txt: false

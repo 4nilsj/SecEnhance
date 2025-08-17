@@ -1,0 +1,329 @@
+# Comprehensive API Security Bambda
+# Detects multiple API security vulnerabilities in a single comprehensive rule set
+
+metadata:
+  name: "Comprehensive API Security"
+  description: "Detects multiple API security vulnerabilities including auth bypass, injection, rate limiting, and more"
+  author: "Burp Automation Tool"
+  version: "1.0.0"
+  tags: ["api", "security", "comprehensive", "authentication", "injection", "rate-limiting"]
+
+rules:
+  - name: "API Authentication Bypass"
+    description: "Detects authentication bypass vulnerabilities in APIs"
+    severity: "High"
+    confidence: "Medium"
+    
+    passive:
+      - when: "response"
+        where: "response.body"
+        matches:
+          - pattern: "unauthorized"
+            flags: "i"
+          - pattern: "forbidden"
+            flags: "i"
+          - pattern: "401"
+          - pattern: "403"
+        then:
+          - issue: "Authentication Required"
+            detail: "API endpoint requires authentication"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "Authorization: Bearer null"
+          - payload: "Authorization: Bearer undefined"
+          - payload: "Authorization: Bearer 00000000-0000-0000-0000-000000000000"
+          - payload: "X-API-Key: null"
+          - payload: "X-API-Key: undefined"
+          - payload: "X-API-Key: 00000000-0000-0000-0000-000000000000"
+        then:
+          - if: "response.status != 401 and response.status != 403"
+            issue: "Authentication Bypass"
+            detail: "API endpoint accessible without valid authentication"
+            severity: "High"
+            confidence: "High"
+
+  - name: "API Authorization Bypass"
+    description: "Detects authorization bypass vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "X-User-ID: 1"
+          - payload: "X-User-ID: admin"
+          - payload: "X-Role: admin"
+          - payload: "X-Role: superuser"
+          - payload: "X-Admin: true"
+          - payload: "X-Admin: 1"
+        then:
+          - if: "response.body contains sensitive_data"
+            issue: "Authorization Bypass"
+            detail: "Unauthorized access to sensitive data"
+            severity: "High"
+            confidence: "High"
+
+  - name: "API Input Validation Bypass"
+    description: "Detects input validation bypass vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "'; DROP TABLE users; --"
+          - payload: "<script>alert('XSS')</script>"
+          - payload: "../../../etc/passwd"
+          - payload: "{{7*7}}"
+          - payload: "${7*7}"
+          - payload: "#{7*7}"
+        then:
+          - if: "response.body contains payload"
+            issue: "Input Validation Bypass"
+            detail: "Malicious input reflected in response"
+            severity: "High"
+            confidence: "High"
+
+  - name: "API Rate Limiting Bypass"
+    description: "Detects rate limiting bypass vulnerabilities"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "X-Forwarded-For: 127.0.0.1"
+          - payload: "X-Real-IP: 127.0.0.1"
+          - payload: "X-Client-IP: 127.0.0.1"
+          - payload: "CF-Connecting-IP: 127.0.0.1"
+          - payload: "True-Client-IP: 127.0.0.1"
+        then:
+          - if: "response.status == 200"
+            issue: "Rate Limiting Bypass"
+            detail: "Rate limiting bypassed using IP spoofing"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "API Information Disclosure"
+    description: "Detects information disclosure vulnerabilities"
+    severity: "Medium"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.body"
+        matches:
+          - pattern: "password"
+            flags: "i"
+          - pattern: "secret"
+            flags: "i"
+          - pattern: "key"
+            flags: "i"
+          - pattern: "token"
+            flags: "i"
+          - pattern: "api_key"
+            flags: "i"
+          - pattern: "private"
+            flags: "i"
+        then:
+          - issue: "Information Disclosure"
+            detail: "Sensitive information exposed in response"
+            severity: "Medium"
+            confidence: "High"
+
+  - name: "API Error Handling"
+    description: "Detects error handling vulnerabilities"
+    severity: "Medium"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.body"
+        matches:
+          - pattern: "stack trace"
+            flags: "i"
+          - pattern: "exception"
+            flags: "i"
+          - pattern: "error in"
+            flags: "i"
+          - pattern: "debug"
+            flags: "i"
+          - pattern: "internal server error"
+            flags: "i"
+        then:
+          - issue: "Error Information Disclosure"
+            detail: "Detailed error information exposed"
+            severity: "Medium"
+            confidence: "High"
+
+  - name: "API CORS Misconfiguration"
+    description: "Detects CORS misconfiguration vulnerabilities"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    passive:
+      - when: "response"
+        where: "response.headers"
+        matches:
+          - pattern: "Access-Control-Allow-Origin: \\*"
+          - pattern: "Access-Control-Allow-Credentials: true"
+        then:
+          - issue: "CORS Misconfiguration"
+            detail: "CORS policy allows all origins or credentials"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "API SQL Injection"
+    description: "Detects SQL injection vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "' OR 1=1--"
+          - payload: "' UNION SELECT NULL--"
+          - payload: "'; WAITFOR DELAY '00:00:05'--"
+          - payload: "' AND (SELECT COUNT(*) FROM users)>0--"
+        then:
+          - if: "response.body contains sql_error"
+            issue: "SQL Injection"
+            detail: "SQL injection vulnerability detected"
+            severity: "High"
+            confidence: "High"
+
+  - name: "API NoSQL Injection"
+    description: "Detects NoSQL injection vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: '{"$gt":""}'
+          - payload: '{"$ne":""}'
+          - payload: '{"$where":"1==1"}'
+          - payload: '{"$regex":".*"}'
+        then:
+          - if: "response.body contains nosql_error"
+            issue: "NoSQL Injection"
+            detail: "NoSQL injection vulnerability detected"
+            severity: "High"
+            confidence: "High"
+
+  - name: "API Command Injection"
+    description: "Detects command injection vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "; ls -la"
+          - payload: "| whoami"
+          - payload: "`id`"
+          - payload: "$(id)"
+        then:
+          - if: "response.body contains command_output"
+            issue: "Command Injection"
+            detail: "Command injection vulnerability detected"
+            severity: "High"
+            confidence: "High"
+
+  - name: "API Path Traversal"
+    description: "Detects path traversal vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "../../../etc/passwd"
+          - payload: "..\\..\\..\\windows\\system32\\drivers\\etc\\hosts"
+          - payload: "....//....//....//etc/passwd"
+          - payload: "..%2F..%2F..%2Fetc%2Fpasswd"
+        then:
+          - if: "response.body contains file_content"
+            issue: "Path Traversal"
+            detail: "Path traversal vulnerability detected"
+            severity: "High"
+            confidence: "High"
+
+  - name: "API XXE Injection"
+    description: "Detects XXE injection vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.body"
+        inject:
+          - payload: '<?xml version="1.0" encoding="ISO-8859-1"?><!DOCTYPE foo [<!ELEMENT foo ANY ><!ENTITY xxe SYSTEM "file:///etc/passwd" >]><foo>&xxe;</foo>'
+          - payload: '<?xml version="1.0" encoding="ISO-8859-1"?><!DOCTYPE data [<!ENTITY file SYSTEM "file:///etc/passwd">]><data>&file;</data>'
+        then:
+          - if: "response.body contains xxe_data"
+            issue: "XXE Injection"
+            detail: "XXE injection vulnerability detected"
+            severity: "High"
+            confidence: "High"
+
+  - name: "API Mass Assignment"
+    description: "Detects mass assignment vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.body"
+        inject:
+          - payload: '{"id":1,"role":"admin","is_admin":true}'
+          - payload: '{"user_id":1,"admin":true,"superuser":true}'
+          - payload: '{"email":"test@test.com","verified":true,"premium":true}'
+        then:
+          - if: "response.body contains elevated_privileges"
+            issue: "Mass Assignment"
+            detail: "Mass assignment vulnerability detected"
+            severity: "High"
+            confidence: "High"
+
+filters:
+  - name: "API Endpoints Only"
+    when: "request"
+    where: "request.url"
+    include:
+      - pattern: "/api/"
+        flags: "i"
+      - pattern: "/rest/"
+        flags: "i"
+      - pattern: "/v[0-9]+/"
+        flags: "i"
+      - pattern: "/graphql"
+        flags: "i"
+      - pattern: "/swagger"
+        flags: "i"
+      - pattern: "/openapi"
+        flags: "i"
+
+  - name: "Exclude Static Resources"
+    when: "request"
+    where: "request.url"
+    exclude:
+      - pattern: "\\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$"
+        flags: "i"
+
+settings:
+  max_payloads_per_parameter: 15
+  timeout: 15000
+  follow_redirects: false
+  respect_robots_txt: false
+  max_requests_per_second: 10

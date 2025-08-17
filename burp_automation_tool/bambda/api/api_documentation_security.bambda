@@ -1,0 +1,260 @@
+# API Documentation Security Bambda
+# Detects documentation-related vulnerabilities in API endpoints
+
+metadata:
+  name: "API Documentation Security"
+  description: "Detects documentation-related vulnerabilities including Swagger/OpenAPI exposure, API key disclosure, and information leakage"
+  author: "Burp Automation Tool"
+  version: "1.0.0"
+  tags: ["swagger", "openapi", "documentation", "information-disclosure"]
+
+rules:
+  - name: "Swagger/OpenAPI Exposure"
+    description: "Detects exposed Swagger/OpenAPI documentation"
+    severity: "Medium"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.body"
+        matches:
+          - pattern: "swagger"
+            flags: "i"
+          - pattern: "openapi"
+            flags: "i"
+          - pattern: "swagger-ui"
+            flags: "i"
+          - pattern: "swagger.json"
+            flags: "i"
+        then:
+          - issue: "Swagger/OpenAPI Documentation Exposed"
+            detail: "API documentation exposed in response"
+            severity: "Medium"
+            confidence: "High"
+
+  - name: "API Key in Documentation"
+    description: "Detects API keys exposed in documentation"
+    severity: "High"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.body"
+        matches:
+          - pattern: "api_key.*[a-zA-Z0-9]{20,}"
+            flags: "i"
+          - pattern: "apiKey.*[a-zA-Z0-9]{20,}"
+            flags: "i"
+          - pattern: "apikey.*[a-zA-Z0-9]{20,}"
+            flags: "i"
+        then:
+          - issue: "API Key in Documentation"
+            detail: "API key exposed in documentation"
+            severity: "High"
+            confidence: "High"
+
+  - name: "Documentation Endpoint Enumeration"
+    description: "Detects documentation endpoint enumeration"
+    severity: "Low"
+    confidence: "High"
+    
+    active:
+      - when: "request"
+        where: "request.url"
+        inject:
+          - payload: "/swagger"
+          - payload: "/swagger-ui"
+          - payload: "/api-docs"
+          - payload: "/docs"
+          - payload: "/documentation"
+          - payload: "/openapi"
+          - payload: "/swagger.json"
+          - payload: "/openapi.json"
+        then:
+          - if: "response.status == 200"
+            issue: "Documentation Endpoint Found"
+            detail: "API documentation endpoint discovered"
+            severity: "Low"
+            confidence: "High"
+
+  - name: "Documentation Information Disclosure"
+    description: "Detects sensitive information in documentation"
+    severity: "Medium"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.body"
+        matches:
+          - pattern: "password"
+            flags: "i"
+          - pattern: "secret"
+            flags: "i"
+          - pattern: "token"
+            flags: "i"
+          - pattern: "key"
+            flags: "i"
+        then:
+          - issue: "Documentation Information Disclosure"
+            detail: "Sensitive information exposed in documentation"
+            severity: "Medium"
+            confidence: "High"
+
+  - name: "Documentation Version Exposure"
+    description: "Detects version information in documentation"
+    severity: "Low"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.body"
+        matches:
+          - pattern: "version.*[0-9]+\\.[0-9]+"
+            flags: "i"
+          - pattern: "v[0-9]+\\.[0-9]+"
+            flags: "i"
+        then:
+          - issue: "Documentation Version Exposure"
+            detail: "Version information exposed in documentation"
+            severity: "Low"
+            confidence: "High"
+
+  - name: "Documentation Endpoint Security"
+    description: "Tests documentation endpoint security"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.url"
+        inject:
+          - payload: "/swagger/admin"
+          - payload: "/docs/admin"
+          - payload: "/api-docs/admin"
+        then:
+          - if: "response.status == 200"
+            issue: "Documentation Endpoint Security Issue"
+            detail: "Documentation endpoint accessible without authentication"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "Documentation Schema Exposure"
+    description: "Detects database schema exposure in documentation"
+    severity: "Medium"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.body"
+        matches:
+          - pattern: "database.*schema"
+            flags: "i"
+          - pattern: "table.*structure"
+            flags: "i"
+          - pattern: "column.*name"
+            flags: "i"
+        then:
+          - issue: "Documentation Schema Exposure"
+            detail: "Database schema exposed in documentation"
+            severity: "Medium"
+            confidence: "High"
+
+  - name: "Documentation Error Exposure"
+    description: "Detects error information in documentation"
+    severity: "Medium"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.body"
+        matches:
+          - pattern: "error.*code"
+            flags: "i"
+          - pattern: "exception.*message"
+            flags: "i"
+          - pattern: "stack.*trace"
+            flags: "i"
+        then:
+          - issue: "Documentation Error Exposure"
+            detail: "Error information exposed in documentation"
+            severity: "Medium"
+            confidence: "High"
+
+  - name: "Documentation Authentication Bypass"
+    description: "Detects authentication bypass in documentation"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "Authorization: Bearer null"
+          - payload: "X-API-Key: null"
+          - payload: "X-Auth-Token: null"
+        then:
+          - if: "response.status == 200"
+            issue: "Documentation Authentication Bypass"
+            detail: "Documentation accessible without authentication"
+            severity: "High"
+            confidence: "Medium"
+
+  - name: "Documentation Directory Traversal"
+    description: "Detects directory traversal in documentation"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.url"
+        inject:
+          - payload: "/swagger/../../../etc/passwd"
+          - payload: "/docs/../../../etc/passwd"
+          - payload: "/api-docs/../../../etc/passwd"
+        then:
+          - if: "response.body contains file_content"
+            issue: "Documentation Directory Traversal"
+            detail: "Directory traversal vulnerability in documentation"
+            severity: "High"
+            confidence: "High"
+
+  - name: "Documentation XSS"
+    description: "Detects XSS vulnerabilities in documentation"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "<script>alert('XSS')</script>"
+          - payload: "javascript:alert('XSS')"
+          - payload: "'><script>alert('XSS')</script>"
+        then:
+          - if: "response.body contains payload"
+            issue: "Documentation XSS"
+            detail: "XSS vulnerability in documentation"
+            severity: "Medium"
+            confidence: "Medium"
+
+filters:
+  - name: "Documentation Endpoints"
+    when: "request"
+    where: "request.url"
+    include:
+      - pattern: "/swagger"
+        flags: "i"
+      - pattern: "/docs"
+        flags: "i"
+      - pattern: "/api-docs"
+        flags: "i"
+      - pattern: "/documentation"
+        flags: "i"
+      - pattern: "/openapi"
+        flags: "i"
+
+settings:
+  max_payloads_per_parameter: 10
+  timeout: 8000
+  follow_redirects: true
+  respect_robots_txt: false

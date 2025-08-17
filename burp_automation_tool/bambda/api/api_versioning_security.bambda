@@ -1,0 +1,231 @@
+# API Versioning Security Bambda
+# Detects version-related vulnerabilities in API endpoints
+
+metadata:
+  name: "API Versioning Security"
+  description: "Detects version-related vulnerabilities including deprecated endpoints, version bypass, and backwards compatibility issues"
+  author: "Burp Automation Tool"
+  version: "1.0.0"
+  tags: ["versioning", "deprecated", "backwards-compatibility", "api-version"]
+
+rules:
+  - name: "Deprecated API Endpoints"
+    description: "Detects deprecated API endpoints"
+    severity: "Medium"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.body"
+        matches:
+          - pattern: "deprecated"
+            flags: "i"
+          - pattern: "sunset"
+            flags: "i"
+          - pattern: "end.*of.*life"
+            flags: "i"
+          - pattern: "eol"
+            flags: "i"
+        then:
+          - issue: "Deprecated API Endpoint"
+            detail: "Deprecated API endpoint detected"
+            severity: "Medium"
+            confidence: "High"
+
+  - name: "Version Bypass"
+    description: "Detects version bypass vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.url"
+        inject:
+          - payload: "/v0/"
+          - payload: "/v999/"
+          - payload: "/latest/"
+          - payload: "/current/"
+          - payload: "/beta/"
+          - payload: "/alpha/"
+        then:
+          - if: "response.status == 200"
+            issue: "Version Bypass"
+            detail: "Version bypass vulnerability detected"
+            severity: "High"
+            confidence: "High"
+
+  - name: "Version Enumeration"
+    description: "Detects available API versions"
+    severity: "Low"
+    confidence: "High"
+    
+    active:
+      - when: "request"
+        where: "request.url"
+        inject:
+          - payload: "/v1/"
+          - payload: "/v2/"
+          - payload: "/v3/"
+          - payload: "/v4/"
+          - payload: "/v5/"
+        then:
+          - if: "response.status == 200"
+            issue: "Version Enumeration"
+            detail: "API version enumeration successful"
+            severity: "Low"
+            confidence: "High"
+
+  - name: "Backwards Compatibility Issues"
+    description: "Detects backwards compatibility issues"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "Accept: application/vnd.api+json;version=1"
+          - payload: "Accept: application/vnd.api+json;version=0"
+          - payload: "Accept: application/vnd.api+json;version=999"
+        then:
+          - if: "response.body contains compatibility_error"
+            issue: "Backwards Compatibility Issue"
+            detail: "Backwards compatibility issue detected"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "Version Header Manipulation"
+    description: "Detects version header manipulation"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "X-API-Version: 1"
+          - payload: "X-API-Version: 0"
+          - payload: "X-API-Version: latest"
+          - payload: "X-API-Version: beta"
+        then:
+          - if: "response.status == 200"
+            issue: "Version Header Manipulation"
+            detail: "Version header manipulation successful"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "Version Parameter Pollution"
+    description: "Detects version parameter pollution"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "version=1&version=2"
+          - payload: "v=1&v=2"
+          - payload: "api_version=1&api_version=2"
+        then:
+          - if: "response.body contains version_conflict"
+            issue: "Version Parameter Pollution"
+            detail: "Version parameter pollution detected"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "Version Information Disclosure"
+    description: "Detects version information disclosure"
+    severity: "Low"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.headers"
+        matches:
+          - pattern: "X-API-Version"
+          - pattern: "API-Version"
+          - pattern: "Version"
+        then:
+          - issue: "Version Information Disclosure"
+            detail: "API version information exposed in headers"
+            severity: "Low"
+            confidence: "High"
+
+  - name: "Version Deprecation Warning"
+    description: "Detects version deprecation warnings"
+    severity: "Low"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.body"
+        matches:
+          - pattern: "deprecation.*warning"
+            flags: "i"
+          - pattern: "version.*deprecated"
+            flags: "i"
+          - pattern: "sunset.*date"
+            flags: "i"
+        then:
+          - issue: "Version Deprecation Warning"
+            detail: "Version deprecation warning detected"
+            severity: "Low"
+            confidence: "High"
+
+  - name: "Version Migration Path"
+    description: "Detects version migration path information"
+    severity: "Low"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.body"
+        matches:
+          - pattern: "migration.*path"
+            flags: "i"
+          - pattern: "upgrade.*guide"
+            flags: "i"
+          - pattern: "migrate.*to"
+            flags: "i"
+        then:
+          - issue: "Version Migration Path"
+            detail: "Version migration path information exposed"
+            severity: "Low"
+            confidence: "High"
+
+  - name: "Version Security Bypass"
+    description: "Detects version security bypass vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.url"
+        inject:
+          - payload: "/v1/admin/"
+          - payload: "/v0/admin/"
+          - payload: "/latest/admin/"
+        then:
+          - if: "response.status == 200"
+            issue: "Version Security Bypass"
+            detail: "Version security bypass vulnerability detected"
+            severity: "High"
+            confidence: "High"
+
+filters:
+  - name: "Versioned Endpoints"
+    when: "request"
+    where: "request.url"
+    include:
+      - pattern: "/v[0-9]+/"
+        flags: "i"
+      - pattern: "/api/v[0-9]+/"
+        flags: "i"
+      - pattern: "/version/"
+        flags: "i"
+
+settings:
+  max_payloads_per_parameter: 10
+  timeout: 8000
+  follow_redirects: false
+  respect_robots_txt: false

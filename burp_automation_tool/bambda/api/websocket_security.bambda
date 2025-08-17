@@ -1,0 +1,222 @@
+# WebSocket Security Bambda
+# Detects WebSocket-specific vulnerabilities in real-time applications
+
+metadata:
+  name: "WebSocket Security"
+  description: "Detects WebSocket vulnerabilities including authentication bypass, message injection, and protocol manipulation"
+  author: "Burp Automation Tool"
+  version: "1.0.0"
+  tags: ["websocket", "real-time", "ws", "wss", "socket"]
+
+rules:
+  - name: "WebSocket Authentication Bypass"
+    description: "Detects WebSocket authentication bypass vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "Sec-WebSocket-Protocol: auth-bypass"
+          - payload: "Sec-WebSocket-Key: null"
+          - payload: "Sec-WebSocket-Version: 13"
+        then:
+          - if: "response.status == 101"
+            issue: "WebSocket Authentication Bypass"
+            detail: "WebSocket authentication bypass successful"
+            severity: "High"
+            confidence: "High"
+
+  - name: "WebSocket Message Injection"
+    description: "Detects WebSocket message injection vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.body"
+        inject:
+          - payload: '{"message":"<script>alert(\'XSS\')</script>"}'
+          - payload: '{"data":"javascript:alert(\'XSS\')"}'
+          - payload: '{"content":"\'><script>alert(\'XSS\')</script>"}'
+        then:
+          - if: "response.body contains payload"
+            issue: "WebSocket Message Injection"
+            detail: "WebSocket message injection vulnerability detected"
+            severity: "High"
+            confidence: "High"
+
+  - name: "WebSocket Protocol Manipulation"
+    description: "Detects WebSocket protocol manipulation"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "Sec-WebSocket-Protocol: invalid-protocol"
+          - payload: "Sec-WebSocket-Version: 99"
+          - payload: "Sec-WebSocket-Extensions: invalid-extension"
+        then:
+          - if: "response.status == 101"
+            issue: "WebSocket Protocol Manipulation"
+            detail: "WebSocket protocol manipulation successful"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "WebSocket Origin Bypass"
+    description: "Detects WebSocket origin bypass vulnerabilities"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "Origin: https://attacker.com"
+          - payload: "Origin: null"
+          - payload: "Origin: javascript:alert(1)"
+        then:
+          - if: "response.status == 101"
+            issue: "WebSocket Origin Bypass"
+            detail: "WebSocket origin bypass successful"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "WebSocket Information Disclosure"
+    description: "Detects WebSocket information disclosure"
+    severity: "Medium"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.headers"
+        matches:
+          - pattern: "Sec-WebSocket-Protocol"
+          - pattern: "Sec-WebSocket-Extensions"
+          - pattern: "Sec-WebSocket-Version"
+        then:
+          - issue: "WebSocket Information Disclosure"
+            detail: "WebSocket information exposed in headers"
+            severity: "Medium"
+            confidence: "High"
+
+  - name: "WebSocket Denial of Service"
+    description: "Detects WebSocket denial of service vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.body"
+        inject:
+          - payload: '{"data":"A" * 1000000}'
+          - payload: '{"message":"A" * 1000000}'
+          - payload: '{"content":"A" * 1000000}'
+        then:
+          - if: "response.status == 500"
+            issue: "WebSocket Denial of Service"
+            detail: "WebSocket denial of service vulnerability detected"
+            severity: "High"
+            confidence: "Medium"
+
+  - name: "WebSocket Session Hijacking"
+    description: "Detects WebSocket session hijacking vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "Sec-WebSocket-Key: hijacked-key"
+          - payload: "Cookie: session=hijacked-session"
+          - payload: "X-Session-ID: hijacked-session"
+        then:
+          - if: "response.status == 101"
+            issue: "WebSocket Session Hijacking"
+            detail: "WebSocket session hijacking vulnerability detected"
+            severity: "High"
+            confidence: "Medium"
+
+  - name: "WebSocket Cross-Site WebSocket Hijacking"
+    description: "Detects CSWSH vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "Origin: https://attacker.com"
+          - payload: "Referer: https://attacker.com"
+        then:
+          - if: "response.status == 101"
+            issue: "Cross-Site WebSocket Hijacking"
+            detail: "Cross-Site WebSocket Hijacking vulnerability detected"
+            severity: "High"
+            confidence: "Medium"
+
+  - name: "WebSocket Rate Limiting Bypass"
+    description: "Detects WebSocket rate limiting bypass"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "X-Forwarded-For: 127.0.0.1"
+          - payload: "X-Real-IP: 127.0.0.1"
+          - payload: "X-Client-IP: 127.0.0.1"
+        then:
+          - if: "response.status == 101"
+            issue: "WebSocket Rate Limiting Bypass"
+            detail: "WebSocket rate limiting bypass successful"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "WebSocket Error Handling"
+    description: "Detects WebSocket error handling vulnerabilities"
+    severity: "Medium"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.body"
+        matches:
+          - pattern: "websocket.*error"
+            flags: "i"
+          - pattern: "socket.*error"
+            flags: "i"
+          - pattern: "connection.*error"
+            flags: "i"
+        then:
+          - issue: "WebSocket Error Handling"
+            detail: "WebSocket error information exposed"
+            severity: "Medium"
+            confidence: "High"
+
+filters:
+  - name: "WebSocket Endpoints"
+    when: "request"
+    where: "request.url"
+    include:
+      - pattern: "/ws"
+        flags: "i"
+      - pattern: "/websocket"
+        flags: "i"
+      - pattern: "/socket"
+        flags: "i"
+      - pattern: "ws://"
+        flags: "i"
+      - pattern: "wss://"
+        flags: "i"
+
+settings:
+  max_payloads_per_parameter: 10
+  timeout: 12000
+  follow_redirects: false
+  respect_robots_txt: false

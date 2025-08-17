@@ -1,0 +1,88 @@
+# Cloud Security Bambda
+# Detects cloud-specific vulnerabilities
+
+metadata:
+  name: "Cloud Security"
+  description: "Detects cloud-specific vulnerabilities including AWS, Azure, and GCP security issues"
+  author: "Burp Automation Tool"
+  version: "1.0.0"
+  tags: ["aws", "azure", "gcp", "cloud", "serverless"]
+
+rules:
+  - name: "AWS Signature Bypass"
+    description: "Detects AWS signature bypass vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "X-Amz-Signature: invalid"
+          - payload: "X-Amz-Date: invalid"
+          - payload: "Authorization: AWS4-HMAC-SHA256 invalid"
+        then:
+          - if: "response.status == 200"
+            issue: "AWS Signature Bypass"
+            detail: "AWS signature bypass successful"
+            severity: "High"
+            confidence: "High"
+
+  - name: "Serverless Function Injection"
+    description: "Detects serverless function injection vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.body"
+        inject:
+          - payload: '{"function":"lambda","payload":"malicious"}'
+          - payload: '{"function":"azure-function","payload":"malicious"}'
+          - payload: '{"function":"cloud-function","payload":"malicious"}'
+        then:
+          - if: "response.body contains function_result"
+            issue: "Serverless Function Injection"
+            detail: "Serverless function injection successful"
+            severity: "High"
+            confidence: "High"
+
+  - name: "Cloud Metadata Exposure"
+    description: "Detects cloud metadata exposure"
+    severity: "Medium"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.body"
+        matches:
+          - pattern: "instance.*metadata"
+            flags: "i"
+          - pattern: "cloud.*metadata"
+            flags: "i"
+          - pattern: "aws.*metadata"
+            flags: "i"
+        then:
+          - issue: "Cloud Metadata Exposure"
+            detail: "Cloud metadata exposed in response"
+            severity: "Medium"
+            confidence: "High"
+
+filters:
+  - name: "Cloud Endpoints"
+    when: "request"
+    where: "request.url"
+    include:
+      - pattern: "/aws/"
+        flags: "i"
+      - pattern: "/azure/"
+        flags: "i"
+      - pattern: "/gcp/"
+        flags: "i"
+      - pattern: "/lambda/"
+        flags: "i"
+
+settings:
+  max_payloads_per_parameter: 6
+  timeout: 12000
+  follow_redirects: false

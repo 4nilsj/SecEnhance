@@ -1,0 +1,225 @@
+# Business Logic Security Bambda
+# Detects business logic vulnerabilities in API applications
+
+metadata:
+  name: "Business Logic Security"
+  description: "Detects business logic vulnerabilities including race conditions, parameter pollution, and privilege escalation"
+  author: "Burp Automation Tool"
+  version: "1.0.0"
+  tags: ["business-logic", "race-conditions", "privilege-escalation", "parameter-pollution"]
+
+rules:
+  - name: "Race Condition Detection"
+    description: "Detects race condition vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "concurrent_requests=true"
+          - payload: "parallel=true"
+          - payload: "async=true"
+        then:
+          - if: "response.body contains race_condition"
+            issue: "Race Condition"
+            detail: "Race condition vulnerability detected"
+            severity: "High"
+            confidence: "High"
+
+  - name: "Parameter Pollution"
+    description: "Detects HTTP parameter pollution vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "user_id=1&user_id=2"
+          - payload: "amount=10&amount=1000"
+          - payload: "role=user&role=admin"
+          - payload: "status=active&status=inactive"
+        then:
+          - if: "response.body contains parameter_conflict"
+            issue: "Parameter Pollution"
+            detail: "HTTP parameter pollution vulnerability detected"
+            severity: "High"
+            confidence: "High"
+
+  - name: "Privilege Escalation"
+    description: "Detects privilege escalation vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "user_id=1&admin=true"
+          - payload: "role=user&superuser=true"
+          - payload: "permissions=read&permissions=write&permissions=admin"
+        then:
+          - if: "response.body contains elevated_privileges"
+            issue: "Privilege Escalation"
+            detail: "Privilege escalation vulnerability detected"
+            severity: "High"
+            confidence: "High"
+
+  - name: "Business Rule Bypass"
+    description: "Detects business rule bypass vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "discount=100"
+          - payload: "price=0"
+          - payload: "quantity=-1"
+          - payload: "limit=999999999"
+        then:
+          - if: "response.body contains rule_bypass"
+            issue: "Business Rule Bypass"
+            detail: "Business rule bypass vulnerability detected"
+            severity: "High"
+            confidence: "High"
+
+  - name: "Workflow Bypass"
+    description: "Detects workflow bypass vulnerabilities"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "step=final"
+          - payload: "status=completed"
+          - payload: "approved=true"
+        then:
+          - if: "response.body contains workflow_bypass"
+            issue: "Workflow Bypass"
+            detail: "Workflow bypass vulnerability detected"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "Resource Exhaustion"
+    description: "Detects resource exhaustion vulnerabilities"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "limit=999999999"
+          - payload: "offset=999999999"
+          - payload: "size=999999999"
+        then:
+          - if: "response.status == 500"
+            issue: "Resource Exhaustion"
+            detail: "Resource exhaustion vulnerability detected"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "Time-based Logic Bypass"
+    description: "Detects time-based logic bypass vulnerabilities"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "expires_at=2099-12-31"
+          - payload: "valid_until=2099-12-31"
+          - payload: "created_at=2020-01-01"
+        then:
+          - if: "response.body contains time_bypass"
+            issue: "Time-based Logic Bypass"
+            detail: "Time-based logic bypass vulnerability detected"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "State Manipulation"
+    description: "Detects state manipulation vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "state=completed"
+          - payload: "phase=final"
+          - payload: "stage=done"
+        then:
+          - if: "response.body contains state_manipulation"
+            issue: "State Manipulation"
+            detail: "State manipulation vulnerability detected"
+            severity: "High"
+            confidence: "High"
+
+  - name: "Concurrent Session Abuse"
+    description: "Detects concurrent session abuse vulnerabilities"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "X-Session-ID: session1"
+          - payload: "X-Session-ID: session2"
+        then:
+          - if: "response.body contains session_conflict"
+            issue: "Concurrent Session Abuse"
+            detail: "Concurrent session abuse vulnerability detected"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "Business Logic Information Disclosure"
+    description: "Detects business logic information disclosure"
+    severity: "Medium"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.body"
+        matches:
+          - pattern: "business.*rule"
+            flags: "i"
+          - pattern: "workflow.*step"
+            flags: "i"
+          - pattern: "validation.*rule"
+            flags: "i"
+        then:
+          - issue: "Business Logic Information Disclosure"
+            detail: "Business logic information exposed in response"
+            severity: "Medium"
+            confidence: "High"
+
+filters:
+  - name: "Business Logic Endpoints"
+    when: "request"
+    where: "request.url"
+    include:
+      - pattern: "/order"
+        flags: "i"
+      - pattern: "/payment"
+        flags: "i"
+      - pattern: "/workflow"
+        flags: "i"
+      - pattern: "/process"
+        flags: "i"
+      - pattern: "/approval"
+        flags: "i"
+
+settings:
+  max_payloads_per_parameter: 12
+  timeout: 12000
+  follow_redirects: false
+  respect_robots_txt: false

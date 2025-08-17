@@ -1,0 +1,228 @@
+# Advanced Rate Limiting Bambda
+# Detects advanced rate limiting bypass techniques
+
+metadata:
+  name: "Advanced Rate Limiting"
+  description: "Detects advanced rate limiting bypass techniques including header manipulation, parameter pollution, and timing attacks"
+  author: "Burp Automation Tool"
+  version: "1.0.0"
+  tags: ["rate-limiting", "throttling", "bypass", "timing"]
+
+rules:
+  - name: "Header Manipulation Bypass"
+    description: "Detects rate limiting bypass using header manipulation"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "X-Forwarded-For: 127.0.0.1, 192.168.1.1"
+          - payload: "X-Real-IP: 127.0.0.1"
+          - payload: "X-Client-IP: 127.0.0.1"
+          - payload: "CF-Connecting-IP: 127.0.0.1"
+          - payload: "True-Client-IP: 127.0.0.1"
+          - payload: "X-Originating-IP: 127.0.0.1"
+        then:
+          - if: "response.status == 200"
+            issue: "Rate Limiting Header Bypass"
+            detail: "Rate limiting bypassed using header manipulation"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "Parameter Pollution Bypass"
+    description: "Detects rate limiting bypass using parameter pollution"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.parameters"
+        inject:
+          - payload: "api_key=key1&api_key=key2"
+          - payload: "client_id=id1&client_id=id2"
+          - payload: "user_id=1&user_id=2"
+        then:
+          - if: "response.status == 200"
+            issue: "Rate Limiting Parameter Pollution"
+            detail: "Rate limiting bypassed using parameter pollution"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "Timing Attack Bypass"
+    description: "Detects rate limiting bypass using timing attacks"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "X-Request-Delay: 1000"
+          - payload: "X-Request-Delay: 2000"
+          - payload: "X-Request-Delay: 5000"
+        then:
+          - if: "response.status == 200"
+            issue: "Rate Limiting Timing Bypass"
+            detail: "Rate limiting bypassed using timing attack"
+            severity: "High"
+            confidence: "Medium"
+
+  - name: "User Agent Rotation"
+    description: "Detects rate limiting bypass using user agent rotation"
+    severity: "Medium"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+          - payload: "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+          - payload: "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"
+        then:
+          - if: "response.status == 200"
+            issue: "Rate Limiting User Agent Bypass"
+            detail: "Rate limiting bypassed using user agent rotation"
+            severity: "Medium"
+            confidence: "Medium"
+
+  - name: "Session Token Rotation"
+    description: "Detects rate limiting bypass using session token rotation"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "X-Session-Token: token1"
+          - payload: "X-Session-Token: token2"
+          - payload: "X-Session-Token: token3"
+        then:
+          - if: "response.status == 200"
+            issue: "Rate Limiting Session Bypass"
+            detail: "Rate limiting bypassed using session token rotation"
+            severity: "High"
+            confidence: "Medium"
+
+  - name: "API Key Rotation"
+    description: "Detects rate limiting bypass using API key rotation"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "X-API-Key: key1"
+          - payload: "X-API-Key: key2"
+          - payload: "X-API-Key: key3"
+        then:
+          - if: "response.status == 200"
+            issue: "Rate Limiting API Key Bypass"
+            detail: "Rate limiting bypassed using API key rotation"
+            severity: "High"
+            confidence: "Medium"
+
+  - name: "Rate Limit Header Analysis"
+    description: "Analyzes rate limiting headers for bypass opportunities"
+    severity: "Low"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.headers"
+        matches:
+          - pattern: "X-RateLimit-Limit"
+          - pattern: "X-RateLimit-Remaining"
+          - pattern: "X-RateLimit-Reset"
+          - pattern: "RateLimit-Limit"
+          - pattern: "RateLimit-Remaining"
+          - pattern: "RateLimit-Reset"
+        then:
+          - issue: "Rate Limiting Headers Detected"
+            detail: "Rate limiting headers detected in response"
+            severity: "Low"
+            confidence: "High"
+
+  - name: "Rate Limit Bypass Detection"
+    description: "Detects successful rate limiting bypasses"
+    severity: "High"
+    confidence: "Medium"
+    
+    passive:
+      - when: "response"
+        where: "response.body"
+        matches:
+          - pattern: "rate.*limit.*exceeded"
+            flags: "i"
+          - pattern: "too.*many.*requests"
+            flags: "i"
+          - pattern: "429"
+          - pattern: "quota.*exceeded"
+            flags: "i"
+        then:
+          - issue: "Rate Limiting Active"
+            detail: "Rate limiting is active on this endpoint"
+            severity: "Low"
+            confidence: "High"
+
+  - name: "Rate Limit Circumvention"
+    description: "Detects rate limit circumvention techniques"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.headers"
+        inject:
+          - payload: "X-Request-ID: unique1"
+          - payload: "X-Request-ID: unique2"
+          - payload: "X-Request-ID: unique3"
+        then:
+          - if: "response.status == 200"
+            issue: "Rate Limit Circumvention"
+            detail: "Rate limit circumvention successful"
+            severity: "High"
+            confidence: "Medium"
+
+  - name: "Rate Limit Information Disclosure"
+    description: "Detects rate limit information disclosure"
+    severity: "Medium"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.body"
+        matches:
+          - pattern: "rate.*limit.*info"
+            flags: "i"
+          - pattern: "throttling.*info"
+            flags: "i"
+          - pattern: "quota.*info"
+            flags: "i"
+        then:
+          - issue: "Rate Limit Information Disclosure"
+            detail: "Rate limit information exposed in response"
+            severity: "Medium"
+            confidence: "High"
+
+filters:
+  - name: "Rate Limited Endpoints"
+    when: "request"
+    where: "request.url"
+    include:
+      - pattern: "/api/"
+        flags: "i"
+      - pattern: "/rest/"
+        flags: "i"
+      - pattern: "/v[0-9]+/"
+        flags: "i"
+
+settings:
+  max_payloads_per_parameter: 12
+  timeout: 15000
+  follow_redirects: false
+  respect_robots_txt: false

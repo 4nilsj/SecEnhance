@@ -1,0 +1,73 @@
+# GraphQL Security Bambda
+# Detects GraphQL vulnerabilities including introspection and field injection
+
+metadata:
+  name: "GraphQL Security"
+  description: "Detects GraphQL vulnerabilities and misconfigurations"
+  author: "Burp Automation Tool"
+  version: "1.0.0"
+  tags: ["graphql", "api", "introspection"]
+
+rules:
+  - name: "GraphQL Introspection Detection"
+    description: "Detects enabled GraphQL introspection"
+    severity: "Medium"
+    confidence: "High"
+    
+    passive:
+      - when: "response"
+        where: "response.body"
+        matches:
+          - pattern: "__schema"
+          - pattern: "__type"
+          - pattern: "queryType"
+          - pattern: "mutationType"
+        then:
+          - issue: "GraphQL Introspection Enabled"
+            detail: "GraphQL introspection is enabled, revealing schema information"
+    
+    active:
+      - when: "request"
+        where: "request.body"
+        inject:
+          - payload: '{"query":"query{__schema{types{name}}}}"}'
+          - payload: '{"query":"query{__type(name:\\"User\\"){name,fields{name}}}}"}'
+        then:
+          - if: "response.body contains __schema"
+            issue: "GraphQL Introspection Confirmed"
+            detail: "GraphQL introspection query successful"
+            severity: "Medium"
+            confidence: "High"
+
+  - name: "GraphQL Field Injection"
+    description: "Detects field injection vulnerabilities"
+    severity: "High"
+    confidence: "Medium"
+    
+    active:
+      - when: "request"
+        where: "request.body"
+        inject:
+          - payload: '{"query":"query{user(id:1){id,name,password}}"}'
+          - payload: '{"query":"query{user(id:1){id,name,email,admin}}"}'
+        then:
+          - if: "response.body contains password"
+            issue: "GraphQL Field Injection"
+            detail: "Sensitive fields accessible through GraphQL"
+            severity: "High"
+            confidence: "High"
+
+filters:
+  - name: "GraphQL Endpoints Only"
+    when: "request"
+    where: "request.url"
+    include:
+      - pattern: "/graphql"
+        flags: "i"
+      - pattern: "/gql"
+        flags: "i"
+
+settings:
+  max_payloads_per_parameter: 5
+  timeout: 10000
+  follow_redirects: false
