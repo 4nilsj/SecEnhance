@@ -92,8 +92,9 @@ python main.py scan -f collection.json \
 
 ### Quick Reference
 
-For a comprehensive command reference and troubleshooting guide, see:
-- **[Quick Reference Guide](docs/QUICK_REFERENCE.md)** - Command reference, common usage patterns, and troubleshooting
+For comprehensive documentation and troubleshooting, see:
+- **[Quick Reference Guide](docs/QUICK_REFERENCE.md)** - Command reference and common usage patterns
+- **[Troubleshooting Guide](docs/TROUBLESHOOTING_GUIDE.md)** - Comprehensive troubleshooting for installation and scan issues
 
 ### Main Commands
 
@@ -311,13 +312,62 @@ Check log files in the `logs/` directory for detailed error information:
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
+## Troubleshooting
+
+### Common Issues
+
+**Installation Problems:**
+```bash
+# Test installation
+python test_installation.py
+
+# Check Python version
+python --version  # Requires 3.7+
+
+# Reinstall dependencies
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+**ZAP Integration Issues:**
+```bash
+# Find ZAP installation
+find /Applications -name "zap.sh" 2>/dev/null  # macOS
+dir "C:\Program Files\OWASP\Zed Attack Proxy\zap.bat"  # Windows
+
+# Use specific ZAP path
+python main.py scan -f api.yaml --zap-path "/path/to/zap.sh"
+
+# Test with different port
+python main.py scan -f api.yaml --zap-port 8081
+```
+
+**Scan Execution Issues:**
+```bash
+# Test with simple example
+python main.py scan -u "curl -X GET https://httpbin.org/get" --no-zap
+
+# Enable debug logging
+python main.py scan -f api.yaml -vv
+
+# Check log files
+tail -f logs/scanner.log
+```
+
+### Comprehensive Troubleshooting
+
+For detailed troubleshooting information, see:
+- **[Troubleshooting Guide](docs/TROUBLESHOOTING_GUIDE.md)** - Complete troubleshooting guide for installation and scan issues
+- **[Quick Reference Guide](docs/QUICK_REFERENCE.md)** - Command reference and common solutions
+
 ## Support
 
 For issues and questions:
-1. Check the troubleshooting section
-2. Review log files for error details
-3. Create an issue with detailed information
-4. Include relevant log output and configuration details
+1. Check the [troubleshooting guide](docs/TROUBLESHOOTING_GUIDE.md)
+2. Review the [documentation](docs/)
+3. Check the [examples](examples/)
+4. Create an issue with detailed information
+5. Include relevant log output and configuration details
 
 ## Changelog
 
