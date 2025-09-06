@@ -76,7 +76,7 @@ class DatabaseManager:
                         risk TEXT NOT NULL CHECK (risk IN ('High', 'Medium', 'Low', 'Informational')),
                         cvss_score REAL NOT NULL CHECK (cvss_score >= 0.0 AND cvss_score <= 10.0),
                         solution TEXT,
-                        references TEXT,
+                        refs TEXT,
                         cwe_id TEXT,
                         wasc_id TEXT,
                         request TEXT NOT NULL,
@@ -86,6 +86,28 @@ class DatabaseManager:
                         evidence TEXT,
                         source TEXT NOT NULL CHECK (source IN ('ZAP', 'Custom Plugin')),
                         plugin_name TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (scan_id) REFERENCES scans (scan_id) ON DELETE CASCADE
+                    )
+                """)
+                
+                # Create custom_alerts table
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS custom_alerts (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        scan_id TEXT NOT NULL,
+                        plugin_name TEXT NOT NULL,
+                        vulnerability_type TEXT NOT NULL,
+                        severity TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        description TEXT,
+                        evidence TEXT,
+                        recommendation TEXT,
+                        url TEXT,
+                        method TEXT,
+                        headers TEXT,
+                        response_code INTEGER,
+                        response_body TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         FOREIGN KEY (scan_id) REFERENCES scans (scan_id) ON DELETE CASCADE
                     )
@@ -286,7 +308,7 @@ class DatabaseManager:
                 cursor.execute("""
                     INSERT INTO vulnerabilities (
                         id, scan_id, name, description, risk, cvss_score,
-                        solution, references, cwe_id, wasc_id, request, response,
+                        solution, refs, cwe_id, wasc_id, request, response,
                         url, parameter, evidence, source, plugin_name
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
