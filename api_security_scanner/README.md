@@ -43,6 +43,12 @@ brew install --cask owasp-zap
 # Or download from the official website
 ```
 
+### macOS Setup
+
+For detailed macOS installation instructions, see:
+- **[macOS Setup Guide](docs/MACOS_SETUP_GUIDE.md)** - Complete setup guide for macOS users
+- Includes Python installation, ZAP setup, troubleshooting, and advanced configuration
+
 ## Quick Start
 
 ### Basic Scan
@@ -83,6 +89,11 @@ python main.py scan -f collection.json \
 ```
 
 ## Command Reference
+
+### Quick Reference
+
+For a comprehensive command reference and troubleshooting guide, see:
+- **[Quick Reference Guide](docs/QUICK_REFERENCE.md)** - Command reference, common usage patterns, and troubleshooting
 
 ### Main Commands
 
@@ -127,12 +138,12 @@ python main.py scan -f collection.json \
 
 The scanner supports custom plugins for additional security checks. Plugins are automatically discovered from the `plugins/` directory.
 
-### Creating a Custom Plugin
+### Quick Start
 
 Create a new Python file in the `plugins/` directory:
 
 ```python
-from src.scanner_plugins import BasePlugin, PluginResult
+from src.scanner_plugins import BasePlugin, Vulnerability, PluginResult
 
 class MyCustomPlugin(BasePlugin):
     name = "MyCustomPlugin"
@@ -141,32 +152,51 @@ class MyCustomPlugin(BasePlugin):
     author = "Your Name"
     
     def check(self, target_url, requests_data, auth_headers=None):
-        findings = []
+        vulnerabilities = []
         
         # Your security check logic here
         for request in requests_data:
-            # Check something
             if self._check_something(request):
-                findings.append(self.create_finding(
-                    title="Security Issue Found",
+                vulnerability = self.create_vulnerability(
+                    vuln_id="unique-id",
+                    name="Security Issue Found",
                     description="Description of the issue",
-                    severity="High",
-                    evidence="Evidence of the issue",
-                    recommendation="How to fix it",
+                    risk="High",
+                    cvss_score=7.5,
+                    solution="How to fix it",
+                    references=["https://example.com"],
+                    cwe_id="CWE-123",
+                    wasc_id="WASC-45",
                     url=request['url'],
-                    method=request['method']
-                ))
+                    parameter="",
+                    evidence="Evidence of the issue",
+                    scan_id="",  # Will be set by scanner
+                    request="Full HTTP request",
+                    response="Full HTTP response"
+                )
+                vulnerabilities.append(vulnerability)
         
         return PluginResult(
             plugin_name=self.name,
             success=True,
-            findings=findings
+            vulnerabilities=vulnerabilities
         )
+    
+    def generate_poc(self, vulnerability_id):
+        """Generate proof-of-concept evidence."""
+        return None
     
     def _check_something(self, request):
         # Your check logic
         return False
 ```
+
+### Comprehensive Documentation
+
+For detailed plugin development instructions, see:
+- **[Custom Plugin Development Guide](docs/CUSTOM_PLUGIN_DEVELOPMENT.md)** - Complete guide for creating custom security plugins
+- **[Plugin Interface Reference](docs/CUSTOM_PLUGIN_DEVELOPMENT.md#plugin-interface-reference)** - Detailed API documentation
+- **[Example Plugins](docs/CUSTOM_PLUGIN_DEVELOPMENT.md#example-plugins)** - Real-world plugin examples
 
 ### Built-in Plugins
 
