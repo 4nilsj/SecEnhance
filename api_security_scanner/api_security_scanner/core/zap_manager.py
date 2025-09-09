@@ -10,8 +10,10 @@ from datetime import datetime
 from typing import Dict, List, Any, Optional, Tuple
 from pathlib import Path
 import json
+import os
 
-from utils.logger import get_logger, LoggedTimer
+from ..utils.logger import get_logger, LoggedTimer
+from .config import get_config
 
 
 class ZAPManagerError(Exception):
@@ -22,19 +24,83 @@ class ZAPManagerError(Exception):
 class ZAPManager:
     """Manages ZAP operations and integration."""
     
-    def __init__(self, zap_path: Optional[str] = None, zap_port: int = 8080, 
-                 zap_host: str = 'localhost', api_key: Optional[str] = None):
+    def __init__(self, zap_path: Optional[str] = None, zap_port: Optional[int] = None, 
+                 zap_host: Optional[str] = None, api_key: Optional[str] = None):
         self.logger = get_logger(__name__)
-        self.zap_path = zap_path
-        self.zap_port = zap_port
-        self.zap_host = zap_host
-        self.api_key = api_key
+        config = get_config()
+        
+        # Use provided values or fall back to configuration
+        self.zap_path = zap_path or config.zap.path
+        self.zap_port = zap_port or config.zap.port
+        self.zap_host = zap_host or config.zap.host
+        self.api_key = api_key or config.zap.api_key
+        self.timeout = config.zap.timeout
+        self.max_scan_time = config.zap.max_scan_time
+        self.spider_depth = config.zap.spider_depth
+        self.max_children = config.zap.max_children
+        self.thread_count = config.zap.thread_count
+        
         self.zap_process = None
-        self.zap_api_url = f"http://{zap_host}:{zap_port}"
+        self.zap_api_url = f"http://{self.zap_host}:{self.zap_port}"
         self.is_running = False
+        self.use_external_zap = config.zap.external_zap
         
         # Performance tracking
         self.performance_stats = {}
+        
+        # Auto-detect ZAP path if not provided
+        if not self.zap_path:
+            self.zap_path = self._get_default_zap_path()
+        
+        self.logger.info(f"ZAP Manager initialized: host={self.zap_host}, port={self.zap_port}, external={self.use_external_zap}")
+    
+    def _load_container_config(self):
+        """Load container-specific configuration."""
+        try:
+            # Try to import container config
+            import sys
+            from pathlib import Path
+            container_config_path = Path(__file__).parent.parent / 'container-config.py'
+            if container_config_path.exists():
+                sys.path.insert(0, str(container_config_path.parent))
+                from container_config import container_config
+                self.container_config = container_config
+                self.logger.debug("Container configuration loaded")
+            else:
+                self.container_config = None
+        except ImportError:
+            self.container_config = None
+            self.logger.debug("Container configuration not available")
+    
+    def _get_default_zap_path(self) -> Optional[str]:
+        """Get default ZAP path based on environment."""
+        if self.container_config and self.container_config.is_container:
+            zap_config = self.container_config.get_zap_config()
+            return zap_config.get('zap_path')
+        
+        # Default paths for non-container environments
+        zap_locations = [
+            'zap.sh',  # Linux/Mac
+            'zap.bat',  # Windows
+            '/usr/share/zaproxy/zap.sh',
+            '/opt/zaproxy/zap.sh',
+            'C:\\Program Files\\OWASP\\Zed Attack Proxy\\zap.bat'
+        ]
+        
+        for location in zap_locations:
+            if Path(location).exists():
+                return location
+        
+        return None
+    
+    def _should_use_external_zap(self) -> bool:
+        """Determine if we should use external ZAP instance."""
+        if self.container_config and self.container_config.is_container:
+            zap_config = self.container_config.get_zap_config()
+            return zap_config.get('use_external_zap', False)
+        
+        # Check if ZAP_HOST is not localhost
+        return self.zap_host != 'localhost'
     
     def start_zap(self, headless: bool = True) -> bool:
         """
@@ -52,7 +118,18 @@ class ZAPManager:
                     self.logger.info("ZAP is already running")
                     return True
                 
-                # Build ZAP command
+                # If using external ZAP, just check connectivity
+                if self.use_external_zap:
+                    self.logger.info(f"Using external ZAP at {self.zap_host}:{self.zap_port}")
+                    if self._wait_for_zap_startup():
+                        self.is_running = True
+                        self.logger.info("External ZAP is accessible")
+                        return True
+                    else:
+                        self.logger.error("External ZAP is not accessible")
+                        return False
+                
+                # Build ZAP command for local instance
                 cmd = self._build_zap_command(headless)
                 
                 self.logger.info(f"Starting ZAP with command: {' '.join(cmd)}")
@@ -146,6 +223,13 @@ class ZAPManager:
         """Stop ZAP daemon."""
         try:
             with LoggedTimer(self.logger, "ZAP shutdown"):
+                # If using external ZAP, just mark as not running
+                if self.use_external_zap:
+                    self.logger.info("External ZAP - no local process to stop")
+                    self.is_running = False
+                    return True
+                
+                # Stop local ZAP process
                 if self.zap_process:
                     self.logger.info("Stopping ZAP process")
                     self.zap_process.terminate()

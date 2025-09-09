@@ -15,24 +15,88 @@ A highly customizable command-line interface (CLI) tool for automated API securi
 
 ## Installation
 
-### Prerequisites
+### Option 1: Docker/Podman (Recommended)
+
+The easiest way to run the API Security Scanner is using Docker or Podman containers.
+
+#### Prerequisites
+- Docker or Podman installed
+- No need to install Python or ZAP separately
+
+#### 🍎 macOS Users (No Admin Privileges Required)
+
+If you're on macOS without administrator privileges, Docker is the perfect solution:
+
+```bash
+# Quick setup for macOS
+./mac-docker-setup.sh
+
+# Or manual setup:
+./setup-container.sh
+./build-docker.sh
+docker-compose up -d zap
+docker-compose run --rm scanner scan -f /workspace/your-collection.json
+```
+
+**Advantages for macOS users:**
+- ✅ No admin privileges required
+- ✅ No system-wide Python installation
+- ✅ No ZAP installation needed
+- ✅ Isolated environment
+- ✅ Easy cleanup
+
+#### Quick Setup
+```bash
+# Clone the repository
+git clone <repository-url>
+cd api_security_scanner
+
+# Setup container environment (creates necessary directories)
+# On Linux/macOS:
+./setup-container.sh
+
+# On Windows:
+setup-container.bat
+
+# Build the container
+docker build -t api-security-scanner .
+
+# Or with Podman:
+podman build -t api-security-scanner .
+```
+
+#### Using Docker Compose (Recommended)
+```bash
+# Start ZAP and scanner services
+docker-compose up -d zap
+
+# Run a scan
+docker-compose run --rm scanner scan -f /workspace/your-collection.json
+
+# Or for standalone mode (with external ZAP):
+docker-compose run --rm scanner-standalone scan -f /workspace/your-collection.json
+```
+
+### Option 2: Local Installation
+
+#### Prerequisites
 
 - Python 3.7 or higher
 - OWASP ZAP (Zed Attack Proxy)
 
-### Install Dependencies
+#### Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### Install OWASP ZAP
+#### Install OWASP ZAP
 
-#### Windows
+##### Windows
 1. Download ZAP from [OWASP ZAP Downloads](https://www.zaproxy.org/download/)
 2. Install and note the installation path
 
-#### Linux/macOS
+##### Linux/macOS
 ```bash
 # Ubuntu/Debian
 sudo apt-get install zaproxy
@@ -49,9 +113,106 @@ For detailed macOS installation instructions, see:
 - **[macOS Setup Guide](docs/MACOS_SETUP_GUIDE.md)** - Complete setup guide for macOS users
 - Includes Python installation, ZAP setup, troubleshooting, and advanced configuration
 
+### Docker/Podman Setup
+
+For comprehensive Docker and Podman usage instructions, see:
+- **[Docker Usage Guide](docs/DOCKER_USAGE_GUIDE.md)** - Complete guide for containerized deployment
+- Includes setup, configuration, troubleshooting, and advanced usage patterns
+
 ## Quick Start
 
-### Basic Scan
+### Configuration Setup
+
+The scanner uses `.env` files for configuration management. Start by setting up your configuration:
+
+```bash
+# Copy the configuration template
+cp env.template .env
+
+# Edit the configuration (optional)
+nano .env
+
+# Show current configuration
+python -m api_security_scanner.cli.main config --show-config
+
+# Validate configuration
+python -m api_security_scanner.cli.main config
+```
+
+For detailed configuration options, see [Environment Configuration Guide](docs/ENVIRONMENT_CONFIGURATION.md).
+
+### Docker/Podman Usage
+
+#### Basic Container Scan
+
+```bash
+# Scan a Postman collection
+docker run --rm -v $(pwd):/workspace api-security-scanner scan -f /workspace/collection.json
+
+# Scan an OpenAPI spec
+docker run --rm -v $(pwd):/workspace api-security-scanner scan -f /workspace/api-spec.yaml
+
+# Scan a curl command
+docker run --rm api-security-scanner scan -u "curl -X GET https://api.example.com/users"
+```
+
+#### Using Docker Compose
+
+```bash
+# Set up configuration
+cp env.template .env
+# Edit .env for Docker environment (ZAP_HOST=zap, ZAP_EXTERNAL=true)
+
+# Start ZAP service
+docker-compose up -d zap
+
+# Run a scan (with integrated ZAP)
+docker-compose run --rm scanner scan -f /workspace/collection.json
+
+# Run a scan with authentication
+docker-compose run --rm scanner scan -f /workspace/collection.json \
+  -a header -n "X-API-Key" -v "your-api-key"
+
+# Run a scan with custom plugins only (no ZAP)
+docker-compose run --rm scanner scan -f /workspace/collection.json --no-zap
+
+# List recent scans
+docker-compose run --rm scanner list-scans
+
+# Show scan details
+docker-compose run --rm scanner show-scan abc12345
+```
+
+#### Container Environment Variables
+
+```bash
+# Custom ZAP configuration
+docker run --rm -e ZAP_HOST=zap-proxy -e ZAP_PORT=8080 \
+  -v $(pwd):/workspace api-security-scanner scan -f /workspace/collection.json
+
+# Custom paths
+docker run --rm -e SCAN_DB_PATH=/app/data/custom.db \
+  -e LOG_DIR=/app/logs -e REPORTS_DIR=/app/reports \
+  -v $(pwd):/workspace api-security-scanner scan -f /workspace/collection.json
+```
+
+#### Podman Usage
+
+```bash
+# Build with Podman
+podman build -t api-security-scanner .
+
+# Run with Podman
+podman run --rm -v $(pwd):/workspace api-security-scanner scan -f /workspace/collection.json
+
+# Using Podman Compose
+podman-compose up -d zap
+podman-compose run --rm scanner scan -f /workspace/collection.json
+```
+
+### Local Installation Usage
+
+#### Basic Scan
 
 ```bash
 # Scan a Postman collection
@@ -277,7 +438,79 @@ python main.py show-scan abc12345 --export detailed-report.html
 
 The scanner can be configured using environment variables or command-line arguments. No separate configuration file is required.
 
-## Troubleshooting
+## Docker/Podman Troubleshooting
+
+### Container-Specific Issues
+
+#### ZAP Connectivity Issues
+```bash
+# Check if ZAP container is running
+docker-compose ps zap
+
+# Check ZAP logs
+docker-compose logs zap
+
+# Test ZAP connectivity from scanner container
+docker-compose run --rm scanner curl -f http://zap:8080/JSON/core/view/version/
+
+# Use external ZAP (if running ZAP on host)
+docker run --rm --network host -v $(pwd):/workspace \
+  api-security-scanner scan -f /workspace/collection.json --zap-host localhost
+```
+
+#### Volume Mount Issues
+```bash
+# Check volume mounts
+docker run --rm -v $(pwd):/workspace api-security-scanner ls -la /workspace
+
+# Fix permissions (Linux/macOS)
+sudo chown -R $USER:$USER data logs reports workspace
+
+# Windows: Run as Administrator or check Docker Desktop settings
+```
+
+#### Container Build Issues
+```bash
+# Clean build (no cache)
+docker build --no-cache -t api-security-scanner .
+
+# Check build logs
+docker build -t api-security-scanner . 2>&1 | tee build.log
+
+# Multi-platform build
+docker buildx build --platform linux/amd64,linux/arm64 -t api-security-scanner .
+```
+
+#### Podman-Specific Issues
+```bash
+# Enable rootless mode
+podman system migrate
+
+# Check Podman version
+podman version
+
+# Use Podman with Docker Compose
+export DOCKER_HOST=unix:///run/user/$(id -u)/podman/podman.sock
+docker-compose up -d zap
+```
+
+### Container Environment Debugging
+
+```bash
+# Check container environment
+docker run --rm api-security-scanner env
+
+# Interactive shell for debugging
+docker run --rm -it api-security-scanner bash
+
+# Check container configuration
+docker run --rm api-security-scanner check
+
+# View container logs
+docker logs <container-id>
+```
+
+## General Troubleshooting
 
 ### Common Issues
 

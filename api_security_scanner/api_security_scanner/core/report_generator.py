@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 from jinja2 import Environment, FileSystemLoader, Template
 
-from utils.logger import get_logger, LoggedTimer
+from ..utils.logger import get_logger, LoggedTimer
 
 
 class ReportGenerator:
@@ -182,6 +182,170 @@ class ReportGenerator:
             font-size: 0.9em;
             overflow-x: auto;
             border: 1px solid #e9ecef;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .request-block {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            margin: 10px 0;
+        }
+        .response-block {
+            background: #f3e5f5;
+            border-left: 4px solid #9c27b0;
+            margin: 10px 0;
+        }
+        .headers-block {
+            background: #e8f5e8;
+            border-left: 4px solid #4caf50;
+            margin: 10px 0;
+        }
+        .vulnerable-text {
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+            margin: 10px 0;
+        }
+        .url-highlight {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            margin: 10px 0;
+        }
+        .method-highlight {
+            background: #e1f5fe;
+            border-left: 4px solid #00bcd4;
+            margin: 10px 0;
+        }
+        .parameter-highlight {
+            background: #fce4ec;
+            border-left: 4px solid #e91e63;
+            margin: 10px 0;
+        }
+        .highlight {
+            background-color: #ffeb3b;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: bold;
+            color: #d32f2f;
+        }
+        .executive-summary {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .summary-text h3 {
+            color: #495057;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        .summary-text ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .summary-text li {
+            margin: 5px 0;
+        }
+        .risk-high {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            color: #721c24;
+        }
+        .risk-medium {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            color: #856404;
+        }
+        .risk-low {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            color: #0c5460;
+        }
+        .issues-table-container {
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+        .issues-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .issues-table th {
+            background: #343a40;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        .issues-table td {
+            padding: 12px;
+            border-bottom: 1px solid #dee2e6;
+            vertical-align: top;
+        }
+        .issues-table tr:hover {
+            background: #f8f9fa;
+        }
+        .issues-table tr.severity-high {
+            border-left: 4px solid #dc3545;
+        }
+        .issues-table tr.severity-medium {
+            border-left: 4px solid #ffc107;
+        }
+        .issues-table tr.severity-low {
+            border-left: 4px solid #28a745;
+        }
+        .issues-table tr.severity-informational {
+            border-left: 4px solid #17a2b8;
+        }
+        .status-open {
+            background: #dc3545;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        .vuln-link {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .vuln-link:hover {
+            color: #0056b3;
+            text-decoration: underline;
+        }
+        .back-to-top {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 14px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        .back-to-top:hover {
+            background: #0056b3;
+            color: white;
+            text-decoration: none;
+        }
+        .vulnerability-section {
+            scroll-margin-top: 20px;
         }
         .url {
             color: #007bff;
@@ -257,6 +421,107 @@ class ReportGenerator:
         </div>
         
         <div class="content">
+            <!-- Executive Summary -->
+            <div class="section">
+                <h2>Executive Summary</h2>
+                <div class="executive-summary">
+                    <div class="summary-text">
+                        <p>This security assessment was conducted on <strong>{{ scan_data.target_url }}</strong> to identify potential security vulnerabilities and misconfigurations. The scan was performed using automated security testing tools and custom security plugins.</p>
+                        
+                        <h3>Key Findings:</h3>
+                        <ul>
+                            <li><strong>Total Issues Identified:</strong> {{ all_vulnerabilities|length }}</li>
+                            <li><strong>High Risk Issues:</strong> {{ risk_counts.High or 0 }}</li>
+                            <li><strong>Medium Risk Issues:</strong> {{ risk_counts.Medium or 0 }}</li>
+                            <li><strong>Low Risk Issues:</strong> {{ risk_counts.Low or 0 }}</li>
+                            <li><strong>Informational Issues:</strong> {{ risk_counts.Informational or 0 }}</li>
+                        </ul>
+                        
+                        <h3>Risk Assessment:</h3>
+                        {% if (risk_counts.High or 0) > 0 %}
+                        <div class="risk-high">
+                            <strong>⚠️ HIGH RISK:</strong> {{ risk_counts.High or 0 }} critical vulnerabilities require immediate attention. These issues pose significant security risks and should be addressed as a priority.
+                        </div>
+                        {% endif %}
+                        {% if (risk_counts.Medium or 0) > 0 %}
+                        <div class="risk-medium">
+                            <strong>🔶 MEDIUM RISK:</strong> {{ risk_counts.Medium or 0 }} vulnerabilities should be addressed in the next security update cycle. These issues could potentially be exploited under certain conditions.
+                        </div>
+                        {% endif %}
+                        {% if (risk_counts.Low or 0) > 0 %}
+                        <div class="risk-low">
+                            <strong>🔷 LOW RISK:</strong> {{ risk_counts.Low or 0 }} issues are informational or pose minimal security risk but should be reviewed for best practices.
+                        </div>
+                        {% endif %}
+                        
+                        <h3>Recommendations:</h3>
+                        <ul>
+                            <li>Address all High and Medium risk vulnerabilities immediately</li>
+                            <li>Implement proper security headers and CORS policies</li>
+                            <li>Review and implement rate limiting mechanisms</li>
+                            <li>Conduct regular security assessments</li>
+                            <li>Implement a security monitoring and alerting system</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Issues Summary Table -->
+            <div class="section">
+                <h2>Issues Summary</h2>
+                <div class="issues-table-container">
+                    <table class="issues-table">
+                        <thead>
+                            <tr>
+                                <th>Issue</th>
+                                <th>Severity</th>
+                                <th>CVSS Score</th>
+                                <th>Impact</th>
+                                <th>Source</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for vuln in all_vulnerabilities %}
+                            <tr class="severity-{{ vuln.risk.lower() }}">
+                                <td>
+                                    <a href="#vuln-{{ loop.index }}" class="vuln-link">
+                                        <strong>{{ vuln.name }}</strong>
+                                    </a>
+                                    <br><small>{{ vuln.url }}</small>
+                                </td>
+                                <td>
+                                    <span class="risk-badge risk-{{ vuln.risk.lower() }}">{{ vuln.risk }}</span>
+                                </td>
+                                <td>{{ vuln.cvss_score }}</td>
+                                <td>
+                                    {% if vuln.risk == 'High' %}
+                                        Critical security vulnerability that could lead to data breach, unauthorized access, or system compromise
+                                    {% elif vuln.risk == 'Medium' %}
+                                        Moderate security risk that could be exploited under certain conditions
+                                    {% elif vuln.risk == 'Low' %}
+                                        Minor security issue or best practice violation
+                                    {% else %}
+                                        Informational finding for security awareness
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if vuln.plugin_name %}
+                                        {{ vuln.plugin_name }}
+                                    {% else %}
+                                        ZAP Scanner
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="status-open">Open</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
             <!-- Scan Summary -->
             <div class="section">
                 <h2>Scan Summary</h2>
@@ -274,12 +539,12 @@ class ReportGenerator:
                         <p>Total Duration</p>
                     </div>
                     <div class="summary-card">
-                        <h3>{{ zap_alerts|length }}</h3>
-                        <p>ZAP Alerts</p>
+                        <h3>{{ all_vulnerabilities|length }}</h3>
+                        <p>Total Issues</p>
                     </div>
                     <div class="summary-card">
-                        <h3>{{ custom_alerts|length }}</h3>
-                        <p>Custom Plugin Alerts</p>
+                        <h3>{{ risk_counts.High or 0 }}</h3>
+                        <p>High Risk</p>
                     </div>
                 </div>
             </div>
@@ -337,7 +602,7 @@ class ReportGenerator:
             <div class="section">
                 <h2>Security Vulnerabilities</h2>
                 {% for vuln in vulnerabilities %}
-                <div class="alert alert-{{ vuln.risk.lower() }}">
+                <div id="vuln-{{ loop.index }}" class="alert alert-{{ vuln.risk.lower() }} vulnerability-section">
                     <div class="alert-header">
                         <span>
                             <span class="method method-{{ vuln.request.split()[0].lower() if vuln.request else 'get' }}">{{ vuln.request.split()[0] if vuln.request else 'GET' }}</span>
@@ -373,10 +638,63 @@ class ReportGenerator:
                         <details class="poc-section">
                             <summary>Proof-of-Concept Evidence</summary>
                             <div class="poc-content">
-                                <h5>HTTP Request:</h5>
-                                <div class="code">{{ vuln.request }}</div>
-                                <h5>HTTP Response:</h5>
-                                <div class="code">{{ vuln.response }}</div>
+                                {% if vuln.url %}
+                                <h5>Target URL:</h5>
+                                <div class="code url-highlight">{{ vuln.url }}</div>
+                                {% endif %}
+                                
+                                {% if vuln.method %}
+                                <h5>HTTP Method:</h5>
+                                <div class="code method-highlight">{{ vuln.method }}</div>
+                                {% endif %}
+                                
+                                <h5>Complete HTTP Request:</h5>
+                                <div class="code request-block">
+                                    {% if vuln.request %}
+                                        {{ vuln.request|replace('\\n', '\n')|replace('\\r', '\r') }}
+                                    {% else %}
+                                        {{ vuln.method or 'GET' }} {{ vuln.url or 'N/A' }} HTTP/1.1
+                                        {% if vuln.headers %}
+                                        {% for header, value in vuln.headers.items() %}
+                                        {{ header }}: {{ value }}
+                                        {% endfor %}
+                                        {% endif %}
+                                        {% if vuln.body %}
+                                        
+                                        {{ vuln.body }}
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                                
+                                <h5>HTTP Response ({{ vuln.response_code or 'N/A' }}):</h5>
+                                <div class="code response-block">
+                                    {% if vuln.response %}
+                                        {{ vuln.response|replace('\\n', '\n')|replace('\\r', '\r') }}
+                                    {% else %}
+                                        Response data not available
+                                    {% endif %}
+                                </div>
+                                
+                                {% if vuln.evidence %}
+                                <h5>Vulnerable Text/Evidence:</h5>
+                                <div class="code vulnerable-text">
+                                    <span class="highlight">{{ vuln.evidence }}</span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if vuln.parameter %}
+                                <h5>Vulnerable Parameter:</h5>
+                                <div class="code parameter-highlight">{{ vuln.parameter }}</div>
+                                {% endif %}
+                                
+                                {% if vuln.response_headers %}
+                                <h5>Response Headers:</h5>
+                                <div class="code headers-block">
+                                    {% for header, value in vuln.response_headers.items() %}
+                                    {{ header }}: {{ value }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
                             </div>
                         </details>
                         
@@ -419,6 +737,9 @@ class ReportGenerator:
         <div class="footer">
             <p>Report generated by API Security Scanner on {{ report_date }}</p>
         </div>
+        
+        <!-- Back to Top Link -->
+        <a href="#" class="back-to-top">↑ Back to Top</a>
     </div>
 </body>
 </html>"""
@@ -446,6 +767,7 @@ class ReportGenerator:
                 template_data = {
                     'scan_data': scan_data,
                     'vulnerabilities': vulnerabilities,
+                    'all_vulnerabilities': vulnerabilities,  # For the issues table
                     'performance_stats': performance_stats,
                     'risk_counts': risk_counts,
                     'report_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')

@@ -14,7 +14,7 @@ import requests
 from datetime import datetime
 from dataclasses import dataclass
 
-from utils.logger import get_logger
+from ..utils.logger import get_logger
 
 
 @dataclass

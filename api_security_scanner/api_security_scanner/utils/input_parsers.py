@@ -11,7 +11,7 @@ from typing import Dict, List, Any, Optional, Union
 from urllib.parse import urlparse, parse_qs, urlencode
 import yaml
 
-from utils.logger import get_logger
+from .logger import get_logger
 
 
 class InputParserError(Exception):

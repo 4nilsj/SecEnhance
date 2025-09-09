@@ -5,6 +5,9 @@ Provides a comprehensive CLI using the click library.
 
 import sys
 import uuid
+import warnings
+import logging
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 import time
@@ -13,34 +16,55 @@ import click
 from click import echo, secho
 from tqdm import tqdm
 
-from utils.logger import setup_logging, get_logger
-from utils.input_parsers import parse_input, InputParserError
-from utils.auth_handler import create_auth_handler, AuthenticationError
-from src.db_manager import DatabaseManager
-from src.zap_manager import ZAPManager, ZAPManagerError
-from src.scanner_plugins import PluginManager
-from src.report_generator import ReportGenerator
+# Suppress all warnings by default
+warnings.filterwarnings('ignore')
+
+# Suppress urllib3 warnings
+try:
+    from urllib3.exceptions import InsecureRequestWarning
+    warnings.filterwarnings('ignore', category=InsecureRequestWarning)
+except ImportError:
+    pass
+
+from ..utils.logger import setup_logging, get_logger
+from ..utils.input_parsers import parse_input, InputParserError
+from ..utils.auth_handler import create_auth_handler, AuthenticationError
+from ..core.db_manager import DatabaseManager
+from ..core.zap_manager import ZAPManager, ZAPManagerError
+from ..core.scanner_plugins import PluginManager
+from ..core.report_generator import ReportGenerator
+from ..core.config import get_config_manager, get_config
 
 
-class ScanProgressBar:
-    """Progress bar for scan operations."""
+class UnifiedScanProgress:
+    """Unified progress bar for entire scan operation."""
     
-    def __init__(self, total_steps: int, description: str = "Scanning", disable: bool = False):
-        self.total_steps = total_steps
-        self.current_step = 0
-        self.description = description
+    def __init__(self, disable: bool = False):
         self.pbar = None
-        self.start_time = time.time()
         self.disable = disable
+        self.start_time = time.time()
+        self.current_phase = 0
+        self.total_phases = 6  # Total number of scan phases
+        
+        # Define scan phases
+        self.phases = [
+            "Initializing scan",
+            "Parsing input data", 
+            "Setting up authentication",
+            "Initializing database",
+            "Loading security plugins",
+            "Executing security checks"
+        ]
     
     def __enter__(self):
         if not self.disable:
             self.pbar = tqdm(
-                total=self.total_steps,
-                desc=self.description,
-                unit="step",
-                bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]',
-                disable=self.disable
+                total=self.total_phases,
+                desc="API Security Scan",
+                unit="phase",
+                bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}] {desc}',
+                disable=self.disable,
+                ncols=80
             )
         return self
     
@@ -48,28 +72,32 @@ class ScanProgressBar:
         if self.pbar:
             self.pbar.close()
     
-    def update(self, step: int = 1, description: str = None):
-        """Update progress bar."""
-        if self.pbar:
-            if description:
-                self.pbar.set_description(description)
-            self.pbar.update(step)
-            self.current_step += step
-        elif self.disable and description:
-            # If progress bar is disabled, just print the description
-            print(f"[{self.description}] {description}")
+    def start_phase(self, phase_name: Optional[str] = None):
+        """Start a new phase of the scan."""
+        if self.pbar and self.current_phase < self.total_phases:
+            if phase_name:
+                self.pbar.set_description(f"API Security Scan - {phase_name}")
+            else:
+                self.pbar.set_description(f"API Security Scan - {self.phases[self.current_phase]}")
+            self.pbar.update(1)
+            self.current_phase += 1
+        elif self.disable and phase_name:
+            print(f"→ {phase_name}")
     
-    def set_description(self, description: str):
-        """Set progress bar description."""
+    def update_plugin_progress(self, plugin_name: str, vulnerabilities_found: int):
+        """Update progress during plugin execution."""
         if self.pbar:
-            self.pbar.set_description(description)
+            self.pbar.set_description(f"API Security Scan - {plugin_name}: {vulnerabilities_found} issues found")
         elif self.disable:
-            print(f"[{self.description}] {description}")
+            print(f"  ✓ {plugin_name}: {vulnerabilities_found} vulnerabilities found")
     
     def finish(self):
         """Finish the progress bar."""
         if self.pbar:
+            self.pbar.set_description("API Security Scan - Complete")
             self.pbar.close()
+        elif self.disable:
+            print("✓ Scan completed successfully")
 
 
 @click.group()
@@ -81,11 +109,58 @@ def cli(ctx, verbose, log_dir):
     # Ensure context object exists
     ctx.ensure_object(dict)
     
+    # Suppress all logging output if not in verbose mode
+    if verbose == 0:
+        # Disable root logger completely
+        logging.getLogger().setLevel(logging.CRITICAL + 1)
+        # Disable specific loggers
+        logging.getLogger('api_security_scanner').setLevel(logging.CRITICAL + 1)
+        logging.getLogger('urllib3').setLevel(logging.CRITICAL + 1)
+        logging.getLogger('requests').setLevel(logging.CRITICAL + 1)
+    
     # Setup logging
     logger_instance = setup_logging(verbose=verbose, log_dir=log_dir)
     ctx.obj['logger'] = logger_instance.get_logger()
     ctx.obj['verbose'] = verbose
     ctx.obj['log_dir'] = log_dir
+
+
+@cli.command()
+@click.option('--env-file', default='.env', help='Path to .env configuration file')
+@click.option('--save-config', is_flag=True, help='Save current configuration to .env file')
+@click.option('--show-config', is_flag=True, help='Show current configuration and exit')
+def config(env_file: str, save_config: bool, show_config: bool):
+    """Configuration management commands."""
+    config_manager = get_config_manager(env_file)
+    config = config_manager.get_config()
+    
+    if show_config:
+        echo("Current Configuration:")
+        echo(f"  Database Path: {config.database.path}")
+        echo(f"  ZAP Host: {config.zap.host}")
+        echo(f"  ZAP Port: {config.zap.port}")
+        echo(f"  ZAP External: {config.zap.external_zap}")
+        echo(f"  Log Level: {config.logging.level}")
+        echo(f"  Log Directory: {config.logging.log_dir}")
+        echo(f"  Report Directory: {config.report.output_dir}")
+        echo(f"  Enabled Plugins: {', '.join(config.plugin.enabled_plugins)}")
+        echo(f"  Debug Mode: {config.debug}")
+        echo(f"  Verbose Mode: {config.verbose}")
+        return
+    
+    if save_config:
+        config_manager.save_to_env(env_file)
+        echo(f"Configuration saved to {env_file}")
+        return
+    
+    # Validate configuration
+    validation = config_manager.validate_config()
+    if validation['valid']:
+        echo("Configuration is valid")
+    else:
+        echo("Configuration issues found:")
+        for issue in validation['issues']:
+            echo(f"  - {issue}")
 
 
 @cli.command()
@@ -129,8 +204,10 @@ def scan(ctx, input_file, curl_command, auth_type, auth_name, auth_value,
         scan_id = str(uuid.uuid4())[:8]
         logger.info(f"Starting scan with ID: {scan_id}")
         
-        # Parse input
-        with ScanProgressBar(1, "Parsing input", disable=no_progress or ctx.obj.get('verbose', 0) > 0) as progress:
+        # Use unified progress bar
+        with UnifiedScanProgress(disable=no_progress or ctx.obj.get('verbose', 0) > 0) as progress:
+            # Phase 1: Parse input
+            progress.start_phase("Parsing input data")
             try:
                 if input_file:
                     requests_data = parse_input(input_file)
@@ -140,30 +217,26 @@ def scan(ctx, input_file, curl_command, auth_type, auth_name, auth_value,
                     requests_data = parse_input(curl_command)
                     input_type = "curl"
                     input_source = curl_command
-                progress.update(1, f"Parsed {len(requests_data)} requests")
             except InputParserError as e:
                 secho(f"Input parsing error: {e}", fg='red')
                 sys.exit(1)
-        
-        # Setup authentication
-        with ScanProgressBar(1, "Setting up authentication", disable=no_progress or ctx.obj.get('verbose', 0) > 0) as progress:
+            
+            # Phase 2: Setup authentication
+            progress.start_phase("Setting up authentication")
             auth_handler = None
             if auth_type and auth_name and auth_value:
                 try:
                     auth_handler = create_auth_handler(auth_type, auth_name, auth_value)
-                    progress.update(1, f"Authentication configured: {auth_type} - {auth_name}")
                 except AuthenticationError as e:
                     secho(f"Authentication error: {e}", fg='red')
                     sys.exit(1)
-            else:
-                progress.update(1, "No authentication configured")
-        
-        # Apply authentication to requests
-        if auth_handler:
-            requests_data = auth_handler.apply_authentication(requests_data)
-        
-        # Initialize database
-        with ScanProgressBar(1, "Initializing database", disable=no_progress or ctx.obj.get('verbose', 0) > 0) as progress:
+            
+            # Apply authentication to requests
+            if auth_handler:
+                requests_data = auth_handler.apply_authentication(requests_data)
+            
+            # Phase 3: Initialize database
+            progress.start_phase("Initializing database")
             db_manager = DatabaseManager(db_path)
             
             # Extract target URL from first request
@@ -177,10 +250,9 @@ def scan(ctx, input_file, curl_command, auth_type, auth_name, auth_value,
                 input_source=input_source,
                 auth_type=auth_type
             )
-            progress.update(1, f"Database initialized for target: {target_url}")
-        
-        # Initialize components
-        with ScanProgressBar(1, "Initializing components", disable=no_progress or ctx.obj.get('verbose', 0) > 0) as progress:
+            
+            # Phase 4: Initialize components
+            progress.start_phase("Loading security plugins")
             zap_manager = None
             plugin_manager = None
             
@@ -188,61 +260,50 @@ def scan(ctx, input_file, curl_command, auth_type, auth_name, auth_value,
                 zap_manager = ZAPManager(zap_path, zap_port, zap_host)
             
             if not no_plugins:
-                plugin_manager = PluginManager()
-                progress.update(1, f"Loaded {len(plugin_manager.loaded_plugins)} custom plugins")
-            else:
-                progress.update(1, "Components initialized")
-        
-        # Start ZAP scanning
-        zap_alerts = []
-        if zap_manager and not no_zap:
-            with ScanProgressBar(3, "ZAP Security Scan", disable=no_progress or ctx.obj.get('verbose', 0) > 0) as progress:
+                plugin_manager = PluginManager("api_security_scanner/plugins")
+            
+            # Phase 5: Execute security checks
+            progress.start_phase("Executing security checks")
+            
+            # Start ZAP scanning
+            zap_alerts = []
+            if zap_manager and not no_zap:
                 try:
                     with zap_manager:
                         # Spider target
-                        progress.set_description("Spidering target")
                         spider_success, spider_id = zap_manager.spider_target(
                             target_url, spider_depth, spider_children
                         )
-                        progress.update(1, "Spidering completed")
                         
                         if spider_success:
                             # Active scan
-                            progress.set_description("Performing active scan")
                             scan_success, scan_id_zap = zap_manager.active_scan_target(target_url)
-                            progress.update(1, "Active scan completed")
                             
                             if scan_success:
                                 # Get alerts
-                                progress.set_description("Retrieving ZAP alerts")
                                 zap_alerts = zap_manager.get_alerts(target_url)
                                 
                                 # Store ZAP alerts in database
                                 for alert in zap_alerts:
                                     db_manager.add_zap_alert(scan_id, alert)
                                 
-                                progress.update(1, f"Found {len(zap_alerts)} ZAP alerts")
-                            else:
-                                progress.update(1, "Active scan failed")
                         else:
-                            progress.update(2, "Spidering failed")
+                            logger.warning("ZAP spidering failed")
                             
                 except ZAPManagerError as e:
                     secho(f"ZAP error: {e}", fg='red')
                     logger.error(f"ZAP operation failed: {e}")
-        
-        # Run custom plugins
-        custom_alerts = []
-        if plugin_manager and not no_plugins:
-            plugin_count = len(plugin_manager.loaded_plugins)
-            with ScanProgressBar(plugin_count, "Custom Plugin Scan", disable=no_progress or ctx.obj.get('verbose', 0) > 0) as progress:
+            
+            # Run custom plugins
+            custom_alerts = []
+            if plugin_manager and not no_plugins:
                 try:
                     plugin_results = plugin_manager.execute_all_plugins(
                         target_url, requests_data, 
                         auth_handler.get_auth_headers() if auth_handler else None
                     )
                     
-                    for i, result in enumerate(plugin_results):
+                    for result in plugin_results:
                         if result.success:
                             for vulnerability in result.vulnerabilities:
                                 # Store custom alert in database
@@ -262,19 +323,17 @@ def scan(ctx, input_file, curl_command, auth_type, auth_name, auth_value,
                                     response_body=vulnerability.response
                                 )
                                 custom_alerts.append(vulnerability.__dict__)
-                            progress.update(1, f"{result.plugin_name}: {len(result.vulnerabilities)} issues found")
+                            
+                            # Update progress with plugin results
+                            progress.update_plugin_progress(result.plugin_name, len(result.vulnerabilities))
                         else:
-                            progress.update(1, f"{result.plugin_name}: Failed - {result.error}")
                             logger.warning(f"Plugin {result.plugin_name} failed: {result.error}")
-                    
-                    progress.set_description(f"Custom plugins completed: {len(custom_alerts)} total issues")
                     
                 except Exception as e:
                     secho(f"Plugin execution error: {e}", fg='red')
                     logger.error(f"Plugin execution failed: {e}")
-        
-        # Update scan completion
-        with ScanProgressBar(1, "Finalizing scan", disable=no_progress or ctx.obj.get('verbose', 0) > 0) as progress:
+            
+            # Update scan completion
             db_manager.update_scan_completion(scan_id, 'completed')
             
             # Get scan summary
@@ -282,7 +341,9 @@ def scan(ctx, input_file, curl_command, auth_type, auth_name, auth_value,
             if not scan_summary:
                 secho("Failed to retrieve scan summary", fg='red')
                 sys.exit(1)
-            progress.update(1, "Scan finalized")
+            
+            # Finish progress bar
+            progress.finish()
         
         # Display results
         echo("\n" + "="*60)
@@ -293,50 +354,89 @@ def scan(ctx, input_file, curl_command, auth_type, auth_name, auth_value,
         echo(f"ZAP Alerts: {len(zap_alerts)}")
         echo(f"Custom Plugin Alerts: {len(custom_alerts)}")
         
+        # Display issues summary
+        _display_issues_summary(zap_alerts, custom_alerts)
+        
         # Show performance stats if requested
         if performance_stats and scan_summary.get('performance_stats'):
             echo("\nPERFORMANCE STATISTICS:")
             for stat in scan_summary['performance_stats']:
                 echo(f"  {stat['phase_name']}: {stat['duration']:.2f}s")
         
-        # Generate reports
+        # Generate reports automatically
+        progress.start_phase("Generating reports")
+        
+        # Create reports directory if it doesn't exist
+        reports_dir = Path("reports")
+        reports_dir.mkdir(exist_ok=True)
+        
+        # Generate default reports with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        default_html_report = reports_dir / f"scan_report_{scan_id}_{timestamp}.html"
+        default_json_report = reports_dir / f"scan_report_{scan_id}_{timestamp}.json"
+        
+        report_generator = ReportGenerator()
+        
+        # Combine zap_alerts and custom_alerts into vulnerabilities list
+        all_vulnerabilities = []
+        
+        # Add ZAP alerts
+        for alert in zap_alerts:
+            all_vulnerabilities.append(alert)
+        
+        # Add custom plugin alerts
+        for alert in custom_alerts:
+            all_vulnerabilities.append(alert)
+        
+        # Generate HTML report
+        html_success = report_generator.generate_report(
+            scan_summary['scan'],
+            all_vulnerabilities,
+            scan_summary.get('performance_stats', []),
+            str(default_html_report)
+        )
+        
+        # Generate JSON report
+        json_success = report_generator.generate_json_report(
+            scan_summary['scan'],
+            all_vulnerabilities,
+            scan_summary.get('performance_stats', []),
+            str(default_json_report)
+        )
+        
+        # Generate custom reports if specified
         if export or export_json:
-            report_steps = 0
             if export:
-                report_steps += 1
+                custom_html_success = report_generator.generate_report(
+                    scan_summary['scan'],
+                    all_vulnerabilities,
+                    scan_summary.get('performance_stats', []),
+                    export
+                )
+                if custom_html_success:
+                    echo(f"Custom HTML report saved to: {export}")
+                else:
+                    secho("Failed to generate custom HTML report", fg='red')
+            
             if export_json:
-                report_steps += 1
-                
-            with ScanProgressBar(report_steps, "Generating reports", disable=no_progress or ctx.obj.get('verbose', 0) > 0) as progress:
-                report_generator = ReportGenerator()
-                
-                if export:
-                    success = report_generator.generate_report(
-                        scan_summary['scan'],
-                        zap_alerts,
-                        custom_alerts,
-                        scan_summary.get('performance_stats', []),
-                        export
-                    )
-                    if success:
-                        progress.update(1, f"HTML report saved to: {export}")
-                    else:
-                        progress.update(1, "Failed to generate HTML report")
-                        secho("Failed to generate HTML report", fg='red')
-                
-                if export_json:
-                    success = report_generator.generate_json_report(
-                        scan_summary['scan'],
-                        zap_alerts,
-                        custom_alerts,
-                        scan_summary.get('performance_stats', []),
-                        export_json
-                    )
-                    if success:
-                        progress.update(1, f"JSON report saved to: {export_json}")
-                    else:
-                        progress.update(1, "Failed to generate JSON report")
-                        secho("Failed to generate JSON report", fg='red')
+                custom_json_success = report_generator.generate_json_report(
+                    scan_summary['scan'],
+                    all_vulnerabilities,
+                    scan_summary.get('performance_stats', []),
+                    export_json
+                )
+                if custom_json_success:
+                    echo(f"Custom JSON report saved to: {export_json}")
+                else:
+                    secho("Failed to generate custom JSON report", fg='red')
+        
+        # Display report information
+        if html_success and json_success:
+            echo(f"\n📊 Reports generated successfully:")
+            echo(f"  HTML Report: {default_html_report}")
+            echo(f"  JSON Report: {default_json_report}")
+        else:
+            secho("⚠️  Some reports failed to generate", fg='yellow')
         
         echo("\nScan completed successfully!")
         
@@ -456,11 +556,13 @@ def show_scan(ctx, scan_id, db_path, export):
                 # Get custom alerts
                 cursor.execute("SELECT * FROM custom_alerts WHERE scan_id = ?", (scan_id,))
                 custom_alerts_data = [dict(row) for row in cursor.fetchall()]
+                
+                # Combine all vulnerabilities
+                all_vulnerabilities = zap_alerts_data + custom_alerts_data
             
             success = report_generator.generate_report(
                 scan_data,
-                zap_alerts_data,
-                custom_alerts_data,
+                all_vulnerabilities,
                 scan_summary.get('performance_stats', []),
                 export
             )
@@ -529,7 +631,7 @@ def stats(ctx, db_path):
 def plugins(ctx):
     """List available custom plugins."""
     try:
-        plugin_manager = PluginManager()
+        plugin_manager = PluginManager("api_security_scanner/plugins")
         plugins = plugin_manager.get_plugin_list()
         
         if not plugins:
@@ -549,6 +651,106 @@ def plugins(ctx):
     except Exception as e:
         secho(f"Error listing plugins: {e}", fg='red')
         sys.exit(1)
+
+
+def _display_issues_summary(zap_alerts, custom_alerts):
+    """Display a summary of all identified issues with severity levels in table format."""
+    all_vulnerabilities = zap_alerts + custom_alerts
+    
+    if not all_vulnerabilities:
+        echo("\n✅ No security issues found!")
+        return
+    
+    # Calculate risk counts
+    risk_counts = {'High': 0, 'Medium': 0, 'Low': 0, 'Informational': 0}
+    for vuln in all_vulnerabilities:
+        risk = vuln.get('risk', 'Informational')
+        if risk in risk_counts:
+            risk_counts[risk] += 1
+    
+    echo("\n🔍 SECURITY ISSUES SUMMARY")
+    echo("="*120)
+    
+    # Display risk summary
+    if risk_counts['High'] > 0:
+        secho(f"🔴 HIGH RISK: {risk_counts['High']} issues", fg='red', bold=True)
+    if risk_counts['Medium'] > 0:
+        secho(f"🟡 MEDIUM RISK: {risk_counts['Medium']} issues", fg='yellow', bold=True)
+    if risk_counts['Low'] > 0:
+        secho(f"🟢 LOW RISK: {risk_counts['Low']} issues", fg='green', bold=True)
+    if risk_counts['Informational'] > 0:
+        secho(f"🔵 INFORMATIONAL: {risk_counts['Informational']} issues", fg='blue', bold=True)
+    
+    echo(f"\nTotal Issues: {len(all_vulnerabilities)}")
+    echo("\n" + "="*120)
+    
+    # Display table header
+    echo(f"{'#':<3} {'Risk':<8} {'CVSS':<6} {'Issue Name':<45} {'Source':<18} {'URL':<35}")
+    echo("-" * 115)
+    
+    # Display issues in table format
+    for i, vuln in enumerate(all_vulnerabilities, 1):
+        risk = vuln.get('risk', 'Informational')
+        name = vuln.get('name', 'Unknown Issue')
+        cvss_score = vuln.get('cvss_score', 'N/A')
+        url = vuln.get('url', 'N/A')
+        source = vuln.get('plugin_name', 'ZAP Scanner')
+        
+        # Truncate long names and URLs
+        display_name = name[:42] + "..." if len(name) > 45 else name
+        display_url = url[:32] + "..." if len(url) > 35 else url
+        display_source = source[:15] + "..." if len(source) > 18 else source
+        
+        # Color code based on risk level
+        if risk == 'High':
+            risk_color = 'red'
+            risk_icon = '🔴'
+        elif risk == 'Medium':
+            risk_color = 'yellow'
+            risk_icon = '🟡'
+        elif risk == 'Low':
+            risk_color = 'green'
+            risk_icon = '🟢'
+        else:
+            risk_color = 'blue'
+            risk_icon = '🔵'
+        
+        # Display table row
+        echo(f"{i:<3} ", nl=False)
+        secho(f"{risk_icon} {risk:<6}", fg=risk_color, bold=True, nl=False)
+        echo(f" {cvss_score:<6} {display_name:<45} {display_source:<18} {display_url:<35}")
+    
+    echo("\n" + "="*115)
+    echo("💡 Check the generated HTML report for detailed information and remediation steps.")
+    
+    # Display detailed evidence for each issue
+    echo("\n📋 DETAILED EVIDENCE:")
+    echo("-" * 115)
+    for i, vuln in enumerate(all_vulnerabilities, 1):
+        risk = vuln.get('risk', 'Informational')
+        name = vuln.get('name', 'Unknown Issue')
+        evidence = vuln.get('evidence', '')
+        
+        # Color code based on risk level
+        if risk == 'High':
+            risk_color = 'red'
+            risk_icon = '🔴'
+        elif risk == 'Medium':
+            risk_color = 'yellow'
+            risk_icon = '🟡'
+        elif risk == 'Low':
+            risk_color = 'green'
+            risk_icon = '🟢'
+        else:
+            risk_color = 'blue'
+            risk_icon = '🔵'
+        
+        echo(f"\n{risk_icon} Issue #{i}: {name}")
+        secho(f"   Risk: {risk}", fg=risk_color, bold=True)
+        if evidence:
+            echo(f"   Evidence: {evidence}")
+        else:
+            echo("   Evidence: No evidence available")
 
 
 if __name__ == '__main__':

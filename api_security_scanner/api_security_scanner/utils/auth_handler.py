@@ -6,7 +6,7 @@ Supports tokens, cookies, and custom headers.
 from typing import Dict, List, Optional, Any
 from urllib.parse import urlencode
 
-from utils.logger import get_logger
+from .logger import get_logger
 
 
 class AuthenticationError(Exception):

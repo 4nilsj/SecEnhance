@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  # OWASP ZAP service
+  zap:
+    image: ghcr.io/zaproxy/zaproxy:stable
+    container_name: zap-proxy
+    ports:
+      - "8080:8080"
+      - "8090:8090"
+    environment:
+      - ZAP_PORT=8080
+      - ZAP_HOST=0.0.0.0
+    command: zap.sh -daemon -host 0.0.0.0 -port 8080 -config api.disablekey=true -config api.addrs.addr.name=.* -config api.addrs.addr.regex=true
+    networks:
+      - scanner-network
+    volumes:
+      - zap-data:/zap/wrk
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/JSON/core/view/version/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # API Security Scanner service
+  scanner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: api-security-scanner
+    depends_on:
+      zap:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - ZAP_HOST=zap
+      - ZAP_PORT=8080
+      - ZAP_EXTERNAL=true
+      - SCAN_DB_PATH=/app/data/scan_results.db
+      - LOG_DIR=/app/logs
+      - REPORTS_DIR=/app/reports
+      - CONTAINER_DATA_DIR=/app/data
+      - CONTAINER_LOGS_DIR=/app/logs
+      - CONTAINER_REPORTS_DIR=/app/reports
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./reports:/app/reports
+      - ./examples:/app/examples:ro
+      - ./plugins:/app/plugins:ro
+      - ./templates:/app/templates:ro
+      - ./.env:/app/.env:ro
+      # Mount workspace for input files
+      - ./workspace:/workspace:ro
+    networks:
+      - scanner-network
+    # Override default command to keep container running
+    command: ["tail", "-f", "/dev/null"]
+    profiles:
+      - scanner
+
+  # Standalone scanner (without ZAP dependency)
+  scanner-standalone:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: api-security-scanner-standalone
+    env_file:
+      - .env
+    environment:
+      - ZAP_HOST=host.docker.internal
+      - ZAP_PORT=8080
+      - ZAP_EXTERNAL=true
+      - SCAN_DB_PATH=/app/data/scan_results.db
+      - LOG_DIR=/app/logs
+      - REPORTS_DIR=/app/reports
+      - CONTAINER_DATA_DIR=/app/data
+      - CONTAINER_LOGS_DIR=/app/logs
+      - CONTAINER_REPORTS_DIR=/app/reports
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./reports:/app/reports
+      - ./examples:/app/examples:ro
+      - ./plugins:/app/plugins:ro
+      - ./templates:/app/templates:ro
+      - ./.env:/app/.env:ro
+      # Mount workspace for input files
+      - ./workspace:/workspace:ro
+    # Override default command to keep container running
+    command: ["tail", "-f", "/dev/null"]
+    profiles:
+      - standalone
+
+networks:
+  scanner-network:
+    driver: bridge
+
+volumes:
+  zap-data:
+    driver: local

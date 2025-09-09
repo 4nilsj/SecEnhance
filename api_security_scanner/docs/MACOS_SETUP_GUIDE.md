@@ -19,9 +19,97 @@ This guide provides step-by-step instructions for setting up the API Security Sc
 Before starting, ensure you have:
 
 - macOS 10.14 (Mojave) or later
-- Administrator access to install software
 - Internet connection for downloading dependencies
 - Terminal access (built into macOS)
+
+**Note**: This guide provides options for both users with and without administrator privileges.
+
+## Setup Options
+
+### Option A: Docker Setup (No Admin Privileges Required) ⭐ **RECOMMENDED**
+
+If you don't have administrator privileges but can run Docker, this is the easiest setup method:
+
+#### 1. Install Docker Desktop
+
+1. **Download Docker Desktop** from [docker.com](https://www.docker.com/products/docker-desktop/)
+2. **Install Docker Desktop** (no admin privileges required for user installation)
+3. **Start Docker Desktop** and ensure it's running
+4. **Verify Docker installation**:
+   ```bash
+   docker --version
+   docker-compose --version
+   ```
+
+#### 2. Setup API Security Scanner with Docker
+
+```bash
+# Clone or download the project
+cd /path/to/api_security_scanner
+
+# Setup container environment (creates necessary directories)
+./setup-container.sh
+
+# Build the Docker image
+./build-docker.sh
+
+# Or manually build
+docker build -t api-security-scanner .
+```
+
+#### 3. Run Your First Scan
+
+```bash
+# Place your API collection in the workspace directory
+cp your-collection.json workspace/
+
+# Start ZAP service
+docker-compose up -d zap
+
+# Run a scan
+docker-compose run --rm scanner scan -f /workspace/your-collection.json
+
+# Or run without ZAP (custom plugins only)
+docker-compose run --rm scanner scan -f /workspace/your-collection.json --no-zap
+```
+
+#### 4. Docker Commands Reference
+
+```bash
+# Basic scan
+docker-compose run --rm scanner scan -f /workspace/collection.json
+
+# Scan with authentication
+docker-compose run --rm scanner scan -f /workspace/collection.json \
+  -a header -n "X-API-Key" -v "your-key"
+
+# Custom plugins only (no ZAP)
+docker-compose run --rm scanner scan -f /workspace/collection.json --no-zap
+
+# Interactive mode
+docker-compose run --rm -it scanner bash
+
+# Check container health
+docker run --rm api-security-scanner python /app/healthcheck.py
+
+# View logs
+docker-compose logs zap
+docker-compose logs scanner
+```
+
+#### 5. Docker Advantages for Non-Admin Users
+
+- ✅ **No system-wide installations** required
+- ✅ **No admin privileges** needed
+- ✅ **Isolated environment** - doesn't affect system Python
+- ✅ **Consistent setup** across different machines
+- ✅ **Easy cleanup** - just remove containers
+- ✅ **Pre-configured** ZAP integration
+- ✅ **Automatic dependency management**
+
+---
+
+### Option B: Traditional Setup (Admin Privileges Required)
 
 ## Python Installation
 
@@ -265,6 +353,120 @@ python main.py scan -u "curl -X GET https://httpbin.org/get" --no-zap --no-progr
 ```
 
 ## Troubleshooting
+
+### Docker-Specific Issues (macOS)
+
+#### 1. Docker Desktop Not Starting
+
+**Problem**: Docker Desktop fails to start or shows errors
+
+**Solutions**:
+```bash
+# Check if Docker Desktop is running
+ps aux | grep -i docker
+
+# Restart Docker Desktop
+# Go to Applications > Docker > Restart Docker Desktop
+
+# Check Docker Desktop logs
+tail -f ~/Library/Containers/com.docker.docker/Data/log/vm/dockerd.log
+
+# Reset Docker Desktop (if needed)
+# Docker Desktop > Settings > Troubleshoot > Reset to factory defaults
+```
+
+#### 2. Permission Issues with Docker
+
+**Problem**: `Permission denied` when running Docker commands
+
+**Solutions**:
+```bash
+# Add your user to docker group (if applicable)
+sudo dscl . -append /Groups/docker GroupMembership $(whoami)
+
+# Check Docker socket permissions
+ls -la /var/run/docker.sock
+
+# Restart Docker Desktop
+# Applications > Docker > Restart Docker Desktop
+```
+
+#### 3. Volume Mount Issues
+
+**Problem**: Cannot access files in mounted volumes
+
+**Solutions**:
+```bash
+# Check if file sharing is enabled in Docker Desktop
+# Docker Desktop > Settings > Resources > File Sharing
+# Add your project directory to shared folders
+
+# Verify volume mounts
+docker run --rm -v $(pwd):/workspace api-security-scanner ls -la /workspace
+
+# Check file permissions
+ls -la workspace/
+chmod 755 workspace/
+```
+
+#### 4. ZAP Container Issues
+
+**Problem**: ZAP container fails to start or connect
+
+**Solutions**:
+```bash
+# Check ZAP container status
+docker-compose ps zap
+
+# Check ZAP logs
+docker-compose logs zap
+
+# Test ZAP connectivity
+docker-compose run --rm scanner curl -f http://zap:8080/JSON/core/view/version/
+
+# Restart ZAP service
+docker-compose restart zap
+
+# Check port conflicts
+lsof -i :8080
+```
+
+#### 5. Build Issues
+
+**Problem**: Docker build fails
+
+**Solutions**:
+```bash
+# Clean build (no cache)
+docker build --no-cache -t api-security-scanner .
+
+# Check build logs
+docker build -t api-security-scanner . 2>&1 | tee build.log
+
+# Check available disk space
+df -h
+
+# Clean up Docker system
+docker system prune -a
+```
+
+#### 6. Network Issues
+
+**Problem**: Cannot connect to external services from containers
+
+**Solutions**:
+```bash
+# Check Docker network
+docker network ls
+
+# Test network connectivity
+docker run --rm alpine ping -c 3 google.com
+
+# Check DNS resolution
+docker run --rm alpine nslookup google.com
+
+# Restart Docker Desktop to reset networking
+```
 
 ### Common Issues and Solutions
 
@@ -544,7 +746,35 @@ After following this guide, you should have a fully functional API Security Scan
 
 ## Quick Reference
 
-### Essential Commands
+### Docker Commands (Recommended for Non-Admin Users)
+
+```bash
+# Setup and build
+./setup-container.sh
+./build-docker.sh
+
+# Basic scan
+docker-compose run --rm scanner scan -f /workspace/collection.json
+
+# Scan without ZAP (custom plugins only)
+docker-compose run --rm scanner scan -f /workspace/collection.json --no-zap
+
+# Scan with authentication
+docker-compose run --rm scanner scan -f /workspace/collection.json \
+  -a header -n "X-API-Key" -v "your-key"
+
+# Interactive mode
+docker-compose run --rm -it scanner bash
+
+# Check container health
+docker run --rm api-security-scanner python /app/healthcheck.py
+
+# View logs
+docker-compose logs zap
+docker-compose logs scanner
+```
+
+### Traditional Setup Commands (Admin Required)
 
 ```bash
 # Activate virtual environment

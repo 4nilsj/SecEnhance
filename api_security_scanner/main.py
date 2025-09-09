@@ -10,19 +10,11 @@ import sys
 import os
 from pathlib import Path
 
-# Add src directory to Python path
-src_dir = Path(__file__).parent / 'src'
-sys.path.insert(0, str(src_dir))
+# Add project root to Python path
+project_root = Path(__file__).parent
+sys.path.insert(0, str(project_root))
 
-# Add utils directory to Python path
-utils_dir = Path(__file__).parent / 'utils'
-sys.path.insert(0, str(utils_dir))
-
-# Add plugins directory to Python path
-plugins_dir = Path(__file__).parent / 'plugins'
-sys.path.insert(0, str(plugins_dir))
-
-from src.cli import cli
+from api_security_scanner.cli import cli
 
 if __name__ == '__main__':
     try:

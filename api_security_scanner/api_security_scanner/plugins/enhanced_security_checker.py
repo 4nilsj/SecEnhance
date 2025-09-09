@@ -8,7 +8,7 @@ import json
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 
-from src.scanner_plugins import BasePlugin, PluginResult, Vulnerability, ProofOfConcept
+from api_security_scanner.core.scanner_plugins import BasePlugin, PluginResult, Vulnerability, ProofOfConcept, format_http_request, format_http_response
 
 
 class EnhancedSecurityChecker(BasePlugin):
@@ -86,8 +86,8 @@ class EnhancedSecurityChecker(BasePlugin):
                                ['error', 'exception', 'stack trace', 'debug', 'internal']):
             
             vuln_id = str(uuid.uuid4())
-            request_str = self.format_http_request(method, url, headers)
-            response_str = self.format_http_response(response.status_code, dict(response.headers), response.text[:1000])
+            request_str = format_http_request(method, url, headers)
+            response_str = format_http_response(response.status_code, dict(response.headers), response.text[:1000])
             
             vulnerabilities.append(self.create_vulnerability(
                 vuln_id=vuln_id,
@@ -139,8 +139,8 @@ class EnhancedSecurityChecker(BasePlugin):
         for header, info in security_headers.items():
             if header not in response_headers:
                 vuln_id = str(uuid.uuid4())
-                request_str = self.format_http_request(method, url, headers)
-                response_str = self.format_http_response(response.status_code, dict(response.headers), response.text[:1000])
+                request_str = format_http_request(method, url, headers)
+                response_str = format_http_response(response.status_code, dict(response.headers), response.text[:1000])
                 
                 vulnerabilities.append(self.create_vulnerability(
                     vuln_id=vuln_id,
@@ -178,8 +178,8 @@ class EnhancedSecurityChecker(BasePlugin):
             if any(indicator in response.text.lower() for indicator in sensitive_indicators):
                 
                 vuln_id = str(uuid.uuid4())
-                request_str = self.format_http_request(method, url, headers)
-                response_str = self.format_http_response(response.status_code, dict(response.headers), response.text[:1000])
+                request_str = format_http_request(method, url, headers)
+                response_str = format_http_response(response.status_code, dict(response.headers), response.text[:1000])
                 
                 vulnerabilities.append(self.create_vulnerability(
                     vuln_id=vuln_id,

@@ -1,0 +1,195 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "api-security-scanner"
+version = "1.0.0"
+description = "A comprehensive command-line tool for automated API security scanning"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "API Security Scanner Team", email = "security@example.com"}
+]
+maintainers = [
+    {name = "API Security Scanner Team", email = "security@example.com"}
+]
+keywords = [
+    "security", "api", "scanning", "owasp", "zap", "vulnerability", 
+    "testing", "automation", "penetration-testing", "security-testing"
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Topic :: Security",
+    "Topic :: Software Development :: Testing",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Operating System :: OS Independent",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "click>=8.1.0",
+    "python-owasp-zap-v2.4>=0.0.21",
+    "requests>=2.31.0",
+    "pyyaml>=6.0",
+    "jinja2>=3.1.0",
+    "pycurl>=7.45.0",
+    "urllib3>=2.0.0",
+    "colorama>=0.4.6",
+    "tqdm>=4.65.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.10.0",
+    "pytest-timeout>=2.1.0",
+    "pytest-xdist>=3.3.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.5.0",
+]
+docs = [
+    "sphinx>=5.0.0",
+    "sphinx-rtd-theme>=1.2.0",
+]
+enhanced = [
+    "matplotlib>=3.7.0",
+    "seaborn>=0.12.0",
+]
+
+[project.scripts]
+api-security-scanner = "api_security_scanner.cli.main:cli"
+api-scanner = "api_security_scanner.cli.main:cli"
+
+[project.urls]
+Homepage = "https://github.com/example/api-security-scanner"
+Documentation = "https://api-security-scanner.readthedocs.io/"
+Repository = "https://github.com/example/api-security-scanner"
+"Bug Tracker" = "https://github.com/example/api-security-scanner/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["api_security_scanner*"]
+
+[tool.setuptools.package-data]
+api_security_scanner = [
+    "templates/*.html",
+    "templates/*.json", 
+    "examples/*.json",
+    "examples/*.yaml",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py38', 'py39', 'py310', 'py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["api_security_scanner"]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = [
+    "click.*",
+    "requests.*",
+    "yaml.*",
+    "jinja2.*",
+    "tqdm.*",
+    "colorama.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--verbose",
+    "--tb=short",
+    "--strict-markers",
+    "--disable-warnings",
+    "--cov=api_security_scanner",
+    "--cov-report=term-missing",
+    "--cov-report=html:htmlcov",
+    "--cov-report=xml:coverage.xml",
+    "--cov-fail-under=80",
+]
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "slow: Slow running tests",
+    "network: Tests requiring network access",
+    "docker: Tests requiring Docker",
+    "zap: Tests requiring ZAP",
+    "database: Tests requiring database",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+    "ignore::UserWarning:requests.*",
+]
+timeout = 300
+
+[tool.coverage.run]
+source = ["api_security_scanner"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+    "*/venv/*",
+    "*/env/*",
+    "*/migrations/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]

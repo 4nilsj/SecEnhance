@@ -9,15 +9,20 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
 from contextlib import contextmanager
 
-from utils.logger import get_logger
+from ..utils.logger import get_logger
+from .config import get_config
 
 
 class DatabaseManager:
     """Manages SQLite database operations for the API Security Scanner."""
     
-    def __init__(self, db_path: str = "scan_results.db"):
-        self.db_path = Path(db_path)
+    def __init__(self, db_path: Optional[str] = None):
+        config = get_config()
+        self.db_path = Path(db_path or config.database.path)
         self.logger = get_logger(__name__)
+        self.backup_enabled = config.database.backup_enabled
+        self.backup_interval = config.database.backup_interval
+        self.max_backups = config.database.max_backups
         self._init_database()
     
     def _init_database(self):
@@ -293,6 +298,32 @@ class DatabaseManager:
                 return True
         except sqlite3.Error as e:
             self.logger.error(f"Failed to add ZAP alert: {e}")
+            return False
+    
+    def add_custom_alert(self, scan_id: str, plugin_name: str, vulnerability_type: str,
+                        severity: str, title: str, description: str = None,
+                        evidence: str = None, recommendation: str = None,
+                        url: str = None, method: str = None, headers: Dict[str, str] = None,
+                        response_code: int = None, response_body: str = None) -> bool:
+        """Add a custom plugin alert to the database."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO custom_alerts (
+                        scan_id, plugin_name, vulnerability_type, severity, title,
+                        description, evidence, recommendation, url, method, headers,
+                        response_code, response_body
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    scan_id, plugin_name, vulnerability_type, severity, title,
+                    description, evidence, recommendation, url, method,
+                    json.dumps(headers) if headers else None, response_code, response_body
+                ))
+                conn.commit()
+                return True
+        except sqlite3.Error as e:
+            self.logger.error(f"Failed to add custom alert: {e}")
             return False
     
     def add_vulnerability(self, vulnerability_id: str, scan_id: str, name: str,

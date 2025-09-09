@@ -25,7 +25,14 @@ class ColoredFormatter(logging.Formatter):
         'RESET': '\033[0m'       # Reset
     }
     
+    def __init__(self, fmt=None, datefmt=None, suppress_output=False):
+        super().__init__(fmt, datefmt)
+        self.suppress_output = suppress_output
+    
     def format(self, record):
+        if self.suppress_output:
+            return ""  # Return empty string to suppress output
+        
         # Add color to the level name
         if record.levelname in self.COLORS:
             record.levelname = f"{self.COLORS[record.levelname]}{record.levelname}{self.COLORS['RESET']}"
@@ -33,10 +40,17 @@ class ColoredFormatter(logging.Formatter):
         return super().format(record)
 
 
+class NullFormatter(logging.Formatter):
+    """Formatter that outputs nothing."""
+    
+    def format(self, record):
+        return ""
+
+
 class APISecurityLogger:
     """Centralized logger for the API Security Scanner."""
     
-    def __init__(self, name: str = "api_security_scanner", log_dir: str = "logs"):
+    def __init__(self, name: str = "api_security_scanner", log_dir: str = "logs", enable_console: bool = False):
         self.name = name
         self.log_dir = Path(log_dir)
         self.log_dir.mkdir(exist_ok=True)
@@ -49,20 +63,26 @@ class APISecurityLogger:
         self.logger.handlers.clear()
         
         # Setup handlers
-        self._setup_console_handler()
+        if enable_console:
+            self._setup_console_handler()
+        else:
+            self.console_handler = None
         self._setup_file_handler()
         self._setup_error_handler()
     
-    def _setup_console_handler(self):
+    def _setup_console_handler(self, suppress_output=False):
         """Setup console handler with colored output."""
         console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setLevel(logging.INFO)  # Default to INFO level
         
-        # Create colored formatter
-        console_format = ColoredFormatter(
-            '%(asctime)s | %(levelname)-8s | %(name)s | %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
-        )
+        # Create formatter based on whether output should be suppressed
+        if suppress_output:
+            console_format = NullFormatter()
+        else:
+            console_format = ColoredFormatter(
+                '%(asctime)s | %(levelname)-8s | %(name)s | %(message)s',
+                datefmt='%Y-%m-%d %H:%M:%S'
+            )
         console_handler.setFormatter(console_format)
         
         self.logger.addHandler(console_handler)
@@ -113,14 +133,31 @@ class APISecurityLogger:
             verbose: Number of -v flags (0=WARNING, 1=INFO, 2=DEBUG)
         """
         if verbose == 0:
-            level = logging.WARNING
-        elif verbose == 1:
-            level = logging.INFO
-        else:  # verbose >= 2
-            level = logging.DEBUG
-        
-        self.console_handler.setLevel(level)
-        self.logger.info(f"Logging level set to {logging.getLevelName(level)}")
+            # No console output for non-verbose mode
+            if self.console_handler:
+                # Remove existing console handler
+                if self.console_handler in self.logger.handlers:
+                    self.logger.removeHandler(self.console_handler)
+                # Create new console handler with suppressed output
+                self._setup_console_handler(suppress_output=True)
+        elif verbose >= 1:
+            # Enable console output for verbose mode
+            if self.console_handler:
+                # Remove existing console handler
+                if self.console_handler in self.logger.handlers:
+                    self.logger.removeHandler(self.console_handler)
+            # Create new console handler with normal output
+            self._setup_console_handler(suppress_output=False)
+            
+            if verbose == 1:
+                level = logging.INFO
+            else:  # verbose >= 2
+                level = logging.DEBUG
+            
+            self.console_handler.setLevel(level)
+            
+            # Only log the level change if verbose mode is enabled
+            self.logger.info(f"Logging level set to {logging.getLevelName(level)}")
     
     def get_logger(self) -> logging.Logger:
         """Get the configured logger instance."""
@@ -170,19 +207,44 @@ def get_logger(name: str = "api_security_scanner") -> logging.Logger:
     return _logger_instance.get_logger()
 
 
-def setup_logging(verbose: int = 0, log_dir: str = "logs") -> APISecurityLogger:
+def setup_logging(verbose: Optional[int] = None, log_dir: Optional[str] = None) -> APISecurityLogger:
     """Setup and configure logging for the application.
     
     Args:
-        verbose: Verbosity level (0=WARNING, 1=INFO, 2=DEBUG)
-        log_dir: Directory to store log files
+        verbose: Verbosity level (0=WARNING, 1=INFO, 2=DEBUG). If None, uses config.
+        log_dir: Directory to store log files. If None, uses config.
         
     Returns:
         Configured APISecurityLogger instance
     """
     global _logger_instance
     
-    _logger_instance = APISecurityLogger(log_dir=log_dir)
+    # Import here to avoid circular imports
+    try:
+        from ..core.config import get_config
+        config = get_config()
+        
+        # Use provided values or fall back to configuration
+        if log_dir is None:
+            log_dir = config.logging.log_dir
+        if verbose is None:
+            # Convert log level to verbose level
+            level_map = {
+                'DEBUG': 2,
+                'INFO': 1,
+                'WARNING': 0,
+                'ERROR': 0,
+                'CRITICAL': 0
+            }
+            verbose = level_map.get(config.logging.level, 1)
+    except ImportError:
+        # Fallback if config is not available
+        log_dir = log_dir or "logs"
+        verbose = verbose or 1
+    
+    # Enable console only if verbose mode is enabled
+    enable_console = verbose > 0
+    _logger_instance = APISecurityLogger(log_dir=log_dir, enable_console=enable_console)
     _logger_instance.set_verbosity(verbose)
     
     return _logger_instance
