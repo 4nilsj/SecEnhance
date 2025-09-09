@@ -613,7 +613,7 @@ class ReportGenerator:
                     <div class="alert-body">
                         <h4>{{ vuln.name }}</h4>
                         <p><strong>CVSS Score:</strong> {{ vuln.cvss_score }}</p>
-                        <p><strong>Source:</strong> {{ vuln.source }}</p>
+                        <p><strong>Source:</strong> {{ vuln.plugin_name or 'ZAP Scanner' }}</p>
                         {% if vuln.plugin_name %}
                         <p><strong>Plugin:</strong> {{ vuln.plugin_name }}</p>
                         {% endif %}
@@ -863,7 +863,9 @@ class ReportGenerator:
             Text summary report
         """
         try:
-            risk_counts = self._calculate_risk_counts(zap_alerts, custom_alerts)
+            # Combine all vulnerabilities and calculate risk counts
+            all_vulnerabilities = zap_alerts + custom_alerts
+            risk_counts = self._calculate_risk_counts_from_vulnerabilities(all_vulnerabilities)
             
             summary = []
             summary.append("=" * 60)
@@ -904,7 +906,7 @@ class ReportGenerator:
             if custom_alerts:
                 summary.append("CUSTOM PLUGIN ALERTS:")
                 for alert in custom_alerts:
-                    summary.append(f"  [{alert.get('severity', 'Unknown')}] {alert.get('title', 'Unknown')}")
+                    summary.append(f"  [{alert.get('risk', 'Unknown')}] {alert.get('name', 'Unknown')}")
                     summary.append(f"    Plugin: {alert.get('plugin_name', 'N/A')}")
                     summary.append(f"    URL: {alert.get('url', 'N/A')}")
                     summary.append("")

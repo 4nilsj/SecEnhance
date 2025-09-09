@@ -55,6 +55,9 @@ class APISecurityLogger:
         self.log_dir = Path(log_dir)
         self.log_dir.mkdir(exist_ok=True)
         
+        # Initialize console_handler attribute
+        self.console_handler = None
+        
         # Create logger
         self.logger = logging.getLogger(name)
         self.logger.setLevel(logging.DEBUG)  # Set to lowest level, handlers will filter
@@ -65,28 +68,38 @@ class APISecurityLogger:
         # Setup handlers
         if enable_console:
             self._setup_console_handler()
-        else:
-            self.console_handler = None
         self._setup_file_handler()
         self._setup_error_handler()
     
     def _setup_console_handler(self, suppress_output=False):
         """Setup console handler with colored output."""
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(logging.INFO)  # Default to INFO level
-        
-        # Create formatter based on whether output should be suppressed
-        if suppress_output:
-            console_format = NullFormatter()
+        # Only create a new handler if we don't have one or if it's not in the logger
+        if not self.console_handler or self.console_handler not in self.logger.handlers:
+            console_handler = logging.StreamHandler(sys.stdout)
+            console_handler.setLevel(logging.INFO)  # Default to INFO level
+            
+            # Create formatter based on whether output should be suppressed
+            if suppress_output:
+                console_format = NullFormatter()
+            else:
+                console_format = ColoredFormatter(
+                    '%(asctime)s | %(levelname)-8s | %(name)s | %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S'
+                )
+            console_handler.setFormatter(console_format)
+            
+            self.logger.addHandler(console_handler)
+            self.console_handler = console_handler
         else:
-            console_format = ColoredFormatter(
-                '%(asctime)s | %(levelname)-8s | %(name)s | %(message)s',
-                datefmt='%Y-%m-%d %H:%M:%S'
-            )
-        console_handler.setFormatter(console_format)
-        
-        self.logger.addHandler(console_handler)
-        self.console_handler = console_handler
+            # Update existing handler's formatter
+            if suppress_output:
+                console_format = NullFormatter()
+            else:
+                console_format = ColoredFormatter(
+                    '%(asctime)s | %(levelname)-8s | %(name)s | %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S'
+                )
+            self.console_handler.setFormatter(console_format)
     
     def _setup_file_handler(self):
         """Setup file handler for all logs."""
@@ -132,21 +145,16 @@ class APISecurityLogger:
         Args:
             verbose: Number of -v flags (0=WARNING, 1=INFO, 2=DEBUG)
         """
+        # Remove existing console handler if it exists
+        if self.console_handler and self.console_handler in self.logger.handlers:
+            self.logger.removeHandler(self.console_handler)
+            self.console_handler = None
+        
         if verbose == 0:
             # No console output for non-verbose mode
-            if self.console_handler:
-                # Remove existing console handler
-                if self.console_handler in self.logger.handlers:
-                    self.logger.removeHandler(self.console_handler)
-                # Create new console handler with suppressed output
-                self._setup_console_handler(suppress_output=True)
-        elif verbose >= 1:
+            self._setup_console_handler(suppress_output=True)
+        else:
             # Enable console output for verbose mode
-            if self.console_handler:
-                # Remove existing console handler
-                if self.console_handler in self.logger.handlers:
-                    self.logger.removeHandler(self.console_handler)
-            # Create new console handler with normal output
             self._setup_console_handler(suppress_output=False)
             
             if verbose == 1:
@@ -154,7 +162,8 @@ class APISecurityLogger:
             else:  # verbose >= 2
                 level = logging.DEBUG
             
-            self.console_handler.setLevel(level)
+            if self.console_handler:
+                self.console_handler.setLevel(level)
             
             # Only log the level change if verbose mode is enabled
             self.logger.info(f"Logging level set to {logging.getLevelName(level)}")

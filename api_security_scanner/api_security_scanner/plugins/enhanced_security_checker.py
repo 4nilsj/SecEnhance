@@ -34,7 +34,7 @@ class EnhancedSecurityChecker(BasePlugin):
                 if auth_headers:
                     headers.update(auth_headers)
                 
-                response = self.make_request(url, method, headers, request.get('body'))
+                response = self.make_request(url, method, headers, request.get('body') or '')
                 
                 if response:
                     # Check for various security issues
@@ -136,19 +136,38 @@ class EnhancedSecurityChecker(BasePlugin):
             }
         }
         
+        # Group missing headers by risk level
+        missing_headers = {
+            'High': [],
+            'Medium': [],
+            'Low': []
+        }
+        
         for header, info in security_headers.items():
             if header not in response_headers:
+                missing_headers[info['risk']].append({
+                    'name': header,
+                    'info': info
+                })
+        
+        # Create consolidated vulnerabilities by risk level
+        for risk_level, headers_list in missing_headers.items():
+            if headers_list:
                 vuln_id = str(uuid.uuid4())
                 request_str = format_http_request(method, url, headers)
                 response_str = format_http_response(response.status_code, dict(response.headers), response.text[:1000])
                 
+                # Use the highest CVSS score for the risk level
+                max_cvss = max(header['info']['cvss'] for header in headers_list)
+                header_names = [header['name'] for header in headers_list]
+                
                 vulnerabilities.append(self.create_vulnerability(
                     vuln_id=vuln_id,
-                    name=f"Missing Security Header: {header}",
-                    description=info['description'],
-                    risk=info['risk'],
-                    cvss_score=info['cvss'],
-                    solution=f"Add the {header} header to all responses with appropriate values.",
+                    name=f"Missing {risk_level} Risk Security Headers",
+                    description=f"API is missing {len(headers_list)} {risk_level.lower()} risk security headers: {', '.join(header_names)}",
+                    risk=risk_level,
+                    cvss_score=max_cvss,
+                    solution=f"Implement the following security headers: {', '.join(header_names)}",
                     references=[
                         "https://owasp.org/www-project-secure-headers/",
                         "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers"
@@ -157,7 +176,7 @@ class EnhancedSecurityChecker(BasePlugin):
                     wasc_id="WASC-15",
                     url=url,
                     parameter="",
-                    evidence=f"Missing {header} header in response",
+                    evidence=f"Missing headers: {', '.join(header_names)}",
                     scan_id="",  # Will be set by the scanner
                     request=request_str,
                     response=response_str
