@@ -394,6 +394,114 @@ class OpenAPIParser(BaseInputParser):
             return ''
 
 
+class HarParser(BaseInputParser):
+    """Parser for HAR (HTTP Archive) files exported from Insomnia and other tools."""
+    
+    def parse(self, input_data: Union[str, Dict, Path]) -> List[Dict[str, Any]]:
+        """Parse HAR file and extract requests."""
+        try:
+            if isinstance(input_data, (str, Path)):
+                with open(input_data, 'r', encoding='utf-8') as f:
+                    har_data = json.load(f)
+            else:
+                har_data = input_data
+            
+            if not isinstance(har_data, dict):
+                raise InputParserError("Invalid HAR file format")
+            
+            # Validate HAR structure
+            if 'log' not in har_data or 'entries' not in har_data['log']:
+                raise InputParserError("Invalid HAR file structure - missing log.entries")
+            
+            entries = har_data['log']['entries']
+            requests = []
+            
+            for entry in entries:
+                if 'request' in entry:
+                    request_data = self._extract_request_from_har_entry(entry)
+                    if request_data:
+                        requests.append(request_data)
+            
+            self.logger.info(f"Extracted {len(requests)} requests from HAR file")
+            return requests
+            
+        except (json.JSONDecodeError, FileNotFoundError, KeyError) as e:
+            raise InputParserError(f"Failed to parse HAR file: {e}")
+    
+    def _extract_request_from_har_entry(self, entry: Dict) -> Optional[Dict[str, Any]]:
+        """Extract request data from a HAR entry."""
+        try:
+            request = entry['request']
+            
+            # Extract basic request info
+            method = request.get('method', 'GET')
+            url = request.get('url', '')
+            
+            if not url:
+                return None
+            
+            # Extract headers
+            headers = {}
+            for header in request.get('headers', []):
+                headers[header['name']] = header['value']
+            
+            # Extract query parameters
+            query_params = {}
+            for param in request.get('queryString', []):
+                query_params[param['name']] = param['value']
+            
+            # Add query parameters to URL
+            if query_params:
+                from urllib.parse import urlencode
+                query_string = urlencode(query_params, doseq=True)
+                if '?' in url:
+                    url += '&' + query_string
+                else:
+                    url += '?' + query_string
+            
+            # Extract body
+            body = ""
+            if 'postData' in request:
+                post_data = request['postData']
+                body = post_data.get('text', '')
+            
+            # Extract cookies
+            cookies = {}
+            for cookie in request.get('cookies', []):
+                cookies[cookie['name']] = cookie['value']
+            
+            # Create request name from URL and method
+            parsed_url = urlparse(url)
+            request_name = f"{method} {parsed_url.path}"
+            if parsed_url.query:
+                request_name += f"?{parsed_url.query}"
+            
+            # Extract folder information from pageref if available
+            folder = ""
+            if 'pageref' in entry:
+                # Try to get page title from pages array
+                pages = entry.get('pages', [])
+                for page in pages:
+                    if page.get('id') == entry['pageref']:
+                        folder = page.get('title', '')
+                        break
+            
+            return {
+                'name': request_name,
+                'method': method,
+                'url': url,
+                'headers': headers,
+                'body': body,
+                'cookies': cookies,
+                'folder': folder,
+                'har_entry': entry  # Store original entry for reference
+            }
+            
+        except Exception as e:
+            self.logger.warning(f"Failed to extract request from HAR entry: {e}")
+            return None
+
+
 class CurlParser(BaseInputParser):
     """Parser for curl command strings."""
     
@@ -503,7 +611,8 @@ class InputParserFactory:
             'postman': PostmanParser,
             'openapi': OpenAPIParser,
             'swagger': OpenAPIParser,
-            'curl': CurlParser
+            'curl': CurlParser,
+            'har': HarParser
         }
         
         parser_class = parsers.get(input_type.lower())
@@ -518,12 +627,16 @@ class InputParserFactory:
         path = Path(input_path)
         
         # Check file extension
-        if path.suffix.lower() == '.json':
-            # Try to detect if it's Postman or OpenAPI
+        if path.suffix.lower() == '.har':
+            return 'har'
+        elif path.suffix.lower() == '.json':
+            # Try to detect if it's Postman, OpenAPI, or HAR
             try:
                 with open(path, 'r', encoding='utf-8') as f:
                     content = json.load(f)
-                    if 'info' in content and 'item' in content:
+                    if 'log' in content and 'entries' in content.get('log', {}):
+                        return 'har'
+                    elif 'info' in content and 'item' in content:
                         return 'postman'
                     elif 'openapi' in content or 'swagger' in content:
                         return 'openapi'

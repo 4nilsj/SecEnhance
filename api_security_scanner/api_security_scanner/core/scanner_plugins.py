@@ -4,6 +4,7 @@ Provides a base class and plugin discovery mechanism with enhanced vulnerability
 """
 
 import importlib
+import importlib.util
 import inspect
 import os
 import sys
@@ -56,7 +57,7 @@ class ProofOfConcept:
 class PluginResult:
     """Container for plugin execution results with enhanced vulnerability data."""
     
-    def __init__(self, plugin_name: str, success: bool, vulnerabilities: List[Vulnerability] = None, 
+    def __init__(self, plugin_name: str, success: bool, vulnerabilities: Optional[List[Vulnerability]] = None, 
                  error: Optional[str] = None, execution_time: float = 0.0):
         self.plugin_name = plugin_name
         self.success = success
@@ -118,8 +119,8 @@ class BasePlugin(ABC):
         """
         pass
     
-    def make_request(self, url: str, method: str = 'GET', headers: Dict[str, str] = None,
-                    data: str = None, params: Dict[str, str] = None, 
+    def make_request(self, url: str, method: str = 'GET', headers: Optional[Dict[str, str]] = None,
+                    data: Optional[str] = None, params: Optional[Dict[str, str]] = None, 
                     timeout: int = 30) -> Optional[requests.Response]:
         """
         Helper method to make HTTP requests with error handling.
@@ -236,16 +237,22 @@ class BasePlugin(ABC):
 class PluginManager:
     """Manages plugin discovery, loading, and execution with enhanced vulnerability tracking."""
     
-    def __init__(self, plugins_dir: str = "plugins"):
+    def __init__(self, plugins_dir: str = "plugins", selected_plugins: Optional[List[str]] = None):
         self.plugins_dir = Path(plugins_dir)
         self.plugins_dir.mkdir(exist_ok=True)
         self.logger = get_logger(__name__)
         self.loaded_plugins: Dict[str, Type[BasePlugin]] = {}
+        self.selected_plugins = selected_plugins
+        self.request_analyzer = None
         self._load_plugins()
+        self._initialize_request_analyzer()
     
     def _load_plugins(self):
         """Discover and load all available plugins."""
-        self.logger.info(f"Loading plugins from {self.plugins_dir}")
+        if self.selected_plugins:
+            self.logger.info(f"Loading selected plugins: {', '.join(self.selected_plugins)}")
+        else:
+            self.logger.info(f"Loading plugins from {self.plugins_dir}")
         
         # Add plugins directory to Python path
         if str(self.plugins_dir) not in sys.path:
@@ -262,6 +269,9 @@ class PluginManager:
                 # Import the module
                 module_name = plugin_file.stem
                 spec = importlib.util.spec_from_file_location(module_name, plugin_file)
+                if spec is None or spec.loader is None:
+                    self.logger.error(f"Failed to create module spec for {plugin_file}")
+                    continue
                 module = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(module)
                 
@@ -270,6 +280,11 @@ class PluginManager:
                     if (issubclass(obj, BasePlugin) and 
                         obj != BasePlugin and 
                         obj.__module__ == module_name):
+                        
+                        # Check if this plugin should be loaded
+                        if self.selected_plugins and name not in self.selected_plugins:
+                            self.logger.debug(f"Skipping plugin {name} (not in selected list)")
+                            continue
                         
                         # Instantiate to get plugin info
                         plugin_instance = obj()
@@ -280,6 +295,16 @@ class PluginManager:
                 self.logger.error(f"Failed to load plugin {plugin_file}: {e}")
         
         self.logger.info(f"Loaded {len(self.loaded_plugins)} plugins")
+    
+    def _initialize_request_analyzer(self):
+        """Initialize the request analyzer for JWT/OAuth detection."""
+        try:
+            from .request_analyzer import RequestAnalyzer
+            self.request_analyzer = RequestAnalyzer()
+            self.logger.info("Request analyzer initialized for JWT/OAuth detection")
+        except ImportError as e:
+            self.logger.warning(f"Failed to initialize request analyzer: {e}")
+            self.request_analyzer = None
     
     def get_plugin_list(self) -> List[Dict[str, str]]:
         """Get list of loaded plugins with their metadata."""
@@ -343,7 +368,7 @@ class PluginManager:
                            auth_headers: Optional[Dict[str, str]] = None,
                            zap=None) -> List[PluginResult]:
         """
-        Execute all loaded plugins with enhanced vulnerability tracking.
+        Execute all loaded plugins with enhanced vulnerability tracking and conditional JWT scanning.
         
         Args:
             target_url: Base URL of the target
@@ -355,18 +380,78 @@ class PluginManager:
             List of PluginResult objects with vulnerabilities
         """
         results = []
-        self.logger.info(f"Executing {len(self.loaded_plugins)} plugins")
         
-        for plugin_name in self.loaded_plugins:
-            result = self.execute_plugin(plugin_name, target_url, requests_data, auth_headers, zap)
-            results.append(result)
-            
-            if result.success:
-                self.logger.info(f"Plugin {plugin_name} found {len(result.vulnerabilities)} vulnerabilities")
+        # Analyze requests for JWT/OAuth flows
+        jwt_analysis = None
+        if self.request_analyzer:
+            jwt_analysis = self.request_analyzer.analyze_requests(requests_data)
+            self.logger.info(f"Request analysis: {self.request_analyzer.get_jwt_analysis_summary(requests_data)}")
+        
+        # Determine which plugins to run
+        plugins_to_run = self._get_plugins_to_run(jwt_analysis)
+        
+        self.logger.info(f"Executing {len(plugins_to_run)} plugins (conditional scanning enabled)")
+        
+        for plugin_name in plugins_to_run:
+            if plugin_name in self.loaded_plugins:
+                result = self.execute_plugin(plugin_name, target_url, requests_data, auth_headers, zap)
+                results.append(result)
+                
+                if result.success:
+                    self.logger.info(f"Plugin {plugin_name} found {len(result.vulnerabilities)} vulnerabilities")
+                else:
+                    self.logger.warning(f"Plugin {plugin_name} failed: {result.error}")
             else:
-                self.logger.warning(f"Plugin {plugin_name} failed: {result.error}")
+                self.logger.warning(f"Plugin {plugin_name} not found in loaded plugins")
         
         return results
+    
+    def _get_plugins_to_run(self, jwt_analysis: Optional[Dict[str, Any]] = None) -> List[str]:
+        """
+        Determine which plugins to run based on request analysis and user selection.
+        
+        Args:
+            jwt_analysis: Results from JWT/OAuth analysis
+            
+        Returns:
+            List of plugin names to execute
+        """
+        plugins_to_run = []
+        
+        # If specific plugins are selected, only run those
+        if self.selected_plugins:
+            for plugin_name in self.selected_plugins:
+                if plugin_name in self.loaded_plugins:
+                    plugins_to_run.append(plugin_name)
+                else:
+                    self.logger.warning(f"Selected plugin '{plugin_name}' not found in loaded plugins")
+            return plugins_to_run
+        
+        # Default behavior: run all loaded plugins with conditional logic
+        # Always run core security plugins
+        core_plugins = ['SecurityHeadersChecker', 'ComprehensiveSecurityChecker', 'CORSChecker', 'RateLimitingChecker']
+        for plugin in core_plugins:
+            if plugin in self.loaded_plugins:
+                plugins_to_run.append(plugin)
+        
+        # Conditionally run JWT plugin based on analysis
+        if jwt_analysis and (jwt_analysis.get('contains_jwt') or jwt_analysis.get('contains_oauth')):
+            if 'JWTSecurityChecker' in self.loaded_plugins:
+                plugins_to_run.append('JWTSecurityChecker')
+                self.logger.info("JWT/OAuth detected - enabling JWT security plugin")
+            else:
+                self.logger.warning("JWT/OAuth detected but JWTSecurityChecker plugin not available")
+        else:
+            self.logger.info("No JWT/OAuth indicators found - skipping JWT security plugin")
+        
+        # Add any other plugins not in the core list (except JWT plugin which is conditional)
+        for plugin_name in self.loaded_plugins:
+            if (plugin_name not in plugins_to_run and 
+                plugin_name not in core_plugins and 
+                plugin_name != 'JWTSecurityChecker'):
+                plugins_to_run.append(plugin_name)
+        
+        return plugins_to_run
     
     def reload_plugins(self):
         """Reload all plugins from the plugins directory."""
@@ -405,7 +490,7 @@ def extract_domain(url: str) -> str:
         return url
 
 
-def format_http_request(method: str, url: str, headers: Dict[str, str], body: str = None) -> str:
+def format_http_request(method: str, url: str, headers: Dict[str, str], body: Optional[str] = None) -> str:
     """Format HTTP request for storage and display."""
     request_lines = [f"{method} {url} HTTP/1.1"]
     
@@ -419,7 +504,7 @@ def format_http_request(method: str, url: str, headers: Dict[str, str], body: st
     return "\n".join(request_lines)
 
 
-def format_http_response(status: int, headers: Dict[str, str], body: str = None) -> str:
+def format_http_response(status: int, headers: Dict[str, str], body: Optional[str] = None) -> str:
     """Format HTTP response for storage and display."""
     response_lines = [f"HTTP/1.1 {status}"]
     

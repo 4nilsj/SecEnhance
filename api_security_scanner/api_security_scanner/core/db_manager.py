@@ -44,6 +44,8 @@ class DatabaseManager:
                         input_type TEXT,
                         input_source TEXT,
                         auth_type TEXT,
+                        plugins_used TEXT,
+                        template_used TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
                 """)
@@ -195,6 +197,17 @@ class DatabaseManager:
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_performance_scan_id ON performance_stats (scan_id)")
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_error_logs_scan_id ON error_logs (scan_id)")
                 
+                # Add new columns to existing scans table if they don't exist
+                try:
+                    cursor.execute("ALTER TABLE scans ADD COLUMN plugins_used TEXT")
+                except sqlite3.OperationalError:
+                    pass  # Column already exists
+                
+                try:
+                    cursor.execute("ALTER TABLE scans ADD COLUMN template_used TEXT")
+                except sqlite3.OperationalError:
+                    pass  # Column already exists
+                
                 conn.commit()
                 self.logger.info("Database initialized successfully")
                 
@@ -220,15 +233,16 @@ class DatabaseManager:
                 conn.close()
     
     def create_scan(self, scan_id: str, target_url: str, input_type: str, 
-                   input_source: str, auth_type: Optional[str] = None) -> bool:
+                   input_source: str, auth_type: Optional[str] = None,
+                   plugins_used: Optional[str] = None, template_used: Optional[str] = None) -> bool:
         """Create a new scan record."""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
-                    INSERT INTO scans (scan_id, target_url, start_time, status, input_type, input_source, auth_type)
-                    VALUES (?, ?, ?, 'running', ?, ?, ?)
-                """, (scan_id, target_url, datetime.now(), input_type, input_source, auth_type))
+                    INSERT INTO scans (scan_id, target_url, start_time, status, input_type, input_source, auth_type, plugins_used, template_used)
+                    VALUES (?, ?, ?, 'running', ?, ?, ?, ?, ?)
+                """, (scan_id, target_url, datetime.now(), input_type, input_source, auth_type, plugins_used, template_used))
                 conn.commit()
                 self.logger.info(f"Created scan record: {scan_id}")
                 return True
@@ -301,10 +315,10 @@ class DatabaseManager:
             return False
     
     def add_custom_alert(self, scan_id: str, plugin_name: str, vulnerability_type: str,
-                        severity: str, title: str, description: str = None,
-                        evidence: str = None, recommendation: str = None,
-                        url: str = None, method: str = None, headers: Dict[str, str] = None,
-                        response_code: int = None, response_body: str = None) -> bool:
+                        severity: str, title: str, description: Optional[str] = None,
+                        evidence: Optional[str] = None, recommendation: Optional[str] = None,
+                        url: Optional[str] = None, method: Optional[str] = None, headers: Optional[Dict[str, str]] = None,
+                        response_code: Optional[int] = None, response_body: Optional[str] = None) -> bool:
         """Add a custom plugin alert to the database."""
         try:
             with self.get_connection() as conn:
@@ -331,7 +345,7 @@ class DatabaseManager:
                          solution: str, references: List[str], cwe_id: str,
                          wasc_id: str, request: str, response: str, url: str,
                          parameter: str, evidence: str, source: str,
-                         plugin_name: str = None) -> bool:
+                         plugin_name: Optional[str] = None) -> bool:
         """Add a vulnerability to the database."""
         try:
             with self.get_connection() as conn:
@@ -380,8 +394,8 @@ class DatabaseManager:
             return False
     
     def add_scan_metadata(self, scan_id: str, phase_name: str, start_time: datetime,
-                         end_time: datetime, tests_performed: int = None,
-                         details: str = None) -> bool:
+                         end_time: datetime, tests_performed: Optional[int] = None,
+                         details: Optional[str] = None) -> bool:
         """Add scan metadata to the database."""
         try:
             duration = (end_time - start_time).total_seconds()
@@ -552,3 +566,296 @@ class DatabaseManager:
         except sqlite3.Error as e:
             self.logger.error(f"Failed to get database stats: {e}")
             return {}
+    
+    def reset_database(self, backup: bool = True) -> bool:
+        """Reset the entire database by dropping all tables and recreating them.
+        
+        Args:
+            backup: Whether to create a backup before resetting
+            
+        Returns:
+            bool: True if reset was successful, False otherwise
+        """
+        try:
+            # Create backup if requested
+            if backup and self.db_path.exists():
+                backup_path = self.db_path.with_suffix(f'.backup_{datetime.now().strftime("%Y%m%d_%H%M%S")}.db')
+                import shutil
+                shutil.copy2(self.db_path, backup_path)
+                self.logger.info(f"Database backed up to: {backup_path}")
+            
+            # Close any existing connections
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Get list of all tables (excluding sqlite_sequence)
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name != 'sqlite_sequence'")
+                tables = [row['name'] for row in cursor.fetchall()]
+                
+                # Drop all tables
+                for table in tables:
+                    cursor.execute(f"DROP TABLE IF EXISTS {table}")
+                    self.logger.info(f"Dropped table: {table}")
+                
+                # Clear sqlite_sequence table
+                cursor.execute("DELETE FROM sqlite_sequence")
+                self.logger.info("Cleared sqlite_sequence table")
+                
+                conn.commit()
+            
+            # Reinitialize database with fresh tables
+            self._init_database()
+            self.logger.info("Database reset completed successfully")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Failed to reset database: {e}")
+            return False
+    
+    def clear_all_data(self) -> bool:
+        """Clear all data from all tables but keep the table structure.
+        
+        Returns:
+            bool: True if clearing was successful, False otherwise
+        """
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Get list of all tables
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+                tables = [row['name'] for row in cursor.fetchall()]
+                
+                # Clear all tables
+                for table in tables:
+                    cursor.execute(f"DELETE FROM {table}")
+                    self.logger.info(f"Cleared table: {table}")
+                
+                # Reset auto-increment sequences
+                cursor.execute("DELETE FROM sqlite_sequence")
+                
+                conn.commit()
+                self.logger.info("All data cleared successfully")
+                return True
+                
+        except Exception as e:
+            self.logger.error(f"Failed to clear database data: {e}")
+            return False
+    
+    def get_database_info(self) -> Dict[str, Any]:
+        """Get comprehensive database information including table sizes."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                info = {
+                    'database_path': str(self.db_path),
+                    'database_size_mb': self.db_path.stat().st_size / (1024 * 1024) if self.db_path.exists() else 0,
+                    'tables': {}
+                }
+                
+                # Get table information
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+                tables = [row['name'] for row in cursor.fetchall()]
+                
+                for table in tables:
+                    cursor.execute(f"SELECT COUNT(*) as count FROM {table}")
+                    count = cursor.fetchone()['count']
+                    info['tables'][table] = count
+                
+                return info
+                
+        except Exception as e:
+            self.logger.error(f"Failed to get database info: {e}")
+            return {}
+
+
+class ReportManager:
+    """Manages report files and cleanup operations."""
+    
+    def __init__(self, reports_dir: str = "reports"):
+        self.reports_dir = Path(reports_dir)
+        self.logger = get_logger(__name__)
+    
+    def get_reports_info(self) -> Dict[str, Any]:
+        """Get comprehensive information about all report files."""
+        try:
+            if not self.reports_dir.exists():
+                return {
+                    'reports_dir': str(self.reports_dir),
+                    'total_files': 0,
+                    'total_size_mb': 0,
+                    'file_types': {},
+                    'files': []
+                }
+            
+            files_info = []
+            total_size = 0
+            file_types = {}
+            
+            for file_path in self.reports_dir.iterdir():
+                if file_path.is_file():
+                    stat = file_path.stat()
+                    file_size = stat.st_size
+                    total_size += file_size
+                    
+                    # Get file extension
+                    ext = file_path.suffix.lower()
+                    if ext:
+                        file_types[ext] = file_types.get(ext, 0) + 1
+                    else:
+                        file_types['no_extension'] = file_types.get('no_extension', 0) + 1
+                    
+                    files_info.append({
+                        'name': file_path.name,
+                        'size_bytes': file_size,
+                        'size_mb': file_size / (1024 * 1024),
+                        'extension': ext,
+                        'created': datetime.fromtimestamp(stat.st_ctime).strftime('%Y-%m-%d %H:%M:%S'),
+                        'modified': datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S'),
+                        'path': str(file_path)
+                    })
+            
+            # Sort files by modification time (newest first)
+            files_info.sort(key=lambda x: x['modified'], reverse=True)
+            
+            return {
+                'reports_dir': str(self.reports_dir),
+                'total_files': len(files_info),
+                'total_size_mb': total_size / (1024 * 1024),
+                'file_types': file_types,
+                'files': files_info
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Failed to get reports info: {e}")
+            return {}
+    
+    def clear_all_reports(self, backup: bool = True) -> bool:
+        """Clear all report files from the reports directory.
+        
+        Args:
+            backup: Whether to create a backup before clearing
+            
+        Returns:
+            bool: True if clearing was successful, False otherwise
+        """
+        try:
+            if not self.reports_dir.exists():
+                self.logger.info("Reports directory does not exist")
+                return True
+            
+            # Get current reports info
+            reports_info = self.get_reports_info()
+            if reports_info.get('total_files', 0) == 0:
+                self.logger.info("No reports to clear")
+                return True
+            
+            # Create backup if requested
+            if backup:
+                backup_dir = self.reports_dir.parent / f"reports_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                import shutil
+                shutil.copytree(self.reports_dir, backup_dir)
+                self.logger.info(f"Reports backed up to: {backup_dir}")
+            
+            # Delete all files
+            deleted_count = 0
+            for file_path in self.reports_dir.iterdir():
+                if file_path.is_file():
+                    file_path.unlink()
+                    deleted_count += 1
+                    self.logger.info(f"Deleted report: {file_path.name}")
+            
+            self.logger.info(f"Cleared {deleted_count} report files")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Failed to clear reports: {e}")
+            return False
+    
+    def clear_old_reports(self, days: int = 30) -> int:
+        """Clear report files older than specified days.
+        
+        Args:
+            days: Number of days to keep reports
+            
+        Returns:
+            int: Number of files deleted
+        """
+        try:
+            if not self.reports_dir.exists():
+                return 0
+            
+            cutoff_time = datetime.now().timestamp() - (days * 24 * 60 * 60)
+            deleted_count = 0
+            
+            for file_path in self.reports_dir.iterdir():
+                if file_path.is_file() and file_path.stat().st_mtime < cutoff_time:
+                    file_path.unlink()
+                    deleted_count += 1
+                    self.logger.info(f"Deleted old report: {file_path.name}")
+            
+            self.logger.info(f"Cleared {deleted_count} old report files")
+            return deleted_count
+            
+        except Exception as e:
+            self.logger.error(f"Failed to clear old reports: {e}")
+            return 0
+    
+    def clear_reports_by_type(self, file_extensions: List[str]) -> int:
+        """Clear report files by file extension.
+        
+        Args:
+            file_extensions: List of file extensions to delete (e.g., ['.html', '.pdf'])
+            
+        Returns:
+            int: Number of files deleted
+        """
+        try:
+            if not self.reports_dir.exists():
+                return 0
+            
+            deleted_count = 0
+            extensions = [ext.lower() if ext.startswith('.') else f'.{ext.lower()}' for ext in file_extensions]
+            
+            for file_path in self.reports_dir.iterdir():
+                if file_path.is_file() and file_path.suffix.lower() in extensions:
+                    file_path.unlink()
+                    deleted_count += 1
+                    self.logger.info(f"Deleted {file_path.suffix} report: {file_path.name}")
+            
+            self.logger.info(f"Cleared {deleted_count} report files of specified types")
+            return deleted_count
+            
+        except Exception as e:
+            self.logger.error(f"Failed to clear reports by type: {e}")
+            return 0
+    
+    def clear_reports_by_pattern(self, pattern: str) -> int:
+        """Clear report files matching a specific pattern.
+        
+        Args:
+            pattern: Pattern to match in filenames (supports wildcards)
+            
+        Returns:
+            int: Number of files deleted
+        """
+        try:
+            if not self.reports_dir.exists():
+                return 0
+            
+            import fnmatch
+            deleted_count = 0
+            
+            for file_path in self.reports_dir.iterdir():
+                if file_path.is_file() and fnmatch.fnmatch(file_path.name, pattern):
+                    file_path.unlink()
+                    deleted_count += 1
+                    self.logger.info(f"Deleted matching report: {file_path.name}")
+            
+            self.logger.info(f"Cleared {deleted_count} report files matching pattern: {pattern}")
+            return deleted_count
+            
+        except Exception as e:
+            self.logger.error(f"Failed to clear reports by pattern: {e}")
+            return 0

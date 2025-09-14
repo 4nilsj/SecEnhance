@@ -1,15 +1,44 @@
 """
-HTML report generator using Jinja2 templates.
+Multi-format report generator using Jinja2 templates.
 Generates comprehensive security scan reports with findings from ZAP and custom plugins.
+Supports HTML, PDF, Excel, XML, and JSON formats.
 """
 
 import json
+import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from jinja2 import Environment, FileSystemLoader, Template
 
 from ..utils.logger import get_logger, LoggedTimer
+
+# Optional imports for additional report formats
+try:
+    from reportlab.lib.pagesizes import letter, A4
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    from reportlab.lib import colors
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+    REPORTLAB_AVAILABLE = True
+except ImportError:
+    REPORTLAB_AVAILABLE = False
+
+try:
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+    OPENPYXL_AVAILABLE = True
+except ImportError:
+    OPENPYXL_AVAILABLE = False
+
+try:
+    import weasyprint
+    WEASYPRINT_AVAILABLE = True
+except (ImportError, OSError):
+    # WeasyPrint has issues on Windows, so we'll disable it
+    WEASYPRINT_AVAILABLE = False
 
 
 class ReportGenerator:
@@ -411,6 +440,38 @@ class ReportGenerator:
         .references a:hover {
             text-decoration: underline;
         }
+        .endpoints-list {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .endpoint-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            border-left: 3px solid #007bff;
+        }
+        .endpoint-item .method {
+            margin-right: 10px;
+            min-width: 60px;
+        }
+        .endpoint-item .url {
+            flex: 1;
+            font-family: 'Courier New', monospace;
+            color: #007bff;
+            word-break: break-all;
+        }
+        .endpoint-item .folder {
+            margin-left: 10px;
+            color: #6c757d;
+            font-size: 0.9em;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -436,6 +497,22 @@ class ReportGenerator:
                             <li><strong>Low Risk Issues:</strong> {{ risk_counts.Low or 0 }}</li>
                             <li><strong>Informational Issues:</strong> {{ risk_counts.Informational or 0 }}</li>
                         </ul>
+                        
+                        {% if parsed_requests %}
+                        <h3>API Endpoints Tested:</h3>
+                        <p>The following {{ parsed_requests|length }} API endpoints were identified and tested during this security assessment:</p>
+                        <div class="endpoints-list">
+                            {% for request in parsed_requests %}
+                            <div class="endpoint-item">
+                                <span class="method method-{{ request.method.lower() }}">{{ request.method }}</span>
+                                <span class="url">{{ request.url }}</span>
+                                {% if request.folder %}
+                                <span class="folder">({{ request.folder }})</span>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                         
                         <h3>Risk Assessment:</h3>
                         {% if (risk_counts.High or 0) > 0 %}
@@ -745,7 +822,8 @@ class ReportGenerator:
 </html>"""
     
     def generate_report(self, scan_data: Dict[str, Any], vulnerabilities: List[Dict[str, Any]], 
-                       performance_stats: List[Dict[str, Any]], output_path: str) -> bool:
+                       performance_stats: List[Dict[str, Any]], output_path: str, 
+                       parsed_requests: Optional[List[Dict[str, Any]]] = None) -> bool:
         """
         Generate HTML report from scan data.
         
@@ -754,6 +832,7 @@ class ReportGenerator:
             vulnerabilities: List of vulnerabilities with proof-of-concept data
             performance_stats: List of performance statistics
             output_path: Path to save the report
+            parsed_requests: List of parsed API requests from collection
             
         Returns:
             True if report was generated successfully
@@ -770,6 +849,7 @@ class ReportGenerator:
                     'all_vulnerabilities': vulnerabilities,  # For the issues table
                     'performance_stats': performance_stats,
                     'risk_counts': risk_counts,
+                    'parsed_requests': parsed_requests or [],
                     'report_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 }
                 
@@ -802,13 +882,13 @@ class ReportGenerator:
         
         # Count vulnerabilities by risk level
         for vuln in vulnerabilities:
-            risk_level = vuln.get('risk', 'Informational')
+            risk_level = self._get_vuln_attr(vuln, 'risk', 'Informational')
             if risk_level in risk_counts:
                 risk_counts[risk_level] += 1
         
         return risk_counts
     
-    def generate_json_report(self, scan_data: Dict[str, Any], vulnerabilities: List[Dict[str, Any]], 
+    def generate_json_report(self, scan_data: Dict[str, Any], vulnerabilities: List[Any], 
                            performance_stats: List[Dict[str, Any]], output_path: str) -> bool:
         """
         Generate JSON report from scan data.
@@ -824,10 +904,37 @@ class ReportGenerator:
         """
         try:
             with LoggedTimer(self.logger, "JSON report generation"):
+                # Convert Vulnerability objects to dictionaries for JSON serialization
+                vuln_dicts = []
+                for vuln in vulnerabilities:
+                    if isinstance(vuln, dict):
+                        vuln_dicts.append(vuln)
+                    else:
+                        # Convert Vulnerability object to dict
+                        vuln_dict = {
+                            'id': getattr(vuln, 'id', ''),
+                            'name': getattr(vuln, 'name', ''),
+                            'description': getattr(vuln, 'description', ''),
+                            'risk': getattr(vuln, 'risk', ''),
+                            'cvss_score': getattr(vuln, 'cvss_score', ''),
+                            'solution': getattr(vuln, 'solution', ''),
+                            'references': getattr(vuln, 'references', []),
+                            'cwe_id': getattr(vuln, 'cwe_id', ''),
+                            'wasc_id': getattr(vuln, 'wasc_id', ''),
+                            'request': getattr(vuln, 'request', ''),
+                            'response': getattr(vuln, 'response', ''),
+                            'url': getattr(vuln, 'url', ''),
+                            'parameter': getattr(vuln, 'parameter', ''),
+                            'evidence': getattr(vuln, 'evidence', ''),
+                            'scan_id': getattr(vuln, 'scan_id', ''),
+                            'timestamp': str(getattr(vuln, 'timestamp', ''))
+                        }
+                        vuln_dicts.append(vuln_dict)
+                
                 # Prepare report data
                 report_data = {
                     'scan_metadata': scan_data,
-                    'vulnerabilities': vulnerabilities,
+                    'vulnerabilities': vuln_dicts,
                     'performance_stats': performance_stats,
                     'risk_counts': self._calculate_risk_counts_from_vulnerabilities(vulnerabilities),
                     'generated_at': datetime.now().isoformat(),
@@ -918,3 +1025,456 @@ class ReportGenerator:
         except Exception as e:
             self.logger.error(f"Failed to generate summary report: {e}")
             return f"Error generating summary: {e}"
+    
+    def generate_pdf_report(self, scan_data: Dict[str, Any], vulnerabilities: List[Any], 
+                          performance_stats: List[Dict[str, Any]], output_path: str) -> bool:
+        """
+        Generate PDF report from scan data.
+        
+        Args:
+            scan_data: Scan metadata and configuration
+            vulnerabilities: List of vulnerability findings
+            performance_stats: Performance timing data
+            output_path: Output file path for PDF report
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        if not REPORTLAB_AVAILABLE:
+            self.logger.error("ReportLab not available. Install with: pip install reportlab")
+            return False
+        
+        try:
+            with LoggedTimer(self.logger, "PDF report generation"):
+                doc = SimpleDocTemplate(output_path, pagesize=A4)
+                story = []
+                
+                # Get styles
+                styles = getSampleStyleSheet()
+                title_style = ParagraphStyle(
+                    'CustomTitle',
+                    parent=styles['Heading1'],
+                    fontSize=24,
+                    spaceAfter=30,
+                    alignment=TA_CENTER,
+                    textColor=colors.darkblue
+                )
+                
+                heading_style = ParagraphStyle(
+                    'CustomHeading',
+                    parent=styles['Heading2'],
+                    fontSize=16,
+                    spaceAfter=12,
+                    textColor=colors.darkblue
+                )
+                
+                # Title
+                story.append(Paragraph("API Security Scan Report", title_style))
+                story.append(Spacer(1, 12))
+                
+                # Scan Information
+                story.append(Paragraph("Scan Information", heading_style))
+                scan_info = [
+                    ["Scan ID:", scan_data.get('scan_id', 'N/A')],
+                    ["Target URL:", scan_data.get('target_url', 'N/A')],
+                    ["Status:", scan_data.get('status', 'N/A')],
+                    ["Start Time:", scan_data.get('start_time', 'N/A')],
+                    ["End Time:", scan_data.get('end_time', 'N/A')],
+                    ["Duration:", f"{scan_data.get('total_duration', 0):.2f}s"]
+                ]
+                
+                # Add template and plugin information if available
+                if scan_data.get('template_used'):
+                    scan_info.append(["Scan Template:", scan_data.get('template_used')])
+                if scan_data.get('plugins_used'):
+                    scan_info.append(["Plugins Used:", scan_data.get('plugins_used')])
+                
+                scan_table = Table(scan_info, colWidths=[2*inch, 4*inch])
+                scan_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
+                    ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                    ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+                    ('FONTSIZE', (0, 0), (-1, -1), 10),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+                    ('BACKGROUND', (1, 0), (1, -1), colors.beige),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                ]))
+                story.append(scan_table)
+                story.append(Spacer(1, 20))
+                
+                # Risk Summary
+                risk_counts = self._calculate_risk_counts(vulnerabilities)
+                story.append(Paragraph("Risk Summary", heading_style))
+                risk_data = [
+                    ["Risk Level", "Count"],
+                    ["High", str(risk_counts['High'])],
+                    ["Medium", str(risk_counts['Medium'])],
+                    ["Low", str(risk_counts['Low'])],
+                    ["Informational", str(risk_counts['Informational'])]
+                ]
+                
+                risk_table = Table(risk_data, colWidths=[2*inch, 1*inch])
+                risk_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, -1), 10),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+                    ('BACKGROUND', (0, 1), (-1, 1), colors.lightgrey),
+                    ('BACKGROUND', (0, 3), (-1, 3), colors.lightgrey),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                ]))
+                story.append(risk_table)
+                story.append(Spacer(1, 20))
+                
+                # Vulnerabilities
+                if vulnerabilities:
+                    story.append(Paragraph("Vulnerability Details", heading_style))
+                    
+                    vuln_data = [["Risk", "CVSS", "Name", "URL", "Source"]]
+                    for vuln in vulnerabilities[:20]:  # Limit to first 20 for PDF
+                        risk = self._get_vuln_attr(vuln, 'risk', self._get_vuln_attr(vuln, 'risk_level', 'Unknown'))
+                        cvss_score = self._get_vuln_attr(vuln, 'cvss_score', 'N/A')
+                        name = str(self._get_vuln_attr(vuln, 'name', 'Unknown'))[:40]  # Truncate long names
+                        url = str(self._get_vuln_attr(vuln, 'url', 'N/A'))[:35]  # Truncate long URLs
+                        source = self._get_vuln_attr(vuln, 'plugin_name', 'ZAP Scanner')
+                        
+                        vuln_data.append([risk, cvss_score, name, url, source])
+                    
+                    vuln_table = Table(vuln_data, colWidths=[0.8*inch, 0.6*inch, 2.2*inch, 1.8*inch, 1.6*inch])
+                    vuln_table.setStyle(TableStyle([
+                        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                        ('FONTSIZE', (0, 0), (-1, -1), 8),
+                        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+                        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                        ('VALIGN', (0, 0), (-1, -1), 'TOP')
+                    ]))
+                    story.append(vuln_table)
+                    story.append(Spacer(1, 20))
+                
+                # Performance Statistics
+                if performance_stats:
+                    story.append(Paragraph("Performance Statistics", heading_style))
+                    perf_data = [["Phase", "Duration (s)"]]
+                    for stat in performance_stats:
+                        perf_data.append([
+                            stat.get('phase_name', 'Unknown'),
+                            f"{stat.get('duration', 0):.2f}"
+                        ])
+                    
+                    perf_table = Table(perf_data, colWidths=[3*inch, 1*inch])
+                    perf_table.setStyle(TableStyle([
+                        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                        ('FONTSIZE', (0, 0), (-1, -1), 10),
+                        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+                        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                    ]))
+                    story.append(perf_table)
+                
+                # Build PDF
+                doc.build(story)
+                
+                self.logger.info(f"PDF report generated successfully: {output_path}")
+                return True
+                
+        except Exception as e:
+            self.logger.error(f"Failed to generate PDF report: {e}")
+            return False
+    
+    def generate_excel_report(self, scan_data: Dict[str, Any], vulnerabilities: List[Any], 
+                            performance_stats: List[Dict[str, Any]], output_path: str) -> bool:
+        """
+        Generate Excel report from scan data.
+        
+        Args:
+            scan_data: Scan metadata and configuration
+            vulnerabilities: List of vulnerability findings
+            performance_stats: Performance timing data
+            output_path: Output file path for Excel report
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        if not OPENPYXL_AVAILABLE:
+            self.logger.error("OpenPyXL not available. Install with: pip install openpyxl")
+            return False
+        
+        try:
+            with LoggedTimer(self.logger, "Excel report generation"):
+                wb = Workbook()
+                # Remove default sheet if it exists and is not None
+                default_sheet = wb.active
+                if default_sheet is not None:
+                    wb.remove(default_sheet)
+                
+                # Summary sheet
+                summary_ws = wb.create_sheet("Summary")
+                self._create_summary_sheet(summary_ws, scan_data, vulnerabilities, performance_stats)
+                
+                # Vulnerabilities sheet
+                if vulnerabilities:
+                    vuln_ws = wb.create_sheet("Vulnerabilities")
+                    self._create_vulnerabilities_sheet(vuln_ws, vulnerabilities)
+                
+                # Performance sheet
+                if performance_stats:
+                    perf_ws = wb.create_sheet("Performance")
+                    self._create_performance_sheet(perf_ws, performance_stats)
+                
+                # Save workbook
+                wb.save(output_path)
+                
+                self.logger.info(f"Excel report generated successfully: {output_path}")
+                return True
+                
+        except Exception as e:
+            self.logger.error(f"Failed to generate Excel report: {e}")
+            return False
+    
+    def generate_xml_report(self, scan_data: Dict[str, Any], vulnerabilities: List[Any], 
+                          performance_stats: List[Dict[str, Any]], output_path: str) -> bool:
+        """
+        Generate XML report from scan data.
+        
+        Args:
+            scan_data: Scan metadata and configuration
+            vulnerabilities: List of vulnerability findings
+            performance_stats: Performance timing data
+            output_path: Output file path for XML report
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            with LoggedTimer(self.logger, "XML report generation"):
+                # Create root element
+                root = ET.Element("security_scan_report")
+                root.set("version", "1.0")
+                root.set("generated_at", datetime.now().isoformat())
+                
+                # Scan information
+                scan_info = ET.SubElement(root, "scan_information")
+                for key, value in scan_data.items():
+                    elem = ET.SubElement(scan_info, key.replace(' ', '_').lower())
+                    elem.text = str(value)
+                
+                # Risk summary
+                risk_counts = self._calculate_risk_counts(vulnerabilities)
+                risk_summary = ET.SubElement(root, "risk_summary")
+                for risk_level, count in risk_counts.items():
+                    risk_elem = ET.SubElement(risk_summary, "risk_level")
+                    risk_elem.set("level", risk_level)
+                    risk_elem.set("count", str(count))
+                
+                # Vulnerabilities
+                if vulnerabilities:
+                    vulns_elem = ET.SubElement(root, "vulnerabilities")
+                    for vuln in vulnerabilities:
+                        vuln_elem = ET.SubElement(vulns_elem, "vulnerability")
+                        
+                        # Handle both dict and Vulnerability object
+                        if isinstance(vuln, dict):
+                            vuln_dict = vuln
+                        else:
+                            # Convert Vulnerability object to dict
+                            vuln_dict = {
+                                'id': getattr(vuln, 'id', ''),
+                                'name': getattr(vuln, 'name', ''),
+                                'description': getattr(vuln, 'description', ''),
+                                'risk': getattr(vuln, 'risk', ''),
+                                'cvss_score': getattr(vuln, 'cvss_score', ''),
+                                'solution': getattr(vuln, 'solution', ''),
+                                'url': getattr(vuln, 'url', ''),
+                                'parameter': getattr(vuln, 'parameter', ''),
+                                'evidence': getattr(vuln, 'evidence', ''),
+                                'cwe_id': getattr(vuln, 'cwe_id', ''),
+                                'wasc_id': getattr(vuln, 'wasc_id', ''),
+                                'plugin_name': getattr(vuln, 'plugin_name', ''),
+                                'scan_id': getattr(vuln, 'scan_id', ''),
+                                'timestamp': str(getattr(vuln, 'timestamp', ''))
+                            }
+                        
+                        for key, value in vuln_dict.items():
+                            if isinstance(value, (str, int, float)):
+                                sub_elem = ET.SubElement(vuln_elem, key.replace(' ', '_').lower())
+                                sub_elem.text = str(value)
+                
+                # Performance statistics
+                if performance_stats:
+                    perf_elem = ET.SubElement(root, "performance_statistics")
+                    for stat in performance_stats:
+                        stat_elem = ET.SubElement(perf_elem, "statistic")
+                        for key, value in stat.items():
+                            if isinstance(value, (str, int, float)):
+                                sub_elem = ET.SubElement(stat_elem, key.replace(' ', '_').lower())
+                                sub_elem.text = str(value)
+                
+                # Write XML to file
+                tree = ET.ElementTree(root)
+                ET.indent(tree, space="  ", level=0)  # Pretty print
+                tree.write(output_path, encoding='utf-8', xml_declaration=True)
+                
+                self.logger.info(f"XML report generated successfully: {output_path}")
+                return True
+                
+        except Exception as e:
+            self.logger.error(f"Failed to generate XML report: {e}")
+            return False
+    
+    def _create_summary_sheet(self, ws, scan_data: Dict[str, Any], vulnerabilities: List[Dict[str, Any]], 
+                             performance_stats: List[Dict[str, Any]]):
+        """Create summary sheet for Excel report."""
+        # Title
+        ws['A1'] = "API Security Scan Report"
+        ws['A1'].font = Font(size=16, bold=True)
+        ws.merge_cells('A1:D1')
+        
+        # Scan information
+        row = 3
+        ws[f'A{row}'] = "Scan Information"
+        ws[f'A{row}'].font = Font(bold=True)
+        row += 1
+        
+        scan_info = [
+            ("Scan ID", scan_data.get('scan_id', 'N/A')),
+            ("Target URL", scan_data.get('target_url', 'N/A')),
+            ("Status", scan_data.get('status', 'N/A')),
+            ("Start Time", scan_data.get('start_time', 'N/A')),
+            ("End Time", scan_data.get('end_time', 'N/A')),
+            ("Duration", f"{scan_data.get('total_duration', 0):.2f}s")
+        ]
+        
+        # Add template and plugin information if available
+        if scan_data.get('template_used'):
+            scan_info.append(("Scan Template", scan_data.get('template_used')))
+        if scan_data.get('plugins_used'):
+            scan_info.append(("Plugins Used", scan_data.get('plugins_used')))
+        
+        for label, value in scan_info:
+            ws[f'A{row}'] = label
+            ws[f'B{row}'] = value
+            row += 1
+        
+        # Risk summary
+        row += 1
+        ws[f'A{row}'] = "Risk Summary"
+        ws[f'A{row}'].font = Font(bold=True)
+        row += 1
+        
+        risk_counts = self._calculate_risk_counts(vulnerabilities)
+        ws[f'A{row}'] = "Risk Level"
+        ws[f'B{row}'] = "Count"
+        ws[f'A{row}'].font = Font(bold=True)
+        ws[f'B{row}'].font = Font(bold=True)
+        row += 1
+        
+        for risk_level, count in risk_counts.items():
+            ws[f'A{row}'] = risk_level
+            ws[f'B{row}'] = count
+            row += 1
+        
+        # Auto-adjust column widths
+        for column in ws.columns:
+            max_length = 0
+            column_letter = get_column_letter(column[0].column)
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            ws.column_dimensions[column_letter].width = adjusted_width
+    
+    def _create_vulnerabilities_sheet(self, ws, vulnerabilities: List[Dict[str, Any]]):
+        """Create vulnerabilities sheet for Excel report."""
+        # Headers
+        headers = ["Risk Level", "CVSS Score", "Name", "URL", "Method", "Plugin", "Description", "Solution"]
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = Font(bold=True)
+            cell.fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
+        
+        # Data
+        for row, vuln in enumerate(vulnerabilities, 2):
+            ws.cell(row=row, column=1, value=self._get_vuln_attr(vuln, 'risk', self._get_vuln_attr(vuln, 'risk_level', 'Unknown')))
+            ws.cell(row=row, column=2, value=self._get_vuln_attr(vuln, 'cvss_score', 'N/A'))
+            ws.cell(row=row, column=3, value=self._get_vuln_attr(vuln, 'name', 'Unknown'))
+            ws.cell(row=row, column=4, value=self._get_vuln_attr(vuln, 'url', 'N/A'))
+            ws.cell(row=row, column=5, value=self._get_vuln_attr(vuln, 'method', 'N/A'))
+            ws.cell(row=row, column=6, value=self._get_vuln_attr(vuln, 'plugin_name', 'ZAP Scanner'))
+            ws.cell(row=row, column=7, value=self._get_vuln_attr(vuln, 'description', 'N/A'))
+            ws.cell(row=row, column=8, value=self._get_vuln_attr(vuln, 'solution', 'N/A'))
+        
+        # Auto-adjust column widths
+        for column in ws.columns:
+            max_length = 0
+            column_letter = get_column_letter(column[0].column)
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            ws.column_dimensions[column_letter].width = adjusted_width
+    
+    def _create_performance_sheet(self, ws, performance_stats: List[Dict[str, Any]]):
+        """Create performance sheet for Excel report."""
+        # Headers
+        headers = ["Phase", "Duration (s)", "Start Time", "End Time"]
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = Font(bold=True)
+            cell.fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
+        
+        # Data
+        for row, stat in enumerate(performance_stats, 2):
+            ws.cell(row=row, column=1, value=stat.get('phase_name', 'Unknown'))
+            ws.cell(row=row, column=2, value=stat.get('duration', 0))
+            ws.cell(row=row, column=3, value=stat.get('start_time', 'N/A'))
+            ws.cell(row=row, column=4, value=stat.get('end_time', 'N/A'))
+        
+        # Auto-adjust column widths
+        for column in ws.columns:
+            max_length = 0
+            column_letter = get_column_letter(column[0].column)
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            ws.column_dimensions[column_letter].width = adjusted_width
+    
+    def _get_vuln_attr(self, vuln: Any, attr: str, default: Any = None) -> Any:
+        """Safely get attribute from vulnerability (handles both dict and object)."""
+        if hasattr(vuln, attr):
+            return getattr(vuln, attr)
+        elif isinstance(vuln, dict):
+            return vuln.get(attr, default)
+        else:
+            return default
+    
+    def _calculate_risk_counts(self, vulnerabilities: List[Any]) -> Dict[str, int]:
+        """Calculate risk level counts from vulnerabilities."""
+        risk_counts = {'High': 0, 'Medium': 0, 'Low': 0, 'Informational': 0}
+        
+        for vuln in vulnerabilities:
+            risk = self._get_vuln_attr(vuln, 'risk', self._get_vuln_attr(vuln, 'risk_level', 'Informational'))
+            
+            if risk in risk_counts:
+                risk_counts[risk] += 1
+            else:
+                risk_counts['Informational'] += 1
+        
+        return risk_counts

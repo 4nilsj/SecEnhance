@@ -1,0 +1,474 @@
+openapi: 3.0.0
+info:
+  title: Test API for Security Scanning
+  description: A comprehensive API specification for testing security scanning capabilities
+  version: 1.0.0
+  contact:
+    name: Security Team
+    email: security@testapp.com
+
+servers:
+  - url: https://api.testapp.com
+    description: Production server
+  - url: https://staging-api.testapp.com
+    description: Staging server
+  - url: http://localhost:3000
+    description: Development server
+
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Returns the health status of the API
+      tags:
+        - System
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /api/public/data:
+    get:
+      summary: Get public data
+      description: Retrieve publicly available data
+      tags:
+        - Public
+      responses:
+        '200':
+          description: Public data retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: string
+                    example: "This is public data"
+
+  /api/users/register:
+    post:
+      summary: Register a new user
+      description: Create a new user account
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegistration'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Bad request - validation error
+        '409':
+          description: User already exists
+
+  /api/auth/login:
+    post:
+      summary: User login
+      description: Authenticate user and return access token
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid credentials
+        '400':
+          description: Bad request
+
+  /api/users/profile:
+    get:
+      summary: Get user profile
+      description: Retrieve the current user's profile
+      tags:
+        - Users
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Profile not found
+
+    put:
+      summary: Update user profile
+      description: Update the current user's profile
+      tags:
+        - Users
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserProfileUpdate'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '400':
+          description: Bad request
+        '401':
+          description: Unauthorized
+
+  /api/admin/users:
+    get:
+      summary: Get all users (Admin only)
+      description: Retrieve all users - requires admin privileges
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Page number for pagination
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          description: Number of users per page
+          required: false
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Users retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden - admin access required
+
+  /api/admin/users/{userId}:
+    delete:
+      summary: Delete user (Admin only)
+      description: Delete a user account - requires admin privileges
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: User ID to delete
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: User deleted successfully
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden - admin access required
+        '404':
+          description: User not found
+
+  /api/files/upload:
+    post:
+      summary: Upload file
+      description: Upload a file to the server
+      tags:
+        - Files
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: File to upload
+                description:
+                  type: string
+                  description: File description
+              required:
+                - file
+      responses:
+        '201':
+          description: File uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileUploadResponse'
+        '400':
+          description: Bad request
+        '401':
+          description: Unauthorized
+
+  /api/files/{fileId}/download:
+    get:
+      summary: Download file
+      description: Download a file from the server
+      tags:
+        - Files
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          description: File ID to download
+          schema:
+            type: string
+      responses:
+        '200':
+          description: File downloaded successfully
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Unauthorized
+        '404':
+          description: File not found
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+  schemas:
+    UserRegistration:
+      type: object
+      required:
+        - username
+        - email
+        - password
+        - firstName
+        - lastName
+      properties:
+        username:
+          type: string
+          example: testuser
+        email:
+          type: string
+          format: email
+          example: test@example.com
+        password:
+          type: string
+          format: password
+          example: weakpassword123
+        firstName:
+          type: string
+          example: Test
+        lastName:
+          type: string
+          example: User
+
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          example: testuser
+        password:
+          type: string
+          format: password
+          example: weakpassword123
+
+    LoginResponse:
+      type: object
+      required:
+        - token
+        - expiresIn
+        - user
+      properties:
+        token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        expiresIn:
+          type: integer
+          example: 3600
+        user:
+          $ref: '#/components/schemas/User'
+
+    User:
+      type: object
+      required:
+        - id
+        - username
+        - email
+        - firstName
+        - lastName
+        - createdAt
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        username:
+          type: string
+          example: testuser
+        email:
+          type: string
+          format: email
+          example: test@example.com
+        firstName:
+          type: string
+          example: Test
+        lastName:
+          type: string
+          example: User
+        createdAt:
+          type: string
+          format: date-time
+          example: "2023-01-01T00:00:00Z"
+
+    UserProfile:
+      type: object
+      required:
+        - id
+        - username
+        - email
+        - firstName
+        - lastName
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        username:
+          type: string
+          example: testuser
+        email:
+          type: string
+          format: email
+          example: test@example.com
+        firstName:
+          type: string
+          example: Test
+        lastName:
+          type: string
+          example: User
+        lastLogin:
+          type: string
+          format: date-time
+          example: "2023-01-01T12:00:00Z"
+
+    UserProfileUpdate:
+      type: object
+      properties:
+        firstName:
+          type: string
+          example: Updated
+        lastName:
+          type: string
+          example: Name
+        email:
+          type: string
+          format: email
+          example: updated@example.com
+
+    FileUploadResponse:
+      type: object
+      required:
+        - fileId
+        - filename
+        - size
+        - uploadedAt
+      properties:
+        fileId:
+          type: string
+          example: abc123
+        filename:
+          type: string
+          example: test.txt
+        size:
+          type: integer
+          example: 1024
+        uploadedAt:
+          type: string
+          format: date-time
+          example: "2023-01-01T12:00:00Z"
+
+    Pagination:
+      type: object
+      required:
+        - page
+        - limit
+        - total
+        - totalPages
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 10
+        total:
+          type: integer
+          example: 100
+        totalPages:
+          type: integer
+          example: 10
+
+security:
+  - bearerAuth: []
+  - apiKeyAuth: []

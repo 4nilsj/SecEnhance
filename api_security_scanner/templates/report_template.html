@@ -368,6 +368,38 @@
         .references a:hover {
             text-decoration: underline;
         }
+        .endpoints-list {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .endpoint-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            border-left: 3px solid #007bff;
+        }
+        .endpoint-item .method {
+            margin-right: 10px;
+            min-width: 60px;
+        }
+        .endpoint-item .url {
+            flex: 1;
+            font-family: 'Courier New', monospace;
+            color: #007bff;
+            word-break: break-all;
+        }
+        .endpoint-item .folder {
+            margin-left: 10px;
+            color: #6c757d;
+            font-size: 0.9em;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -393,6 +425,22 @@
                             <li><strong>Low Risk Issues:</strong> {{ risk_counts.Low or 0 }}</li>
                             <li><strong>Informational Issues:</strong> {{ risk_counts.Informational or 0 }}</li>
                         </ul>
+                        
+                        {% if parsed_requests %}
+                        <h3>API Endpoints Tested:</h3>
+                        <p>The following {{ parsed_requests|length }} API endpoints were identified and tested during this security assessment:</p>
+                        <div class="endpoints-list">
+                            {% for request in parsed_requests %}
+                            <div class="endpoint-item">
+                                <span class="method method-{{ request.method.lower() }}">{{ request.method }}</span>
+                                <span class="url">{{ request.url }}</span>
+                                {% if request.folder %}
+                                <span class="folder">({{ request.folder }})</span>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                         
                         <h3>Risk Assessment:</h3>
                         {% if (risk_counts.High or 0) > 0 %}
@@ -570,7 +618,7 @@
                     <div class="alert-body">
                         <h4>{{ vuln.name }}</h4>
                         <p><strong>CVSS Score:</strong> {{ vuln.cvss_score }}</p>
-                        <p><strong>Source:</strong> {{ vuln.source }}</p>
+                        <p><strong>Source:</strong> {{ vuln.plugin_name or 'ZAP Scanner' }}</p>
                         {% if vuln.plugin_name %}
                         <p><strong>Plugin:</strong> {{ vuln.plugin_name }}</p>
                         {% endif %}
@@ -609,7 +657,8 @@
                                 <div class="code request-block">
                                     {% if vuln.request %}
                                         {{ vuln.request|replace('\n', '
-')|replace('\r', '') }}
+')|replace('\r', '
+') }}
                                     {% else %}
                                         {{ vuln.method or 'GET' }} {{ vuln.url or 'N/A' }} HTTP/1.1
                                         {% if vuln.headers %}
@@ -628,7 +677,8 @@
                                 <div class="code response-block">
                                     {% if vuln.response %}
                                         {{ vuln.response|replace('\n', '
-')|replace('\r', '') }}
+')|replace('\r', '
+') }}
                                     {% else %}
                                         Response data not available
                                     {% endif %}
@@ -685,6 +735,12 @@
                     <strong>Input Source:</strong> {{ scan_data.input_source }}<br>
                     {% if scan_data.auth_type %}
                     <strong>Authentication:</strong> {{ scan_data.auth_type }}<br>
+                    {% endif %}
+                    {% if scan_data.template_used %}
+                    <strong>Scan Template:</strong> {{ scan_data.template_used }}<br>
+                    {% endif %}
+                    {% if scan_data.plugins_used %}
+                    <strong>Plugins Used:</strong> {{ scan_data.plugins_used }}<br>
                     {% endif %}
                     {% if scan_data.error_message %}
                     <strong>Error:</strong> {{ scan_data.error_message }}<br>
