@@ -73,7 +73,7 @@ class ConfigurationWizard:
         
         if not confirm("Do you want to continue with the configuration wizard?"):
             echo("Configuration wizard cancelled.")
-n            return {}
+            return {}
     
     def _step_basic_config(self):
         """Step 1: Basic configuration."""
