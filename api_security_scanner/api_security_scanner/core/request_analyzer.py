@@ -1,6 +1,6 @@
 """
-Request Analyzer for JWT/OAuth Flow Detection
-Analyzes requests and responses to identify JWT tokens and OAuth flows.
+Request Analyzer for JWT/OAuth/GraphQL Flow Detection
+Analyzes requests and responses to identify JWT tokens, OAuth flows, and GraphQL endpoints.
 """
 
 import re
@@ -12,7 +12,7 @@ from ..utils.logger import get_logger
 
 
 class RequestAnalyzer:
-    """Analyzes requests and responses for JWT tokens and OAuth flows."""
+    """Analyzes requests and responses for JWT tokens, OAuth flows, and GraphQL endpoints."""
     
     def __init__(self):
         self.logger = get_logger(__name__)
@@ -50,6 +50,32 @@ class RequestAnalyzer:
             'x-api-key', 'x-token', 'jwt', 'token'
         }
         
+        # GraphQL endpoint patterns
+        self.graphql_endpoints = {
+            'graphql': re.compile(r'/graphql|/api/graphql|/v\d+/graphql', re.IGNORECASE),
+            'query': re.compile(r'/query|/api/query', re.IGNORECASE),
+            'gql': re.compile(r'/gql|/api/gql', re.IGNORECASE)
+        }
+        
+        # GraphQL operation patterns
+        self.graphql_operations = {
+            'query': re.compile(r'query\s*\{|query\s+\w+', re.IGNORECASE),
+            'mutation': re.compile(r'mutation\s*\{|mutation\s+\w+', re.IGNORECASE),
+            'subscription': re.compile(r'subscription\s*\{|subscription\s+\w+', re.IGNORECASE),
+            'introspection': re.compile(r'__schema|__type|__typename|__field|__directive', re.IGNORECASE)
+        }
+        
+        # GraphQL content types
+        self.graphql_content_types = {
+            'application/graphql',
+            'application/json'  # GraphQL over HTTP typically uses JSON
+        }
+        
+        # GraphQL-specific parameters
+        self.graphql_parameters = {
+            'query', 'mutation', 'subscription', 'variables', 'operationName'
+        }
+        
         # OAuth-related response fields
         self.oauth_response_fields = {
             'access_token', 'refresh_token', 'id_token', 'token_type',
@@ -58,7 +84,7 @@ class RequestAnalyzer:
     
     def analyze_requests(self, requests_data: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
-        Analyze a list of requests for JWT tokens and OAuth flows.
+        Analyze a list of requests for JWT tokens, OAuth flows, and GraphQL endpoints.
         
         Args:
             requests_data: List of request dictionaries
@@ -69,9 +95,12 @@ class RequestAnalyzer:
         analysis_result = {
             'contains_jwt': False,
             'contains_oauth': False,
+            'contains_graphql': False,
             'jwt_tokens': [],
             'oauth_flows': [],
             'oauth_endpoints': [],
+            'graphql_endpoints': [],
+            'graphql_operations': [],
             'security_concerns': [],
             'recommended_plugins': []
         }
@@ -96,13 +125,18 @@ class RequestAnalyzer:
                     analysis_result['oauth_flows'].extend(request_analysis['oauth_flows'])
                     analysis_result['oauth_endpoints'].extend(request_analysis['oauth_endpoints'])
                 
+                if request_analysis['contains_graphql']:
+                    analysis_result['contains_graphql'] = True
+                    analysis_result['graphql_endpoints'].extend(request_analysis['graphql_endpoints'])
+                    analysis_result['graphql_operations'].extend(request_analysis['graphql_operations'])
+                
                 analysis_result['security_concerns'].extend(request_analysis['security_concerns'])
             
             # Determine recommended plugins
             analysis_result['recommended_plugins'] = self._get_recommended_plugins(analysis_result)
             
             # Log analysis results
-            self.logger.info(f"Request analysis complete: JWT={analysis_result['contains_jwt']}, OAuth={analysis_result['contains_oauth']}")
+            self.logger.info(f"Request analysis complete: JWT={analysis_result['contains_jwt']}, OAuth={analysis_result['contains_oauth']}, GraphQL={analysis_result['contains_graphql']}")
             
         except Exception as e:
             self.logger.error(f"Request analysis failed: {e}")
@@ -111,13 +145,16 @@ class RequestAnalyzer:
         return analysis_result
     
     def _analyze_single_request(self, url: str, method: str, headers: Dict[str, str], body: str) -> Dict[str, Any]:
-        """Analyze a single request for JWT/OAuth indicators."""
+        """Analyze a single request for JWT/OAuth/GraphQL indicators."""
         analysis = {
             'contains_jwt': False,
             'contains_oauth': False,
+            'contains_graphql': False,
             'jwt_tokens': [],
             'oauth_flows': [],
             'oauth_endpoints': [],
+            'graphql_endpoints': [],
+            'graphql_operations': [],
             'security_concerns': []
         }
         
@@ -150,6 +187,18 @@ class RequestAnalyzer:
         if oauth_params:
             analysis['contains_oauth'] = True
             analysis['oauth_flows'].extend(oauth_params)
+        
+        # Check for GraphQL endpoints
+        graphql_endpoints = self._detect_graphql_endpoints(url)
+        if graphql_endpoints:
+            analysis['contains_graphql'] = True
+            analysis['graphql_endpoints'].extend(graphql_endpoints)
+        
+        # Check for GraphQL operations in body
+        graphql_operations = self._detect_graphql_operations(body, headers)
+        if graphql_operations:
+            analysis['contains_graphql'] = True
+            analysis['graphql_operations'].extend(graphql_operations)
         
         # Check for security concerns
         security_concerns = self._check_security_concerns(url, method, headers, body)
@@ -335,6 +384,85 @@ class RequestAnalyzer:
         
         return flows
     
+    def _detect_graphql_endpoints(self, url: str) -> List[Dict[str, str]]:
+        """Detect GraphQL endpoints in URL."""
+        endpoints = []
+        
+        try:
+            for endpoint_type, pattern in self.graphql_endpoints.items():
+                if pattern.search(url):
+                    endpoints.append({
+                        'type': 'graphql_endpoint',
+                        'endpoint_type': endpoint_type,
+                        'url': url,
+                        'confidence': 'high'
+                    })
+        except Exception:
+            pass
+        
+        return endpoints
+    
+    def _detect_graphql_operations(self, body: str, headers: Dict[str, str]) -> List[Dict[str, str]]:
+        """Detect GraphQL operations in request body and headers."""
+        operations = []
+        
+        try:
+            # Check content type for GraphQL
+            content_type = headers.get('Content-Type', '').lower()
+            if 'application/graphql' in content_type:
+                operations.append({
+                    'type': 'graphql_content_type',
+                    'content_type': content_type,
+                    'confidence': 'high'
+                })
+            
+            # Check for GraphQL operations in body
+            if body:
+                # Try to parse as JSON first
+                try:
+                    body_data = json.loads(body)
+                    if isinstance(body_data, dict):
+                        # Check for GraphQL query parameter
+                        if 'query' in body_data:
+                            query = body_data['query']
+                            for op_type, pattern in self.graphql_operations.items():
+                                if pattern.search(query):
+                                    operations.append({
+                                        'type': 'graphql_operation',
+                                        'operation_type': op_type,
+                                        'query': query[:200] + '...' if len(query) > 200 else query,
+                                        'confidence': 'high'
+                                    })
+                        
+                        # Check for other GraphQL parameters
+                        graphql_params = []
+                        for param in self.graphql_parameters:
+                            if param in body_data:
+                                graphql_params.append(param)
+                        
+                        if graphql_params:
+                            operations.append({
+                                'type': 'graphql_parameters',
+                                'parameters': graphql_params,
+                                'confidence': 'medium'
+                            })
+                
+                except json.JSONDecodeError:
+                    # Check for GraphQL operations in raw body
+                    for op_type, pattern in self.graphql_operations.items():
+                        if pattern.search(body):
+                            operations.append({
+                                'type': 'graphql_operation',
+                                'operation_type': op_type,
+                                'query': body[:200] + '...' if len(body) > 200 else body,
+                                'confidence': 'medium'
+                            })
+        
+        except Exception:
+            pass
+        
+        return operations
+    
     def _check_security_concerns(self, url: str, method: str, headers: Dict[str, str], body: str) -> List[Dict[str, str]]:
         """Check for security concerns in the request."""
         concerns = []
@@ -379,6 +507,9 @@ class RequestAnalyzer:
         if analysis_result['contains_oauth']:
             recommended.append('JWTSecurityChecker')  # JWT plugin also handles OAuth
         
+        if analysis_result['contains_graphql']:
+            recommended.append('GraphQLSecurityChecker')
+        
         # Always recommend general security plugins
         recommended.extend(['SecurityHeadersChecker', 'ComprehensiveSecurityChecker'])
         
@@ -398,6 +529,21 @@ class RequestAnalyzer:
         
         # Run JWT plugin if JWT tokens or OAuth flows are detected
         return analysis['contains_jwt'] or analysis['contains_oauth']
+    
+    def should_run_graphql_plugin(self, requests_data: List[Dict[str, Any]]) -> bool:
+        """
+        Determine if GraphQL security plugin should be run based on request analysis.
+        
+        Args:
+            requests_data: List of request dictionaries
+            
+        Returns:
+            True if GraphQL plugin should be run, False otherwise
+        """
+        analysis = self.analyze_requests(requests_data)
+        
+        # Run GraphQL plugin if GraphQL endpoints or operations are detected
+        return analysis['contains_graphql']
     
     def get_jwt_analysis_summary(self, requests_data: List[Dict[str, Any]]) -> str:
         """
@@ -427,3 +573,32 @@ class RequestAnalyzer:
             summary_parts.append(f"Recommended plugins: {', '.join(analysis['recommended_plugins'])}")
         
         return "; ".join(summary_parts) if summary_parts else "No JWT/OAuth indicators found"
+    
+    def get_graphql_analysis_summary(self, requests_data: List[Dict[str, Any]]) -> str:
+        """
+        Get a summary of GraphQL analysis results.
+        
+        Args:
+            requests_data: List of request dictionaries
+            
+        Returns:
+            Summary string
+        """
+        analysis = self.analyze_requests(requests_data)
+        
+        summary_parts = []
+        
+        if analysis['contains_graphql']:
+            summary_parts.append(f"GraphQL endpoints detected: {len(analysis['graphql_endpoints'])}")
+            summary_parts.append(f"GraphQL operations found: {len(analysis['graphql_operations'])}")
+            
+            # Add details about operation types
+            operation_types = set()
+            for op in analysis['graphql_operations']:
+                if 'operation_type' in op:
+                    operation_types.add(op['operation_type'])
+            
+            if operation_types:
+                summary_parts.append(f"Operation types: {', '.join(operation_types)}")
+        
+        return "; ".join(summary_parts) if summary_parts else "No GraphQL indicators found"

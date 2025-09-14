@@ -381,14 +381,16 @@ class PluginManager:
         """
         results = []
         
-        # Analyze requests for JWT/OAuth flows
-        jwt_analysis = None
+        # Analyze requests for JWT/OAuth/GraphQL flows
+        request_analysis = None
         if self.request_analyzer:
-            jwt_analysis = self.request_analyzer.analyze_requests(requests_data)
+            request_analysis = self.request_analyzer.analyze_requests(requests_data)
             self.logger.info(f"Request analysis: {self.request_analyzer.get_jwt_analysis_summary(requests_data)}")
+            if request_analysis.get('contains_graphql'):
+                self.logger.info(f"GraphQL analysis: {self.request_analyzer.get_graphql_analysis_summary(requests_data)}")
         
         # Determine which plugins to run
-        plugins_to_run = self._get_plugins_to_run(jwt_analysis)
+        plugins_to_run = self._get_plugins_to_run(request_analysis)
         
         self.logger.info(f"Executing {len(plugins_to_run)} plugins (conditional scanning enabled)")
         
@@ -406,12 +408,12 @@ class PluginManager:
         
         return results
     
-    def _get_plugins_to_run(self, jwt_analysis: Optional[Dict[str, Any]] = None) -> List[str]:
+    def _get_plugins_to_run(self, request_analysis: Optional[Dict[str, Any]] = None) -> List[str]:
         """
         Determine which plugins to run based on request analysis and user selection.
         
         Args:
-            jwt_analysis: Results from JWT/OAuth analysis
+            request_analysis: Results from JWT/OAuth/GraphQL analysis
             
         Returns:
             List of plugin names to execute
@@ -435,7 +437,7 @@ class PluginManager:
                 plugins_to_run.append(plugin)
         
         # Conditionally run JWT plugin based on analysis
-        if jwt_analysis and (jwt_analysis.get('contains_jwt') or jwt_analysis.get('contains_oauth')):
+        if request_analysis and (request_analysis.get('contains_jwt') or request_analysis.get('contains_oauth')):
             if 'JWTSecurityChecker' in self.loaded_plugins:
                 plugins_to_run.append('JWTSecurityChecker')
                 self.logger.info("JWT/OAuth detected - enabling JWT security plugin")
@@ -444,11 +446,22 @@ class PluginManager:
         else:
             self.logger.info("No JWT/OAuth indicators found - skipping JWT security plugin")
         
-        # Add any other plugins not in the core list (except JWT plugin which is conditional)
+        # Conditionally run GraphQL plugin based on analysis
+        if request_analysis and request_analysis.get('contains_graphql'):
+            if 'GraphQLSecurityChecker' in self.loaded_plugins:
+                plugins_to_run.append('GraphQLSecurityChecker')
+                self.logger.info("GraphQL endpoints detected - enabling GraphQL security plugin")
+            else:
+                self.logger.warning("GraphQL endpoints detected but GraphQLSecurityChecker plugin not available")
+        else:
+            self.logger.info("No GraphQL indicators found - skipping GraphQL security plugin")
+        
+        # Add any other plugins not in the core list (except conditional plugins)
+        conditional_plugins = ['JWTSecurityChecker', 'GraphQLSecurityChecker']
         for plugin_name in self.loaded_plugins:
             if (plugin_name not in plugins_to_run and 
                 plugin_name not in core_plugins and 
-                plugin_name != 'JWTSecurityChecker'):
+                plugin_name not in conditional_plugins):
                 plugins_to_run.append(plugin_name)
         
         return plugins_to_run
