@@ -1,0 +1,40 @@
+
+# API Security Scanner Autocomplete
+_api_security_scanner_completion() {
+    local cur prev opts
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    
+    # Main commands
+    if [[ ${COMP_CWORD} -eq 1 ]]; then
+        opts="scan config list-scans show-scan cleanup stats reset-db clear-db db-info reports-info clear-reports cleanup-reports templates plugins help"
+        COMPREPLY=( $(compgen -o plusdirs -W "${opts}" -- ${cur}) )
+        return 0
+    fi
+    
+    # Command-specific completions
+    case ${COMP_WORDS[1]} in
+        scan)
+            if [[ ${prev} == "-f" || ${prev} == "--file" ]]; then
+                COMPREPLY=( $(compgen -o plusdirs -f -X '!*.{json,yaml,yml,har}' -- ${cur}) )
+            elif [[ ${prev} == "--template" ]]; then
+                COMPREPLY=( $(compgen -o plusdirs -W "quick comprehensive jwt-focused api-only zap-only" -- ${cur}) )
+            elif [[ ${prev} == "--auth-type" ]]; then
+                COMPREPLY=( $(compgen -o plusdirs -W "header cookie token" -- ${cur}) )
+            elif [[ ${prev} == "--plugins" ]]; then
+                COMPREPLY=( $(compgen -o plusdirs -W "SecurityHeadersChecker CORSChecker JWTSecurityChecker ParameterPollutionChecker RateLimitingChecker" -- ${cur}) )
+            else
+                opts="-f --file -u --curl -a --auth-type -n --auth-name -v --auth-value --zap-path --zap-port --zap-host --db-path --export --export-json --export-pdf --export-excel --export-xml --performance-stats --no-zap --no-plugins --plugins --spider-depth --spider-children --max-scan-time --no-progress --template"
+                COMPREPLY=( $(compgen -o plusdirs -W "${opts}" -- ${cur}) )
+            fi
+            ;;
+        config)
+            opts="--env-file --save-config --show-config --wizard"
+            COMPREPLY=( $(compgen -o plusdirs -W "${opts}" -- ${cur}) )
+            ;;
+    esac
+}
+
+complete -F _api_security_scanner_completion python
+complete -F _api_security_scanner_completion main.py

@@ -31,6 +31,8 @@ except ImportError:
 from ..utils.logger import setup_logging, get_logger
 from ..utils.input_parsers import parse_input, InputParserError
 from ..utils.auth_handler import create_auth_handler, AuthenticationError
+from ..utils.autocomplete import AutocompleteManager, generate_autocomplete_files
+from ..utils.config_wizard import run_configuration_wizard
 from ..core.db_manager import DatabaseManager, ReportManager
 from ..core.zap_manager import ZAPManager, ZAPManagerError
 from ..core.scanner_plugins import PluginManager
@@ -154,14 +156,16 @@ def cli(ctx, verbose, log_dir, interactive):
 @click.option('--save-config', is_flag=True, help='Save current configuration to .env file')
 @click.option('--show-config', is_flag=True, help='Show current configuration and exit')
 @click.option('--wizard', is_flag=True, help='Run interactive configuration wizard')
+@click.option('--validate', is_flag=True, help='Validate current configuration')
 @click.pass_context
-def config(ctx, env_file: str, save_config: bool, show_config: bool, wizard: bool):
+def config(ctx, env_file: str, save_config: bool, show_config: bool, wizard: bool, validate: bool):
     """⚙️ Configuration management commands."""
     config_manager = get_config_manager(env_file)
     config = config_manager.get_config()
     
     if wizard:
-        _run_configuration_wizard(config_manager, env_file)
+        # Use the new enhanced configuration wizard
+        run_configuration_wizard(env_file)
         return
     
     if show_config:
@@ -183,7 +187,18 @@ def config(ctx, env_file: str, save_config: bool, show_config: bool, wizard: boo
         echo(f"Configuration saved to {env_file}")
         return
     
-    # Validate configuration
+    if validate:
+        # Validate configuration
+        validation = config_manager.validate_config()
+        if validation['valid']:
+            secho("✅ Configuration is valid", fg='green')
+        else:
+            secho("❌ Configuration issues found:", fg='red')
+            for issue in validation['issues']:
+                echo(f"  - {issue}")
+        return
+    
+    # Default: validate configuration
     validation = config_manager.validate_config()
     if validation['valid']:
         echo("Configuration is valid")
@@ -1225,6 +1240,7 @@ def help_cmd(ctx):
     echo("1. Basic scan: python main.py scan -f collection.json")
     echo("2. Interactive mode: python main.py --interactive scan")
     echo("3. Quick template: python main.py scan -f collection.json --template quick")
+    echo("4. Configuration wizard: python main.py config --wizard")
     
     echo("\n🔧 COMMON COMMANDS:")
     echo("-" * 30)
@@ -1242,6 +1258,8 @@ def help_cmd(ctx):
     echo("reports-info  - Show reports directory info")
     echo("clear-reports - Clear all report files")
     echo("cleanup-reports - Clean up old report files")
+    echo("autocomplete  - Generate shell autocomplete files")
+    echo("help          - Show this help message")
     
     echo("\n📁 INPUT FORMATS:")
     echo("-" * 30)
@@ -1282,6 +1300,9 @@ def help_cmd(ctx):
     echo("")
     echo("# Scan with specific plugins only")
     echo("python main.py scan -f api.json --plugins JWTSecurityChecker,SecurityHeadersChecker")
+    echo("")
+    echo("# Setup autocomplete for your shell")
+    echo("python main.py autocomplete")
     
     echo("\n🔗 For more detailed help on any command:")
     echo("python main.py <command> --help")
@@ -1328,6 +1349,99 @@ def plugins(ctx):
     except Exception as e:
         secho(f"Error listing plugins: {e}", fg='red')
         sys.exit(1)
+
+
+@cli.command()
+@click.option('--shell', type=click.Choice(['bash', 'zsh', 'fish', 'all']), 
+              default='all', help='Generate autocomplete for specific shell')
+@click.option('--install', is_flag=True, help='Install autocomplete files to system')
+@click.pass_context
+def autocomplete(ctx, shell: str, install: bool):
+    """🚀 Generate and install shell autocomplete files."""
+    try:
+        echo("\n🚀 API Security Scanner - Autocomplete Setup")
+        echo("=" * 50)
+        
+        # Generate autocomplete files
+        generate_autocomplete_files()
+        
+        if install:
+            echo("\n📦 Installing autocomplete files...")
+            _install_autocomplete_files(shell)
+        else:
+            echo("\n💡 To install autocomplete files, run:")
+            echo("  python main.py autocomplete --install")
+            echo("\nOr manually install:")
+            echo("  Bash: source autocomplete/api-security-scanner.bash")
+            echo("  Zsh:  cp autocomplete/_api-security-scanner ~/.zsh/completions/")
+            echo("  Fish: cp autocomplete/api-security-scanner.fish ~/.config/fish/completions/")
+        
+        echo("\n✅ Autocomplete setup complete!")
+        echo("🔄 Restart your shell or run 'source ~/.bashrc' to activate autocomplete")
+        
+    except Exception as e:
+        secho(f"Error setting up autocomplete: {e}", fg='red')
+        sys.exit(1)
+
+
+def _install_autocomplete_files(shell: str):
+    """Install autocomplete files to system directories."""
+    import shutil
+    from pathlib import Path
+    
+    autocomplete_dir = Path("autocomplete")
+    if not autocomplete_dir.exists():
+        secho("Error: Autocomplete directory not found. Run without --install first.", fg='red')
+        return
+    
+    home_dir = Path.home()
+    
+    if shell in ['bash', 'all']:
+        # Install bash completion
+        bash_source = autocomplete_dir / "api-security-scanner.bash"
+        bash_target = home_dir / ".bash_completion.d" / "api-security-scanner"
+        
+        try:
+            bash_target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(bash_source, bash_target)
+            echo(f"✅ Bash completion installed to {bash_target}")
+            
+            # Add to .bashrc if not already present
+            bashrc = home_dir / ".bashrc"
+            if bashrc.exists():
+                with open(bashrc, 'r') as f:
+                    content = f.read()
+                
+                if "api-security-scanner" not in content:
+                    with open(bashrc, 'a') as f:
+                        f.write(f"\n# API Security Scanner autocomplete\nsource {bash_target}\n")
+                    echo("✅ Added autocomplete to .bashrc")
+        except Exception as e:
+            secho(f"⚠️  Could not install bash completion: {e}", fg='yellow')
+    
+    if shell in ['zsh', 'all']:
+        # Install zsh completion
+        zsh_source = autocomplete_dir / "_api-security-scanner"
+        zsh_target = home_dir / ".zsh" / "completions" / "_api-security-scanner"
+        
+        try:
+            zsh_target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(zsh_source, zsh_target)
+            echo(f"✅ Zsh completion installed to {zsh_target}")
+        except Exception as e:
+            secho(f"⚠️  Could not install zsh completion: {e}", fg='yellow')
+    
+    if shell in ['fish', 'all']:
+        # Install fish completion
+        fish_source = autocomplete_dir / "api-security-scanner.fish"
+        fish_target = home_dir / ".config" / "fish" / "completions" / "api-security-scanner.fish"
+        
+        try:
+            fish_target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(fish_source, fish_target)
+            echo(f"✅ Fish completion installed to {fish_target}")
+        except Exception as e:
+            secho(f"⚠️  Could not install fish completion: {e}", fg='yellow')
 
 
 def _show_welcome_message():
@@ -1499,121 +1613,9 @@ def _interactive_report_setup() -> Dict[str, Any]:
     return report_options
 
 
-def _run_configuration_wizard(config_manager, env_file: str):
-    """Run interactive configuration wizard."""
-    echo("\n🔧 CONFIGURATION WIZARD")
-    echo("="*50)
-    echo("This wizard will help you configure the API Security Scanner.")
-    echo("Press Enter to keep current values or type new values.\n")
-    
-    config = config_manager.get_config()
-    
-    # Database configuration
-    echo("📁 DATABASE CONFIGURATION")
-    echo("-" * 30)
-    current_db_path = config.database.path
-    new_db_path = prompt("Database path", default=current_db_path)
-    
-    # ZAP configuration
-    echo("\n🕷️  ZAP CONFIGURATION")
-    echo("-" * 30)
-    current_zap_host = config.zap.host
-    current_zap_port = config.zap.port
-    current_zap_external = config.zap.external_zap
-    
-    new_zap_host = prompt("ZAP host", default=current_zap_host)
-    new_zap_port = int(prompt("ZAP port", default=str(current_zap_port)))
-    new_zap_external = confirm("Use external ZAP instance?", default=current_zap_external)
-    
-    # Logging configuration
-    echo("\n📝 LOGGING CONFIGURATION")
-    echo("-" * 30)
-    current_log_level = config.logging.level
-    current_log_dir = config.logging.log_dir
-    
-    log_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
-    new_log_level = click.prompt(
-        "Log level",
-        type=click.Choice(log_levels, case_sensitive=False),
-        default=current_log_level
-    )
-    new_log_dir = prompt("Log directory", default=current_log_dir)
-    
-    # Report configuration
-    echo("\n📊 REPORT CONFIGURATION")
-    echo("-" * 30)
-    current_report_dir = config.report.output_dir
-    new_report_dir = prompt("Report output directory", default=current_report_dir)
-    
-    # Plugin configuration
-    echo("\n🔌 PLUGIN CONFIGURATION")
-    echo("-" * 30)
-    current_plugins = config.plugin.enabled_plugins
-    echo(f"Current enabled plugins: {', '.join(current_plugins)}")
-    
-    if confirm("Modify enabled plugins?"):
-        try:
-            plugin_manager = PluginManager("api_security_scanner/plugins")
-            available_plugins = plugin_manager.get_plugin_list()
-            
-            if available_plugins:
-                echo("\nAvailable plugins:")
-                for i, plugin in enumerate(available_plugins, 1):
-                    echo(f"  {i}. {plugin['name']} - {plugin['description']}")
-                
-                selected_indices = prompt(
-                    "Enter plugin numbers to enable (comma-separated) or press Enter for all"
-                )
-                
-                if selected_indices.strip():
-                    try:
-                        indices = [int(x.strip()) - 1 for x in selected_indices.split(',')]
-                        new_plugins = [available_plugins[i]['name'] for i in indices if 0 <= i < len(available_plugins)]
-                    except (ValueError, IndexError):
-                        secho("Invalid selection. Keeping current plugins.", fg='yellow')
-                        new_plugins = current_plugins
-                else:
-                    new_plugins = [plugin['name'] for plugin in available_plugins]
-            else:
-                echo("No plugins available.")
-                new_plugins = current_plugins
-        except Exception as e:
-            secho(f"Error loading plugins: {e}", fg='yellow')
-            new_plugins = current_plugins
-    else:
-        new_plugins = current_plugins
-    
-    # Summary and save
-    echo("\n📋 CONFIGURATION SUMMARY")
-    echo("="*50)
-    echo(f"Database Path: {new_db_path}")
-    echo(f"ZAP Host: {new_zap_host}")
-    echo(f"ZAP Port: {new_zap_port}")
-    echo(f"ZAP External: {new_zap_external}")
-    echo(f"Log Level: {new_log_level}")
-    echo(f"Log Directory: {new_log_dir}")
-    echo(f"Report Directory: {new_report_dir}")
-    echo(f"Enabled Plugins: {', '.join(new_plugins)}")
-    
-    if confirm("\nSave this configuration?"):
-        # Update configuration
-        config.database.path = new_db_path
-        config.zap.host = new_zap_host
-        config.zap.port = new_zap_port
-        config.zap.external_zap = new_zap_external
-        config.logging.level = new_log_level
-        config.logging.log_dir = new_log_dir
-        config.report.output_dir = new_report_dir
-        config.plugin.enabled_plugins = new_plugins
-        
-        # Save to file
-        config_manager.save_to_env(env_file)
-        echo(f"\n✅ Configuration saved to {env_file}")
-    else:
-        echo("\n❌ Configuration not saved.")
 
 
-def _get_scan_template(template_name: str) -> Dict[str, Any]:
+def _get_scan_template(template_name: str) -> Optional[Dict[str, Any]]:
     """Get predefined scan template configuration."""
     templates = {
         'quick': {
