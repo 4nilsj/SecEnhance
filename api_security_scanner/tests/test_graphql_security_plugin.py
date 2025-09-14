@@ -25,8 +25,8 @@ class TestGraphQLSecurityChecker:
     def test_plugin_initialization(self):
         """Test plugin initialization."""
         assert self.plugin.name == "GraphQLSecurityChecker"
-        assert self.plugin.description == "Advanced GraphQL vulnerability detection, query analysis, and security testing"
-        assert self.plugin.version == "1.0.0"
+        assert "Conditional GraphQL vulnerability detection" in self.plugin.description
+        assert self.plugin.version == "1.1.0"
         assert len(self.plugin.graphql_patterns) > 0
         assert len(self.plugin.attack_payloads) > 0
         assert 'introspection' in self.plugin.attack_payloads
@@ -402,6 +402,100 @@ class TestGraphQLSecurityChecker:
         # Should find some vulnerabilities in the test GraphQL endpoint
         assert len(result.vulnerabilities) >= 0  # May or may not find vulnerabilities depending on implementation
     
+    def test_should_activate_with_graphql_requests(self):
+        """Test should_activate method with GraphQL requests."""
+        # Create requests with GraphQL endpoints
+        requests = [
+            {
+                'url': 'https://test.com/graphql',
+                'method': 'POST',
+                'headers': {'Content-Type': 'application/json'},
+                'body': '{"query": "query { user { name } }"}'
+            },
+            {
+                'url': 'https://test.com/api/users',
+                'method': 'GET',
+                'headers': {'Content-Type': 'application/json'},
+                'body': '{"name": "John"}'
+            }
+        ]
+        
+        assert self.plugin.should_activate(requests) == True
+    
+    def test_should_activate_without_graphql_requests(self):
+        """Test should_activate method without GraphQL requests."""
+        # Create requests without GraphQL endpoints
+        requests = [
+            {
+                'url': 'https://test.com/api/users',
+                'method': 'GET',
+                'headers': {'Content-Type': 'application/json'},
+                'body': '{"name": "John"}'
+            },
+            {
+                'url': 'https://test.com/api/posts',
+                'method': 'POST',
+                'headers': {'Content-Type': 'application/json'},
+                'body': '{"title": "Test Post"}'
+            }
+        ]
+        
+        assert self.plugin.should_activate(requests) == False
+    
+    def test_conditional_plugin_behavior_with_graphql(self):
+        """Test conditional plugin behavior when GraphQL endpoints are found."""
+        # Create a request with GraphQL endpoint
+        request = {
+            'url': 'https://test.com/graphql',
+            'method': 'POST',
+            'headers': {'Content-Type': 'application/json'},
+            'body': '{"query": "query { user { name } }"}'
+        }
+        
+        response = Mock()
+        response.status_code = 200
+        response.headers = {'Content-Type': 'application/json'}
+        response.text = '{"data": {"user": {"name": "John Doe"}}}'
+        
+        # Mock the make_request method
+        with patch.object(self.plugin, 'make_request', return_value=response):
+            result = self.plugin.check("https://test.com", [request])
+        
+        assert isinstance(result, PluginResult)
+        assert result.success
+        assert result.plugin_name == "GraphQLSecurityChecker"
+        # Should perform GraphQL security analysis
+        assert len(result.vulnerabilities) >= 0  # May or may not find vulnerabilities depending on implementation
+    
+    def test_conditional_plugin_behavior_without_graphql(self):
+        """Test conditional plugin behavior when no GraphQL endpoints are found."""
+        # Create requests without GraphQL endpoints
+        requests = [
+            {
+                'url': 'https://test.com/api/users',
+                'method': 'GET',
+                'headers': {'Content-Type': 'application/json'},
+                'body': '{"name": "John"}'
+            },
+            {
+                'url': 'https://test.com/api/posts',
+                'method': 'POST',
+                'headers': {'Content-Type': 'application/json'},
+                'body': '{"title": "Test Post"}'
+            }
+        ]
+        
+        # Mock the make_request method (should not be called)
+        with patch.object(self.plugin, 'make_request') as mock_make_request:
+            result = self.plugin.check("https://test.com", requests)
+        
+        assert isinstance(result, PluginResult)
+        assert result.success
+        assert result.plugin_name == "GraphQLSecurityChecker"
+        # Should not find any vulnerabilities and should not make any requests
+        assert len(result.vulnerabilities) == 0
+        mock_make_request.assert_not_called()
+    
     def test_non_graphql_endpoint_skipping(self):
         """Test that non-GraphQL endpoints are skipped."""
         # Create a request with non-GraphQL endpoint
@@ -417,15 +511,16 @@ class TestGraphQLSecurityChecker:
         response.headers = {'Content-Type': 'application/json'}
         response.text = '{"users": [{"name": "John"}]}'
         
-        # Mock the make_request method
-        with patch.object(self.plugin, 'make_request', return_value=response):
+        # Mock the make_request method (should not be called)
+        with patch.object(self.plugin, 'make_request') as mock_make_request:
             result = self.plugin.check("https://test.com", [request])
         
         assert isinstance(result, PluginResult)
         assert result.success
         assert result.plugin_name == "GraphQLSecurityChecker"
-        # Should not find any vulnerabilities for non-GraphQL endpoints
+        # Should not find any vulnerabilities and should not make any requests
         assert len(result.vulnerabilities) == 0
+        mock_make_request.assert_not_called()
     
     def test_error_handling(self):
         """Test error handling in plugin."""
@@ -443,6 +538,7 @@ class TestGraphQLSecurityChecker:
         
         assert isinstance(result, PluginResult)
         assert not result.success
+        assert result.error is not None
         assert "GraphQL security check failed" in result.error
         assert len(result.vulnerabilities) == 0
     

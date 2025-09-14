@@ -18,11 +18,16 @@ from api_security_scanner.core.scanner_plugins import BasePlugin, PluginResult, 
 
 
 class GraphQLSecurityChecker(BasePlugin):
-    """Comprehensive GraphQL security analysis plugin covering all major attack vectors."""
+    """Comprehensive GraphQL security analysis plugin covering all major attack vectors.
+    
+    This is a conditional plugin that only activates when GraphQL endpoints are detected.
+    It performs comprehensive security testing including introspection, query complexity,
+    injection attacks, and authorization bypass detection.
+    """
     
     name = "GraphQLSecurityChecker"
-    description = "Advanced GraphQL vulnerability detection, query analysis, and security testing"
-    version = "1.0.0"
+    description = "Conditional GraphQL vulnerability detection, query analysis, and security testing (activates only when GraphQL endpoints are found)"
+    version = "1.1.0"
     author = "API Security Scanner"
     
     def __init__(self, zap=None, target=None):
@@ -177,26 +182,42 @@ class GraphQLSecurityChecker(BasePlugin):
     
     def check(self, target_url: str, requests_data: List[Dict[str, Any]], 
               auth_headers: Optional[Dict[str, str]] = None) -> PluginResult:
-        """Perform comprehensive GraphQL security analysis."""
+        """Perform comprehensive GraphQL security analysis only when GraphQL requests are found."""
         vulnerabilities = []
         
+        # First, check if any requests contain GraphQL content
+        graphql_requests = []
+        for request in requests_data:
+            if self._is_graphql_endpoint(request.get('url', ''), request):
+                graphql_requests.append(request)
+        
+        # If no GraphQL requests found, return early
+        if not graphql_requests:
+            self.logger.info("No GraphQL endpoints detected, skipping GraphQL security checks")
+            return PluginResult(
+                plugin_name=self.name,
+                success=True,
+                vulnerabilities=[],
+                error=None
+            )
+        
+        self.logger.info(f"Found {len(graphql_requests)} GraphQL endpoint(s), performing security analysis")
+        
         try:
-            for request in requests_data:
+            for request in graphql_requests:
                 url = request.get('url', '')
                 method = request.get('method', 'GET')
                 
-                # Check if this is a GraphQL endpoint
-                if self._is_graphql_endpoint(url, request):
-                    self.logger.info(f"GraphQL endpoint detected: {url}")
-                    
-                    # Make request with authentication
-                    headers = request.get('headers', {}).copy()
-                    if auth_headers:
-                        headers.update(auth_headers)
-                    
-                    response = self.make_request(url, method, headers, request.get('body') or '')
-                    
-                    if response:
+                self.logger.info(f"Analyzing GraphQL endpoint: {url}")
+                
+                # Make request with authentication
+                headers = request.get('headers', {}).copy()
+                if auth_headers:
+                    headers.update(auth_headers)
+                
+                response = self.make_request(url, method, headers, request.get('body') or '')
+                
+                if response:
                         # 1. Test GraphQL introspection
                         intro_vulns = self._test_introspection(url, method, headers, response)
                         vulnerabilities.extend(intro_vulns)
@@ -297,6 +318,13 @@ class GraphQLSecurityChecker(BasePlugin):
         if 'application/graphql' in content_type:
             return True
         
+        return False
+    
+    def should_activate(self, requests_data: List[Dict[str, Any]]) -> bool:
+        """Check if the plugin should be activated based on request data."""
+        for request in requests_data:
+            if self._is_graphql_endpoint(request.get('url', ''), request):
+                return True
         return False
     
     def _test_introspection(self, url: str, method: str, headers: Dict[str, str], 
