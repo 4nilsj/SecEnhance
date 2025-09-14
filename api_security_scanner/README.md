@@ -4,14 +4,15 @@ A highly customizable command-line interface (CLI) tool for automated API securi
 
 ## Features
 
-- **Multiple Input Formats**: Supports Postman Collections, OpenAPI/Swagger specs, and curl commands
+- **Multiple Input Formats**: Supports Postman Collections, OpenAPI/Swagger specs, curl commands, and HAR files
 - **OWASP ZAP Integration**: Leverages OWASP ZAP for comprehensive security testing
+- **🤖 AI-Powered Detection**: Machine learning-based vulnerability detection with anomaly detection, classification, and risk scoring
 - **Custom Plugin System**: Extensible architecture for custom vulnerability checks
 - **Authentication Support**: Token, cookie, and header-based authentication
 - **Performance Monitoring**: Detailed timing and performance statistics
 - **Comprehensive Logging**: Multi-level logging with structured output
 - **SQLite Storage**: Persistent storage of scan results and metrics
-- **HTML/JSON Reports**: Detailed reporting with Jinja2 templates
+- **Multi-Format Reports**: HTML, PDF, Excel, XML, and JSON reports with Jinja2 templates
 
 ## Installation
 
@@ -154,6 +155,9 @@ docker run --rm -v $(pwd):/workspace api-security-scanner scan -f /workspace/api
 
 # Scan a curl command
 docker run --rm api-security-scanner scan -u "curl -X GET https://api.example.com/users"
+
+# Scan a HAR file (from Insomnia, Postman, etc.)
+docker run --rm -v $(pwd):/workspace api-security-scanner scan -f /workspace/insomnia-export.har
 ```
 
 #### Using Docker Compose
@@ -223,7 +227,44 @@ python main.py scan -f api-spec.yaml
 
 # Scan a curl command
 python main.py scan -u "curl -X GET https://api.example.com/users"
+
+# Scan a HAR file (from Insomnia, Postman, etc.)
+python main.py scan -f insomnia-export.har
 ```
+
+### AI-Powered Detection
+
+The scanner includes advanced AI-powered detection capabilities:
+
+```bash
+# Enable AI detection (default)
+python main.py scan -f collection.json --ai-detection
+
+# Disable AI detection
+python main.py scan -f collection.json --no-ai-detection
+
+# Configure specific AI features
+python main.py scan -f collection.json \
+  --ai-anomaly-detection \
+  --ai-vulnerability-classification \
+  --ai-risk-scoring \
+  --ai-intelligent-fuzzing
+
+# Run only AI security checker
+python main.py scan -f collection.json --plugins AISecurityChecker
+```
+
+**AI Detection Features:**
+- 🤖 **Anomaly Detection**: Identifies unusual patterns in API requests
+- 🎯 **Vulnerability Classification**: Automatically classifies attack types (SQL injection, XSS, etc.)
+- 📊 **Risk Scoring**: Calculates comprehensive risk scores based on multiple factors
+- 💡 **Intelligent Fuzzing**: Suggests targeted fuzzing approaches
+- 🧠 **Learning**: Improves detection accuracy over time
+
+For detailed AI detection documentation, see:
+- **[AI Detection Guide](docs/AI_DETECTION_GUIDE.md)** - Complete user guide
+- **[AI Detection Quick Reference](docs/AI_DETECTION_QUICK_REFERENCE.md)** - Quick reference
+- **[AI Detection Architecture](docs/AI_DETECTION_ARCHITECTURE.md)** - Technical details
 
 ### Scan with Authentication
 
@@ -237,6 +278,161 @@ python main.py scan -f collection.json -a token -n "Authorization" -v "Bearer yo
 # Cookie authentication
 python main.py scan -f collection.json -a cookie -n "session" -v "session-value"
 ```
+
+### HAR File Support
+
+The scanner now supports HAR (HTTP Archive) files exported from various tools:
+
+#### Supported Tools
+- **Insomnia REST Client** - Export as HAR format
+- **Postman** - Export collection as HAR
+- **Browser DevTools** - Network tab export
+- **Burp Suite** - Export as HAR
+- **OWASP ZAP** - Export as HAR
+
+#### HAR File Features
+- ✅ **Automatic Detection** - Detects `.har` files and JSON files with HAR structure
+- ✅ **Complete Request Data** - Extracts headers, body, query parameters, and cookies
+- ✅ **JWT Token Detection** - Automatically detects JWT tokens in Authorization headers
+- ✅ **Conditional Scanning** - Enables JWT security plugin when JWT tokens are found
+- ✅ **Folder Organization** - Preserves request grouping from original tool
+
+#### Example Usage
+
+```bash
+# Scan HAR file from Insomnia
+python main.py scan -f insomnia-export.har
+
+# Scan HAR file with authentication
+python main.py scan -f postman-export.har -a header -n "X-API-Key" -v "your-key"
+
+# Scan HAR file with ZAP only
+python main.py scan -f browser-export.har --no-plugins
+
+# Scan HAR file with custom plugins only
+python main.py scan -f burp-export.har --no-zap
+```
+
+#### Creating HAR Files
+
+**From Insomnia:**
+1. Right-click on your workspace
+2. Select "Export Data" → "HAR"
+3. Save the file and use with the scanner
+
+**From Postman:**
+1. Click on your collection
+2. Go to "Export" → "Collection v2.1"
+3. Convert to HAR format using online tools or Postman's HAR export feature
+
+**From Browser DevTools:**
+1. Open DevTools (F12)
+2. Go to Network tab
+3. Right-click → "Save all as HAR with content"
+
+### Multi-Format Report Generation
+
+The scanner supports generating reports in multiple formats for different use cases:
+
+#### Supported Report Formats
+
+- **HTML** (Default) - Interactive web-based reports with charts and detailed findings
+- **PDF** - Professional PDF reports for documentation and sharing
+- **Excel** - Spreadsheet format with multiple sheets for data analysis
+- **XML** - Machine-readable format for integration with other tools
+- **JSON** (Default) - Structured data format for programmatic processing
+
+#### Report Generation Examples
+
+```bash
+# Generate all report formats
+python main.py scan -f collection.json \
+  --export-pdf security-report.pdf \
+  --export-excel security-data.xlsx \
+  --export-xml security-findings.xml
+
+# Generate specific formats only
+python main.py scan -f api-spec.yaml --export-pdf executive-summary.pdf
+
+# Generate Excel report for data analysis
+python main.py scan -f har-export.har --export-excel detailed-analysis.xlsx
+
+# Generate XML for CI/CD integration
+python main.py scan -f postman-collection.json --export-xml ci-results.xml
+```
+
+#### Report Format Details
+
+**PDF Reports:**
+- Professional layout with tables and summaries
+- Suitable for executive presentations
+- Includes risk summaries and vulnerability details
+- Limited to first 20 vulnerabilities for readability
+
+**Excel Reports:**
+- Multiple sheets: Summary, Vulnerabilities, Performance
+- Full vulnerability data with descriptions and solutions
+- Sortable and filterable data
+- Suitable for detailed analysis and tracking
+
+**XML Reports:**
+- Machine-readable format
+- Complete scan metadata and findings
+- Suitable for integration with other security tools
+- Structured data for automated processing
+
+**JSON Reports:**
+- Complete scan data in structured format
+- Includes metadata, vulnerabilities, and performance stats
+- Suitable for API integration and data processing
+- Human-readable with proper formatting
+
+### Plugin Selection
+
+The scanner supports running only specific security plugins, giving you fine-grained control over which security checks to perform.
+
+#### Available Plugins
+
+List all available plugins:
+```bash
+python main.py plugins
+```
+
+#### Plugin Selection Examples
+
+```bash
+# Run only security headers plugin
+python main.py scan -f collection.json --plugins SecurityHeadersChecker
+
+# Run only JWT security plugin
+python main.py scan -f collection.json --plugins JWTSecurityChecker
+
+# Run multiple specific plugins
+python main.py scan -f collection.json --plugins SecurityHeadersChecker,CORSChecker,JWTSecurityChecker
+
+# Run with curl command and specific plugins
+python main.py scan -u "curl -X GET https://api.com" --plugins SecurityHeadersChecker
+
+# Run with HAR file and JWT plugin only
+python main.py scan -f export.har --plugins JWTSecurityChecker --export-pdf jwt-analysis.pdf
+```
+
+#### Plugin Selection Benefits
+
+- **Faster Scans**: Run only the checks you need
+- **Focused Analysis**: Target specific security areas
+- **Reduced Noise**: Avoid irrelevant findings
+- **Custom Workflows**: Create specialized scanning pipelines
+- **Resource Optimization**: Use fewer system resources
+
+#### Plugin Categories
+
+- **SecurityHeadersChecker**: HTTP security headers analysis
+- **CORSChecker**: Cross-Origin Resource Sharing security
+- **JWTSecurityChecker**: JWT token and OAuth flow security
+- **RateLimitingChecker**: API rate limiting analysis
+- **ComprehensiveSecurityChecker**: General security analysis
+- **EnhancedSecurityChecker**: Advanced security checks
 
 ### Advanced Scan with Reporting
 
@@ -269,8 +465,19 @@ For comprehensive documentation and troubleshooting, see:
 ### Scan Options
 
 #### Input Options
-- `-f, --file` - Path to Postman Collection or OpenAPI spec file
+- `-f, --file` - Path to Postman Collection, OpenAPI spec file, or HAR file
 - `-u, --curl` - Curl command string to parse
+
+#### Report Export Options
+- `--export` - Export HTML report to specified file
+- `--export-json` - Export JSON report to specified file
+- `--export-pdf` - Export PDF report to specified file
+- `--export-excel` - Export Excel report to specified file
+- `--export-xml` - Export XML report to specified file
+
+#### Plugin Selection Options
+- `--plugins` - Comma-separated list of specific plugins to run (e.g., "SecurityHeadersChecker,JWTSecurityChecker")
+- `--no-plugins` - Skip custom plugin scanning (ZAP only)
 
 #### Authentication Options
 - `-a, --auth-type` - Authentication type (header, cookie, token)
