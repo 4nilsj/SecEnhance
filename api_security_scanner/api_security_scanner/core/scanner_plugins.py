@@ -237,13 +237,14 @@ class BasePlugin(ABC):
 class PluginManager:
     """Manages plugin discovery, loading, and execution with enhanced vulnerability tracking."""
     
-    def __init__(self, plugins_dir: str = "plugins", selected_plugins: Optional[List[str]] = None):
+    def __init__(self, plugins_dir: str = "plugins", selected_plugins: Optional[List[str]] = None, ai_config: Optional[Dict[str, Any]] = None):
         self.plugins_dir = Path(plugins_dir)
         self.plugins_dir.mkdir(exist_ok=True)
         self.logger = get_logger(__name__)
         self.loaded_plugins: Dict[str, Type[BasePlugin]] = {}
         self.selected_plugins = selected_plugins
         self.request_analyzer = None
+        self.ai_config = ai_config
         self._load_plugins()
         self._initialize_request_analyzer()
     
@@ -346,6 +347,11 @@ class PluginManager:
         try:
             plugin_class = self.loaded_plugins[plugin_name]
             plugin_instance = plugin_class(zap=zap, target=target_url)
+            
+            # Configure AI plugin if needed
+            if plugin_name == 'AISecurityChecker' and self.ai_config and hasattr(plugin_instance, 'configure'):
+                # Type ignore because we know this is an AI plugin with configure method
+                plugin_instance.configure(self.ai_config)  # type: ignore
             
             start_time = datetime.now()
             result = plugin_instance.check(target_url, requests_data, auth_headers)

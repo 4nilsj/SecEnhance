@@ -233,11 +233,19 @@ def config(ctx, env_file: str, save_config: bool, show_config: bool, wizard: boo
 @click.option('--max-scan-time', type=int, help='Maximum scan time in minutes (time-bound scanning)')
 @click.option('--no-progress', is_flag=True, help='Disable progress bars (useful for verbose output)')
 @click.option('--template', help='Use predefined scan template (quick, comprehensive, jwt-focused)')
+@click.option('--ai-detection/--no-ai-detection', default=True, help='Enable/disable AI-powered vulnerability detection')
+@click.option('--ai-anomaly-detection/--no-ai-anomaly-detection', default=True, help='Enable/disable AI anomaly detection')
+@click.option('--ai-vulnerability-classification/--no-ai-vulnerability-classification', default=True, help='Enable/disable AI vulnerability classification')
+@click.option('--ai-risk-scoring/--no-ai-risk-scoring', default=True, help='Enable/disable AI risk scoring')
+@click.option('--ai-intelligent-fuzzing/--no-ai-intelligent-fuzzing', default=True, help='Enable/disable AI intelligent fuzzing suggestions')
+@click.option('--ai-learning/--no-ai-learning', default=True, help='Enable/disable AI learning from scan results')
 @click.pass_context
 def scan(ctx, input_file, curl_command, auth_type, auth_name, auth_value, 
          zap_path, zap_port, zap_host, db_path, export, export_json, export_pdf, 
          export_excel, export_xml, performance_stats, no_zap, no_plugins, plugins,
-         spider_depth, spider_children, max_scan_time, no_progress, template):
+         spider_depth, spider_children, max_scan_time, no_progress, template,
+         ai_detection, ai_anomaly_detection, ai_vulnerability_classification,
+         ai_risk_scoring, ai_intelligent_fuzzing, ai_learning):
     """🔍 Perform security scan on API endpoints.
     
     This command performs comprehensive security testing on your API endpoints
@@ -372,7 +380,45 @@ def scan(ctx, input_file, curl_command, auth_type, auth_name, auth_value,
                 zap_manager = ZAPManager(zap_path, zap_port, zap_host)
             
             if not no_plugins:
-                plugin_manager = PluginManager("api_security_scanner/plugins", selected_plugins=selected_plugins)
+                # Configure AI detection settings
+                ai_config = {
+                    'enabled': ai_detection,
+                    'models': {
+                        'anomaly_detection': {
+                            'enabled': ai_anomaly_detection,
+                            'threshold': 0.7,
+                            'contamination': 0.1
+                        },
+                        'vulnerability_classification': {
+                            'enabled': ai_vulnerability_classification,
+                            'threshold': 0.8,
+                            'min_samples': 10
+                        },
+                        'risk_scoring': {
+                            'enabled': ai_risk_scoring,
+                            'weights': {
+                                'endpoint_complexity': 0.3,
+                                'parameter_count': 0.2,
+                                'authentication': 0.3,
+                                'data_sensitivity': 0.2
+                            }
+                        },
+                        'intelligent_fuzzing': {
+                            'enabled': ai_intelligent_fuzzing,
+                            'max_suggestions': 50,
+                            'confidence_threshold': 0.6
+                        }
+                    },
+                    'learning': {
+                        'enabled': ai_learning,
+                        'auto_retrain': True,
+                        'retrain_interval': 100,
+                        'min_training_samples': 50
+                    },
+                    'fallback_to_rules': True
+                }
+                
+                plugin_manager = PluginManager("api_security_scanner/plugins", selected_plugins=selected_plugins, ai_config=ai_config)
             
             # Phase 5: Execute security checks
             progress.start_phase("Executing security checks")

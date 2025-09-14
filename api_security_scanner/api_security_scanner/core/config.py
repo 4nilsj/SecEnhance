@@ -50,6 +50,46 @@ class LoggingConfig:
 
 
 @dataclass
+class AIDetectionConfig:
+    """AI-powered detection configuration settings."""
+    enabled: bool = True
+    models: Dict[str, Any] = field(default_factory=lambda: {
+        'anomaly_detection': {
+            'enabled': True,
+            'threshold': 0.7,
+            'contamination': 0.1
+        },
+        'vulnerability_classification': {
+            'enabled': True,
+            'threshold': 0.8,
+            'min_samples': 10
+        },
+        'risk_scoring': {
+            'enabled': True,
+            'weights': {
+                'endpoint_complexity': 0.3,
+                'parameter_count': 0.2,
+                'authentication': 0.3,
+                'data_sensitivity': 0.2
+            }
+        },
+        'intelligent_fuzzing': {
+            'enabled': True,
+            'max_suggestions': 50,
+            'confidence_threshold': 0.6
+        }
+    })
+    learning: Dict[str, Any] = field(default_factory=lambda: {
+        'enabled': True,
+        'auto_retrain': True,
+        'retrain_interval': 100,  # scans
+        'min_training_samples': 50
+    })
+    fallback_to_rules: bool = True
+    model_storage_path: str = "models"
+
+
+@dataclass
 class ReportConfig:
     """Report generation configuration settings."""
     output_dir: str = "reports"
@@ -107,6 +147,7 @@ class AppConfig:
     security: SecurityConfig = field(default_factory=SecurityConfig)
     plugin: PluginConfig = field(default_factory=PluginConfig)
     container: ContainerConfig = field(default_factory=ContainerConfig)
+    ai_detection: AIDetectionConfig = field(default_factory=AIDetectionConfig)
     
     # Application settings
     app_name: str = "API Security Scanner"
@@ -234,6 +275,22 @@ class ConfigManager:
             self.config.container.reports_dir = os.getenv("CONTAINER_REPORTS_DIR")
         if os.getenv("ZAP_CONTAINER_NAME"):
             self.config.container.zap_container_name = os.getenv("ZAP_CONTAINER_NAME")
+        
+        # AI Detection configuration
+        if os.getenv("AI_DETECTION_ENABLED"):
+            self.config.ai_detection.enabled = os.getenv("AI_DETECTION_ENABLED").lower() == "true"
+        if os.getenv("AI_ANOMALY_DETECTION_ENABLED"):
+            self.config.ai_detection.models['anomaly_detection']['enabled'] = os.getenv("AI_ANOMALY_DETECTION_ENABLED").lower() == "true"
+        if os.getenv("AI_VULNERABILITY_CLASSIFICATION_ENABLED"):
+            self.config.ai_detection.models['vulnerability_classification']['enabled'] = os.getenv("AI_VULNERABILITY_CLASSIFICATION_ENABLED").lower() == "true"
+        if os.getenv("AI_RISK_SCORING_ENABLED"):
+            self.config.ai_detection.models['risk_scoring']['enabled'] = os.getenv("AI_RISK_SCORING_ENABLED").lower() == "true"
+        if os.getenv("AI_INTELLIGENT_FUZZING_ENABLED"):
+            self.config.ai_detection.models['intelligent_fuzzing']['enabled'] = os.getenv("AI_INTELLIGENT_FUZZING_ENABLED").lower() == "true"
+        if os.getenv("AI_LEARNING_ENABLED"):
+            self.config.ai_detection.learning['enabled'] = os.getenv("AI_LEARNING_ENABLED").lower() == "true"
+        if os.getenv("AI_MODEL_STORAGE_PATH"):
+            self.config.ai_detection.model_storage_path = os.getenv("AI_MODEL_STORAGE_PATH")
         
         # Application settings
         if os.getenv("DEBUG"):
