@@ -533,28 +533,60 @@ def extract_domain(url: str) -> str:
 
 
 def format_http_request(method: str, url: str, headers: Dict[str, str], body: Optional[str] = None) -> str:
-    """Format HTTP request for storage and display."""
+    """Format HTTP request for storage and display with comprehensive details."""
     request_lines = [f"{method} {url} HTTP/1.1"]
     
-    for header, value in headers.items():
-        request_lines.append(f"{header}: {value}")
+    # Add headers section
+    if headers:
+        request_lines.append("")
+        request_lines.append("Request Headers:")
+        for header, value in headers.items():
+            # Mask sensitive headers
+            if header.lower() in ['authorization', 'cookie', 'x-api-key', 'x-auth-token']:
+                masked_value = value[:10] + "..." if len(value) > 10 else "***"
+                request_lines.append(f"  {header}: {masked_value}")
+            else:
+                request_lines.append(f"  {header}: {value}")
     
+    # Add body section
     if body:
         request_lines.append("")
-        request_lines.append(body)
+        request_lines.append("Request Body:")
+        # Truncate very long bodies
+        if len(body) > 2000:
+            request_lines.append(f"  {body[:2000]}...")
+            request_lines.append(f"  [Body truncated - {len(body)} total characters]")
+        else:
+            request_lines.append(f"  {body}")
     
     return "\n".join(request_lines)
 
 
 def format_http_response(status: int, headers: Dict[str, str], body: Optional[str] = None) -> str:
-    """Format HTTP response for storage and display."""
+    """Format HTTP response for storage and display with comprehensive details."""
     response_lines = [f"HTTP/1.1 {status}"]
     
-    for header, value in headers.items():
-        response_lines.append(f"{header}: {value}")
+    # Add headers section
+    if headers:
+        response_lines.append("")
+        response_lines.append("Response Headers:")
+        for header, value in headers.items():
+            # Mask sensitive headers
+            if header.lower() in ['set-cookie', 'authorization', 'x-api-key']:
+                masked_value = value[:10] + "..." if len(value) > 10 else "***"
+                response_lines.append(f"  {header}: {masked_value}")
+            else:
+                response_lines.append(f"  {header}: {value}")
     
+    # Add body section
     if body:
         response_lines.append("")
-        response_lines.append(body)
+        response_lines.append("Response Body:")
+        # Truncate very long bodies
+        if len(body) > 2000:
+            response_lines.append(f"  {body[:2000]}...")
+            response_lines.append(f"  [Body truncated - {len(body)} total characters]")
+        else:
+            response_lines.append(f"  {body}")
     
     return "\n".join(response_lines)

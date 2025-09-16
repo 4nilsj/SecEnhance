@@ -226,6 +226,48 @@ class ReportGenerator:
             border-left: 4px solid #9c27b0;
             margin: 10px 0;
         }
+        .request-line, .response-line {
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 10px;
+            padding: 5px;
+            background: #e3f2fd;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        .headers-section, .body-section {
+            margin: 10px 0;
+            padding: 10px;
+            background: #ffffff;
+            border-radius: 3px;
+            border-left: 3px solid #28a745;
+        }
+        .header-line {
+            margin: 2px 0;
+            padding: 2px 5px;
+            background: #f8f9fa;
+            border-radius: 2px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+        }
+        .body-content {
+            margin-top: 5px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .no-data {
+            color: #6c757d;
+            font-style: italic;
+            padding: 10px;
+            text-align: center;
+        }
         .headers-block {
             background: #e8f5e8;
             border-left: 4px solid #4caf50;
@@ -752,15 +794,20 @@ class ReportGenerator:
                                     {% if vuln.request %}
                                         {{ vuln.request|replace('\\n', '\n')|replace('\\r', '\r') }}
                                     {% else %}
-                                        {{ vuln.method or 'GET' }} {{ vuln.url or 'N/A' }} HTTP/1.1
+                                        <div class="request-line">{{ vuln.method or 'GET' }} {{ vuln.url or 'N/A' }} HTTP/1.1</div>
                                         {% if vuln.headers %}
-                                        {% for header, value in vuln.headers.items() %}
-                                        {{ header }}: {{ value }}
-                                        {% endfor %}
+                                        <div class="headers-section">
+                                            <strong>Request Headers:</strong>
+                                            {% for header, value in vuln.headers.items() %}
+                                            <div class="header-line">{{ header }}: {{ value }}</div>
+                                            {% endfor %}
+                                        </div>
                                         {% endif %}
                                         {% if vuln.body %}
-                                        
-                                        {{ vuln.body }}
+                                        <div class="body-section">
+                                            <strong>Request Body:</strong>
+                                            <div class="body-content">{{ vuln.body }}</div>
+                                        </div>
                                         {% endif %}
                                     {% endif %}
                                 </div>
@@ -770,7 +817,23 @@ class ReportGenerator:
                                     {% if vuln.response %}
                                         {{ vuln.response|replace('\\n', '\n')|replace('\\r', '\r') }}
                                     {% else %}
-                                        Response data not available
+                                        <div class="response-line">HTTP/1.1 {{ vuln.response_code or '200' }}</div>
+                                        {% if vuln.response_headers %}
+                                        <div class="headers-section">
+                                            <strong>Response Headers:</strong>
+                                            {% for header, value in vuln.response_headers.items() %}
+                                            <div class="header-line">{{ header }}: {{ value }}</div>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                        {% if vuln.response_body %}
+                                        <div class="body-section">
+                                            <strong>Response Body:</strong>
+                                            <div class="body-content">{{ vuln.response_body }}</div>
+                                        </div>
+                                        {% else %}
+                                        <div class="no-data">Response data not available</div>
+                                        {% endif %}
                                     {% endif %}
                                 </div>
                                 
