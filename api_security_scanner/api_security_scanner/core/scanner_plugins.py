@@ -8,6 +8,8 @@ import importlib.util
 import inspect
 import os
 import sys
+import signal
+import threading
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Type, Tuple
@@ -245,8 +247,24 @@ class PluginManager:
         self.selected_plugins = selected_plugins
         self.request_analyzer = None
         self.ai_config = ai_config
+        
+        # Scan cancellation support
+        self._cancellation_requested = False
+        self._active_plugins = {}  # Track active plugin executions
+        self._plugin_lock = threading.Lock()
+        
         self._load_plugins()
         self._initialize_request_analyzer()
+    
+    def request_cancellation(self):
+        """Request cancellation of all active plugin executions."""
+        with self._plugin_lock:
+            self._cancellation_requested = True
+            self.logger.info("Plugin execution cancellation requested")
+    
+    def is_cancellation_requested(self) -> bool:
+        """Check if plugin execution cancellation has been requested."""
+        return self._cancellation_requested
     
     def _load_plugins(self):
         """Discover and load all available plugins."""
@@ -401,6 +419,11 @@ class PluginManager:
         self.logger.info(f"Executing {len(plugins_to_run)} plugins (conditional scanning enabled)")
         
         for plugin_name in plugins_to_run:
+            # Check for cancellation before each plugin
+            if self.is_cancellation_requested():
+                self.logger.info("Plugin execution cancelled by user")
+                break
+            
             if plugin_name in self.loaded_plugins:
                 result = self.execute_plugin(plugin_name, target_url, requests_data, auth_headers, zap)
                 results.append(result)

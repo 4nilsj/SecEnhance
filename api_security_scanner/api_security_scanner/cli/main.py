@@ -9,6 +9,8 @@ import warnings
 import logging
 import json
 import os
+import signal
+import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, List, Dict, Any
@@ -39,6 +41,27 @@ from ..core.scanner_plugins import PluginManager
 from ..core.report_generator import ReportGenerator
 from ..core.config import get_config_manager, get_config
 from ..core.scan_mode_manager import ScanModeManager
+
+# Global scan cancellation state
+_scan_cancellation_requested = False
+_scan_components = {}  # Store references to ZAPManager and PluginManager
+
+
+def _signal_handler(signum, frame):
+    """Handle SIGINT (Ctrl+C) for graceful scan cancellation."""
+    global _scan_cancellation_requested
+    
+    echo("\n🛑 Scan cancellation requested...")
+    _scan_cancellation_requested = True
+    
+    # Request cancellation from all scan components
+    if 'zap_manager' in _scan_components:
+        _scan_components['zap_manager'].request_cancellation()
+    
+    if 'plugin_manager' in _scan_components:
+        _scan_components['plugin_manager'].request_cancellation()
+    
+    echo("⏳ Gracefully stopping scans... (Press Ctrl+C again to force exit)")
 
 
 class UnifiedScanProgress:
@@ -254,6 +277,13 @@ def scan(ctx, input_file, curl_command, auth_type, auth_name, auth_value,
     This command performs comprehensive security testing on your API endpoints
     using OWASP ZAP and custom security plugins with configurable scan modes.
     
+    🛑 SCAN CANCELLATION:
+      Press Ctrl+C to gracefully cancel a running scan. The scanner will:
+      - Stop ZAP spider and active scans
+      - Cancel custom plugin execution
+      - Update database with 'cancelled' status
+      - Clean up resources and exit gracefully
+    
     Examples:
       # Safe mode scan for production environments
       python main.py scan -f collection.json --scan-mode safe
@@ -278,6 +308,14 @@ def scan(ctx, input_file, curl_command, auth_type, auth_name, auth_value,
     """
     logger = ctx.obj['logger']
     interactive_mode = ctx.obj.get('interactive', False)
+    
+    # Set up signal handling for graceful scan cancellation
+    global _scan_cancellation_requested, _scan_components
+    _scan_cancellation_requested = False
+    _scan_components.clear()
+    
+    # Register signal handler for SIGINT (Ctrl+C)
+    original_sigint = signal.signal(signal.SIGINT, _signal_handler)
     
     try:
         # Handle interactive mode
@@ -438,6 +476,7 @@ def scan(ctx, input_file, curl_command, auth_type, auth_name, auth_value,
                     }
                 
                 zap_manager = ZAPManager(zap_path, zap_port, zap_host, api_key=None, scan_mode_config=scan_mode_config)
+                _scan_components['zap_manager'] = zap_manager
             
             if not no_plugins:
                 # Configure AI detection settings
@@ -479,13 +518,14 @@ def scan(ctx, input_file, curl_command, auth_type, auth_name, auth_value,
                 }
                 
                 plugin_manager = PluginManager("api_security_scanner/plugins", selected_plugins=selected_plugins, ai_config=ai_config)
+                _scan_components['plugin_manager'] = plugin_manager
             
             # Phase 5: Execute security checks
             progress.start_phase("Executing security checks")
             
             # Start ZAP scanning
             zap_alerts = []
-            if zap_manager and not no_zap:
+            if zap_manager and not no_zap and not _scan_cancellation_requested:
                 try:
                     with zap_manager:
                         # Spider target
@@ -515,7 +555,7 @@ def scan(ctx, input_file, curl_command, auth_type, auth_name, auth_value,
             
             # Run custom plugins
             custom_alerts = []
-            if plugin_manager and not no_plugins:
+            if plugin_manager and not no_plugins and not _scan_cancellation_requested:
                 try:
                     plugin_results = plugin_manager.execute_all_plugins(
                         target_url, requests_data, 
@@ -744,6 +784,17 @@ def scan(ctx, input_file, curl_command, auth_type, auth_name, auth_value,
         if 'scan_id' in locals():
             db_manager.update_scan_completion(scan_id, 'failed', str(e))
         sys.exit(1)
+    finally:
+        # Restore original signal handler and cleanup
+        signal.signal(signal.SIGINT, original_sigint)
+        _scan_components.clear()
+        
+        # Handle scan cancellation
+        if _scan_cancellation_requested:
+            echo("\n🛑 Scan cancelled by user")
+            if 'scan_id' in locals():
+                db_manager.update_scan_completion(scan_id, 'cancelled', 'Cancelled by user')
+            sys.exit(0)
 
 
 @cli.command()

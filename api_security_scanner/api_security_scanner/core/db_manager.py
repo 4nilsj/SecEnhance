@@ -39,7 +39,7 @@ class DatabaseManager:
                         start_time TIMESTAMP NOT NULL,
                         end_time TIMESTAMP,
                         total_duration REAL,
-                        status TEXT NOT NULL CHECK (status IN ('running', 'completed', 'failed')),
+                        status TEXT NOT NULL CHECK (status IN ('running', 'completed', 'failed', 'cancelled')),
                         error_message TEXT,
                         input_type TEXT,
                         input_source TEXT,
@@ -57,6 +57,41 @@ class DatabaseManager:
                     self.logger.info("Added scan_mode column to scans table")
                 except sqlite3.OperationalError:
                     # Column already exists, ignore
+                    pass
+                
+                # Update status constraint to include 'cancelled' (migration)
+                try:
+                    # SQLite doesn't support ALTER CONSTRAINT, so we need to recreate the table
+                    cursor.execute("PRAGMA table_info(scans)")
+                    columns = [row[1] for row in cursor.fetchall()]
+                    
+                    if 'scan_mode' in columns:
+                        # Recreate table with updated constraint
+                        cursor.execute("""
+                            CREATE TABLE scans_new (
+                                scan_id TEXT PRIMARY KEY,
+                                target_url TEXT NOT NULL,
+                                start_time TIMESTAMP NOT NULL,
+                                end_time TIMESTAMP,
+                                total_duration REAL,
+                                status TEXT NOT NULL CHECK (status IN ('running', 'completed', 'failed', 'cancelled')),
+                                error_message TEXT,
+                                input_type TEXT,
+                                input_source TEXT,
+                                auth_type TEXT,
+                                plugins_used TEXT,
+                                template_used TEXT,
+                                scan_mode TEXT,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """)
+                        
+                        cursor.execute("INSERT INTO scans_new SELECT * FROM scans")
+                        cursor.execute("DROP TABLE scans")
+                        cursor.execute("ALTER TABLE scans_new RENAME TO scans")
+                        self.logger.info("Updated scans table to support 'cancelled' status")
+                except sqlite3.OperationalError:
+                    # Migration already applied or not needed
                     pass
                 
                 # Create zap_alerts table

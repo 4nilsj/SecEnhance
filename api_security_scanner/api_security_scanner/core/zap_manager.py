@@ -6,6 +6,8 @@ Handles ZAP operations including spidering, active scanning, and alert retrieval
 import time
 import subprocess
 import requests
+import signal
+import threading
 from datetime import datetime
 from typing import Dict, List, Any, Optional, Tuple
 from pathlib import Path
@@ -52,6 +54,11 @@ class ZAPManager:
         
         # Performance tracking
         self.performance_stats = {}
+        
+        # Scan cancellation support
+        self._cancellation_requested = False
+        self._active_scans = {}  # Track active scan IDs
+        self._scan_lock = threading.Lock()
         
         # Load container configuration
         self._load_container_config()
@@ -149,6 +156,80 @@ class ZAPManager:
             
         except Exception as e:
             self.logger.warning(f"Failed to configure some ZAP settings: {e}")
+    
+    def request_cancellation(self):
+        """Request cancellation of all active scans."""
+        with self._scan_lock:
+            self._cancellation_requested = True
+            self.logger.info("Scan cancellation requested")
+    
+    def is_cancellation_requested(self) -> bool:
+        """Check if scan cancellation has been requested."""
+        return self._cancellation_requested
+    
+    def cancel_all_scans(self) -> bool:
+        """Cancel all active ZAP scans."""
+        try:
+            with self._scan_lock:
+                if not self._active_scans:
+                    self.logger.info("No active scans to cancel")
+                    return True
+                
+                cancelled_count = 0
+                
+                # Cancel spider scans
+                for scan_id, scan_type in list(self._active_scans.items()):
+                    if scan_type == 'spider':
+                        if self._cancel_spider_scan(scan_id):
+                            cancelled_count += 1
+                    elif scan_type == 'ascan':
+                        if self._cancel_active_scan(scan_id):
+                            cancelled_count += 1
+                
+                self.logger.info(f"Cancelled {cancelled_count} active scans")
+                return cancelled_count > 0
+                
+        except Exception as e:
+            self.logger.error(f"Failed to cancel scans: {e}")
+            return False
+    
+    def _cancel_spider_scan(self, scan_id: str) -> bool:
+        """Cancel a specific spider scan."""
+        try:
+            params = {'scanId': scan_id}
+            response = requests.get(f"{self.zap_api_url}/JSON/spider/action/stop/", 
+                                  params=params, timeout=10)
+            
+            if response.status_code == 200:
+                self.logger.info(f"Cancelled spider scan: {scan_id}")
+                self._active_scans.pop(scan_id, None)
+                return True
+            else:
+                self.logger.warning(f"Failed to cancel spider scan {scan_id}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.logger.error(f"Error cancelling spider scan {scan_id}: {e}")
+            return False
+    
+    def _cancel_active_scan(self, scan_id: str) -> bool:
+        """Cancel a specific active scan."""
+        try:
+            params = {'scanId': scan_id}
+            response = requests.get(f"{self.zap_api_url}/JSON/ascan/action/stop/", 
+                                  params=params, timeout=10)
+            
+            if response.status_code == 200:
+                self.logger.info(f"Cancelled active scan: {scan_id}")
+                self._active_scans.pop(scan_id, None)
+                return True
+            else:
+                self.logger.warning(f"Failed to cancel active scan {scan_id}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.logger.error(f"Error cancelling active scan {scan_id}: {e}")
+            return False
     
     def _load_container_config(self):
         """Load container-specific configuration."""
@@ -382,14 +463,23 @@ class ZAPManager:
                     raise ZAPManagerError(f"Failed to start spider: {response.text}")
                 
                 scan_id = response.json().get('scan')
+                
+                # Track active scan
+                with self._scan_lock:
+                    self._active_scans[scan_id] = 'spider'
+                
                 self.logger.info(f"Spider started with ID: {scan_id}")
                 
                 # Wait for spider to complete
                 if self._wait_for_spider_completion(scan_id):
+                    with self._scan_lock:
+                        self._active_scans.pop(scan_id, None)
                     self.logger.info("Spider completed successfully")
                     return True, scan_id
                 else:
-                    self.logger.error("Spider failed to complete")
+                    with self._scan_lock:
+                        self._active_scans.pop(scan_id, None)
+                    self.logger.error("Spider failed to complete or was cancelled")
                     return False, scan_id
                     
         except Exception as e:
@@ -419,6 +509,12 @@ class ZAPManager:
         start_time = time.time()
         
         while time.time() - start_time < timeout:
+            # Check for cancellation
+            if self.is_cancellation_requested():
+                self.logger.info("Spider scan cancellation requested")
+                self._cancel_spider_scan(scan_id)
+                return False
+            
             try:
                 params = {'scanId': scan_id}
                 response = requests.get(f"{self.zap_api_url}/JSON/spider/view/status/", 
@@ -480,14 +576,23 @@ class ZAPManager:
                     raise ZAPManagerError(f"Failed to start active scan: {response.text}")
                 
                 scan_id = response.json().get('scan')
+                
+                # Track active scan
+                with self._scan_lock:
+                    self._active_scans[scan_id] = 'ascan'
+                
                 self.logger.info(f"Active scan started with ID: {scan_id}")
                 
                 # Wait for scan to complete
                 if self._wait_for_active_scan_completion(scan_id):
+                    with self._scan_lock:
+                        self._active_scans.pop(scan_id, None)
                     self.logger.info("Active scan completed successfully")
                     return True, scan_id
                 else:
-                    self.logger.error("Active scan failed to complete")
+                    with self._scan_lock:
+                        self._active_scans.pop(scan_id, None)
+                    self.logger.error("Active scan failed to complete or was cancelled")
                     return False, scan_id
                     
         except Exception as e:
@@ -499,6 +604,12 @@ class ZAPManager:
         start_time = time.time()
         
         while time.time() - start_time < timeout:
+            # Check for cancellation
+            if self.is_cancellation_requested():
+                self.logger.info("Active scan cancellation requested")
+                self._cancel_active_scan(scan_id)
+                return False
+            
             try:
                 params = {'scanId': scan_id}
                 response = requests.get(f"{self.zap_api_url}/JSON/ascan/view/status/", 
