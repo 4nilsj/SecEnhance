@@ -16,12 +16,13 @@ The API Security Scanner now has comprehensive `.env` configuration management i
 ### 2. **Configuration Templates**
 - **`config/env.template`** - Comprehensive template with all configuration options
 - **`config/env.example`** - Simple example configuration for quick setup
-- **Organized by category** - Database, ZAP, Logging, Reports, Security, Plugins, Container
+- **Organized by category** - Database, ZAP, Logging, Reports, Security, Plugins, Container, Proxy
 
 ### 3. **Core Module Integration**
 - **Database Manager** - Uses configuration for database paths and backup settings
 - **ZAP Manager** - Uses configuration for ZAP connection and scanning parameters
 - **Logger** - Uses configuration for log levels and output settings
+- **Proxy Handler** - Uses configuration for HTTP/HTTPS proxy settings
 - **All modules** - Automatically load configuration on initialization
 
 ### 4. **CLI Integration**
@@ -102,6 +103,21 @@ echo "DEBUG=true" >> .env.development
 # Production
 cp config/env.template .env.production
 echo "LOG_LEVEL=WARNING" >> .env.production
+```
+
+### **Proxy Configuration**
+```bash
+# Enable proxy for debugging (e.g., Burp Suite)
+echo "PROXY_ENABLED=true" >> .env
+echo "HTTP_PROXY=http://127.0.0.1:8080" >> .env
+echo "HTTPS_PROXY=https://127.0.0.1:8080" >> .env
+echo "NO_PROXY=localhost,127.0.0.1" >> .env
+
+# Corporate proxy
+echo "PROXY_ENABLED=true" >> .env
+echo "HTTP_PROXY=http://proxy.company.com:8080" >> .env
+echo "HTTPS_PROXY=https://proxy.company.com:8080" >> .env
+echo "PROXY_VERIFY_SSL=false" >> .env
 ```
 
 ## 📁 Files Created/Modified

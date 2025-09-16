@@ -156,6 +156,23 @@ class PluginConfig:
 
 
 @dataclass
+class ProxyConfig:
+    """Proxy configuration settings for HTTP requests."""
+    enabled: bool = False
+    http_proxy: Optional[str] = None  # http://proxy:port
+    https_proxy: Optional[str] = None  # https://proxy:port
+    no_proxy: Optional[str] = None  # comma-separated list of hosts to bypass
+    verify_ssl: bool = True
+    timeout: int = 30
+    max_retries: int = 3
+    retry_delay: float = 1.0
+    
+    def is_configured(self) -> bool:
+        """Check if proxy is actually configured (not just enabled)."""
+        return self.enabled and (self.http_proxy is not None or self.https_proxy is not None)
+
+
+@dataclass
 class ContainerConfig:
     """Container-specific configuration settings."""
     is_container: bool = False
@@ -179,6 +196,7 @@ class AppConfig:
     container: ContainerConfig = field(default_factory=ContainerConfig)
     ai_detection: AIDetectionConfig = field(default_factory=AIDetectionConfig)
     scan_mode: ScanModeConfig = field(default_factory=ScanModeConfig)
+    proxy: ProxyConfig = field(default_factory=ProxyConfig)
     
     # Application settings
     app_name: str = "API Security Scanner"
@@ -436,6 +454,32 @@ class ConfigManager:
         if scan_mode_ai_detection_enabled:
             self.config.scan_mode.ai_detection_enabled = scan_mode_ai_detection_enabled.lower() == "true"
         
+        # Proxy configuration
+        proxy_enabled = os.getenv("PROXY_ENABLED")
+        if proxy_enabled:
+            self.config.proxy.enabled = proxy_enabled.lower() == "true"
+        http_proxy = os.getenv("HTTP_PROXY")
+        if http_proxy:
+            self.config.proxy.http_proxy = http_proxy
+        https_proxy = os.getenv("HTTPS_PROXY")
+        if https_proxy:
+            self.config.proxy.https_proxy = https_proxy
+        no_proxy = os.getenv("NO_PROXY")
+        if no_proxy:
+            self.config.proxy.no_proxy = no_proxy
+        proxy_verify_ssl = os.getenv("PROXY_VERIFY_SSL")
+        if proxy_verify_ssl:
+            self.config.proxy.verify_ssl = proxy_verify_ssl.lower() == "true"
+        proxy_timeout = os.getenv("PROXY_TIMEOUT")
+        if proxy_timeout:
+            self.config.proxy.timeout = int(proxy_timeout)
+        proxy_max_retries = os.getenv("PROXY_MAX_RETRIES")
+        if proxy_max_retries:
+            self.config.proxy.max_retries = int(proxy_max_retries)
+        proxy_retry_delay = os.getenv("PROXY_RETRY_DELAY")
+        if proxy_retry_delay:
+            self.config.proxy.retry_delay = float(proxy_retry_delay)
+        
         # Application settings
         debug = os.getenv("DEBUG")
         if debug:
@@ -550,6 +594,21 @@ class ConfigManager:
         env_content.append(f"SCAN_MODE_GRAPHQL_ANALYSIS={str(self.config.scan_mode.graphql_analysis).lower()}")
         env_content.append(f"SCAN_MODE_GRPC_ANALYSIS={str(self.config.scan_mode.grpc_analysis).lower()}")
         env_content.append(f"SCAN_MODE_AI_DETECTION_ENABLED={str(self.config.scan_mode.ai_detection_enabled).lower()}")
+        env_content.append("")
+        
+        # Proxy settings
+        env_content.append("# Proxy Configuration")
+        env_content.append(f"PROXY_ENABLED={str(self.config.proxy.enabled).lower()}")
+        if self.config.proxy.http_proxy:
+            env_content.append(f"HTTP_PROXY={self.config.proxy.http_proxy}")
+        if self.config.proxy.https_proxy:
+            env_content.append(f"HTTPS_PROXY={self.config.proxy.https_proxy}")
+        if self.config.proxy.no_proxy:
+            env_content.append(f"NO_PROXY={self.config.proxy.no_proxy}")
+        env_content.append(f"PROXY_VERIFY_SSL={str(self.config.proxy.verify_ssl).lower()}")
+        env_content.append(f"PROXY_TIMEOUT={self.config.proxy.timeout}")
+        env_content.append(f"PROXY_MAX_RETRIES={self.config.proxy.max_retries}")
+        env_content.append(f"PROXY_RETRY_DELAY={self.config.proxy.retry_delay}")
         env_content.append("")
         
         # Application settings

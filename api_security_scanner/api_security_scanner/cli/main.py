@@ -245,6 +245,11 @@ def config(ctx, env_file: str, save_config: bool, show_config: bool, wizard: boo
               help='Authentication type')
 @click.option('-n', '--auth-name', help='Authentication parameter name (header name, cookie name, etc.)')
 @click.option('-v', '--auth-value', help='Authentication parameter value')
+@click.option('--proxy', help='HTTP/HTTPS proxy URL (e.g., http://proxy:8080) - Optional, only use if needed')
+@click.option('--proxy-http', help='HTTP proxy URL (e.g., http://proxy:8080) - Optional, only use if needed')
+@click.option('--proxy-https', help='HTTPS proxy URL (e.g., https://proxy:8080) - Optional, only use if needed')
+@click.option('--no-proxy', help='Comma-separated list of hosts to bypass proxy (e.g., localhost,127.0.0.1)')
+@click.option('--proxy-verify-ssl/--no-proxy-verify-ssl', default=True, help='Verify SSL certificates when using proxy')
 @click.option('--zap-path', help='Path to ZAP executable (auto-detected if not specified)')
 @click.option('--zap-port', default=8080, help='ZAP proxy port')
 @click.option('--zap-host', default='localhost', help='ZAP proxy host')
@@ -273,6 +278,7 @@ def config(ctx, env_file: str, save_config: bool, show_config: bool, wizard: boo
 @click.option('--ai-learning/--no-ai-learning', default=True, help='Enable/disable AI learning from scan results')
 @click.pass_context
 def scan(ctx, input_file, curl_command, auth_type, auth_name, auth_value, 
+         proxy, proxy_http, proxy_https, no_proxy, proxy_verify_ssl,
          zap_path, zap_port, zap_host, db_path, export, export_json, export_pdf, 
          export_excel, export_xml, performance_stats, no_zap, no_plugins, plugins,
          spider_depth, spider_children, max_scan_time, no_progress, template,
@@ -301,6 +307,15 @@ def scan(ctx, input_file, curl_command, auth_type, auth_name, auth_value,
       # Plugin-only scan (no ZAP, no scan mode)
       python main.py scan -f collection.json --no-zap
       
+      # Scan through proxy (e.g., Burp Suite)
+      python main.py scan -f collection.json --proxy http://127.0.0.1:8080
+      
+      # Scan with different HTTP/HTTPS proxies
+      python main.py scan -f collection.json --proxy-http http://proxy:8080 --proxy-https https://proxy:8080
+      
+      # Scan with proxy and bypass localhost
+      python main.py scan -f collection.json --proxy http://proxy:8080 --no-proxy localhost,127.0.0.1
+      
       # Interactive guided scan
       python main.py --interactive scan
       
@@ -325,6 +340,33 @@ def scan(ctx, input_file, curl_command, auth_type, auth_name, auth_value,
     original_sigint = signal.signal(signal.SIGINT, _signal_handler)
     
     try:
+        # Load configuration
+        config_manager = get_config_manager()
+        config = config_manager.get_config()
+        
+        # Handle proxy configuration from CLI arguments
+        if proxy or proxy_http or proxy_https:
+            config.proxy.enabled = True
+            if proxy:
+                # If --proxy is specified, use it for both HTTP and HTTPS
+                config.proxy.http_proxy = proxy
+                config.proxy.https_proxy = proxy
+            if proxy_http:
+                config.proxy.http_proxy = proxy_http
+            if proxy_https:
+                config.proxy.https_proxy = proxy_https
+            if no_proxy:
+                config.proxy.no_proxy = no_proxy
+            config.proxy.verify_ssl = proxy_verify_ssl
+            
+            logger.info(f"Proxy configuration enabled: HTTP={config.proxy.http_proxy}, HTTPS={config.proxy.https_proxy}")
+        
+        # Create proxy handler if proxy is configured
+        proxy_handler = None
+        if config.proxy.is_configured():
+            from ..utils.proxy_handler import create_proxy_handler
+            proxy_handler = create_proxy_handler(config.proxy)
+            logger.info("Proxy handler created for plugin requests")
         # Handle interactive mode
         if interactive_mode:
             interactive_config = _interactive_scan_setup()
@@ -481,7 +523,7 @@ def scan(ctx, input_file, curl_command, auth_type, auth_name, auth_value,
                         'timeout': mode_config.timeout
                     }
                 
-                zap_manager = ZAPManager(zap_path, zap_port, zap_host, api_key=None, scan_mode_config=scan_mode_config)
+                zap_manager = ZAPManager(zap_path, zap_port, zap_host, api_key=None, scan_mode_config=scan_mode_config, proxy_config=config.proxy)
                 _scan_components['zap_manager'] = zap_manager
             
             if not no_plugins:
@@ -523,7 +565,7 @@ def scan(ctx, input_file, curl_command, auth_type, auth_name, auth_value,
                     'fallback_to_rules': True
                 }
                 
-                plugin_manager = PluginManager("api_security_scanner/plugins", selected_plugins=selected_plugins, ai_config=ai_config)
+                plugin_manager = PluginManager("api_security_scanner/plugins", selected_plugins=selected_plugins, ai_config=ai_config, proxy_handler=proxy_handler)
                 _scan_components['plugin_manager'] = plugin_manager
             
             # Phase 5: Execute security checks

@@ -355,6 +355,26 @@ python main.py scan -f collection.json -a token -n "Authorization" -v "Bearer yo
 python main.py scan -f collection.json -a cookie -n "session" -v "session-value"
 ```
 
+### Scan with Proxy (Optional)
+
+Route traffic through HTTP/HTTPS proxies for debugging and integration with tools like Burp Suite:
+
+```bash
+# Route all traffic through a proxy (e.g., Burp Suite)
+python main.py scan -f collection.json --proxy http://127.0.0.1:8080
+
+# Use different proxies for HTTP and HTTPS
+python main.py scan -f collection.json --proxy-http http://proxy:8080 --proxy-https https://proxy:8080
+
+# Bypass proxy for localhost and internal services
+python main.py scan -f collection.json --proxy http://proxy:8080 --no-proxy localhost,127.0.0.1,.local
+
+# Disable SSL verification when using proxy
+python main.py scan -f collection.json --proxy http://proxy:8080 --no-proxy-verify-ssl
+```
+
+**Note:** Proxy support is completely optional and only activates when explicitly configured. By default, all requests go directly to the target without any proxy.
+
 ### HAR File Support
 
 The scanner now supports HAR (HTTP Archive) files exported from various tools:
@@ -589,6 +609,13 @@ For comprehensive documentation and troubleshooting, see:
 - `-a, --auth-type` - Authentication type (header, cookie, token)
 - `-n, --auth-name` - Authentication parameter name
 - `-v, --auth-value` - Authentication parameter value
+
+#### Proxy Options (Optional)
+- `--proxy` - HTTP/HTTPS proxy URL (e.g., http://proxy:8080)
+- `--proxy-http` - HTTP proxy URL (e.g., http://proxy:8080)
+- `--proxy-https` - HTTPS proxy URL (e.g., https://proxy:8080)
+- `--no-proxy` - Comma-separated list of hosts to bypass proxy
+- `--proxy-verify-ssl/--no-proxy-verify-ssl` - Verify SSL certificates when using proxy
 
 #### ZAP Options
 - `--zap-path` - Path to ZAP executable

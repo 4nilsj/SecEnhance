@@ -28,7 +28,7 @@ class ZAPManager:
     
     def __init__(self, zap_path: Optional[str] = None, zap_port: Optional[int] = None, 
                  zap_host: Optional[str] = None, api_key: Optional[str] = None,
-                 scan_mode_config: Optional[Dict[str, Any]] = None):
+                 scan_mode_config: Optional[Dict[str, Any]] = None, proxy_config: Optional[Any] = None):
         self.logger = get_logger(__name__)
         config = get_config()
         
@@ -46,6 +46,9 @@ class ZAPManager:
         # Apply scan mode configuration if provided
         if scan_mode_config:
             self._apply_scan_mode_config(scan_mode_config)
+        
+        # Store proxy configuration
+        self.proxy_config = proxy_config
         
         self.zap_process = None
         self.zap_api_url = f"http://{self.zap_host}:{self.zap_port}"
@@ -68,6 +71,39 @@ class ZAPManager:
             self.zap_path = self._get_default_zap_path()
         
         self.logger.info(f"ZAP Manager initialized: host={self.zap_host}, port={self.zap_port}, external={self.use_external_zap}")
+    
+    def _make_zap_request(self, url: str, params: Optional[Dict[str, Any]] = None, 
+                         timeout: int = 10) -> requests.Response:
+        """
+        Make a request to ZAP API with optional proxy support.
+        
+        Args:
+            url: The ZAP API URL
+            params: Query parameters
+            timeout: Request timeout
+            
+        Returns:
+            Response object
+        """
+        # Prepare request arguments
+        request_kwargs = {'timeout': timeout}
+        
+        # Add proxy configuration if available
+        if self.proxy_config and hasattr(self.proxy_config, 'is_configured') and self.proxy_config.is_configured():
+            from ..utils.proxy_handler import ProxyHandler
+            proxy_handler = ProxyHandler(self.proxy_config)
+            proxy_kwargs = proxy_handler.get_request_kwargs()
+            
+            # Add proxy settings explicitly
+            if 'proxies' in proxy_kwargs:
+                request_kwargs['proxies'] = proxy_kwargs['proxies']
+            if 'verify' in proxy_kwargs:
+                request_kwargs['verify'] = proxy_kwargs['verify']
+            
+            if proxy_kwargs.get('proxies'):
+                self.logger.debug(f"Using proxy for ZAP API request: {proxy_kwargs['proxies']}")
+        
+        return requests.get(url, params=params, **request_kwargs)  # type: ignore
     
     def _apply_scan_mode_config(self, scan_mode_config: Dict[str, Any]):
         """Apply scan mode configuration to ZAP settings."""
@@ -119,39 +155,39 @@ class ZAPManager:
             if 'request_delay' in config:
                 delay_ms = int(config['request_delay'] * 1000)  # Convert to milliseconds
                 params = {'Integer': str(delay_ms)}
-                requests.get(f"{self.zap_api_url}/JSON/ascan/action/setOptionDelayInMs/", 
-                           params=params, timeout=10)
+                self._make_zap_request(f"{self.zap_api_url}/JSON/ascan/action/setOptionDelayInMs/", 
+                                     params=params, timeout=10)
                 self.logger.info(f"Set ZAP request delay to {delay_ms}ms")
             
             # Configure thread count
             if 'concurrent_requests' in config:
                 thread_count = config['concurrent_requests']
                 params = {'Integer': str(thread_count)}
-                requests.get(f"{self.zap_api_url}/JSON/ascan/action/setOptionThreadPerHost/", 
-                           params=params, timeout=10)
+                self._make_zap_request(f"{self.zap_api_url}/JSON/ascan/action/setOptionThreadPerHost/", 
+                                     params=params, timeout=10)
                 self.logger.info(f"Set ZAP thread count to {thread_count}")
             
             # Configure user agent for stealth mode
             if config.get('stealth_mode', False) and 'custom_user_agent' in config:
                 user_agent = config['custom_user_agent']
                 params = {'String': user_agent}
-                requests.get(f"{self.zap_api_url}/JSON/core/action/setOptionDefaultUserAgent/", 
-                           params=params, timeout=10)
+                self._make_zap_request(f"{self.zap_api_url}/JSON/core/action/setOptionDefaultUserAgent/", 
+                                     params=params, timeout=10)
                 self.logger.info(f"Set ZAP user agent to: {user_agent}")
             elif config.get('stealth_mode', False):
                 # Use a common browser user agent for stealth
                 stealth_ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
                 params = {'String': stealth_ua}
-                requests.get(f"{self.zap_api_url}/JSON/core/action/setOptionDefaultUserAgent/", 
-                           params=params, timeout=10)
+                self._make_zap_request(f"{self.zap_api_url}/JSON/core/action/setOptionDefaultUserAgent/", 
+                                     params=params, timeout=10)
                 self.logger.info("Set ZAP to stealth mode with common browser user agent")
             
             # Configure timeout
             if 'timeout' in config:
                 timeout_sec = config['timeout']
                 params = {'Integer': str(timeout_sec)}
-                requests.get(f"{self.zap_api_url}/JSON/core/action/setOptionTimeoutInSecs/", 
-                           params=params, timeout=10)
+                self._make_zap_request(f"{self.zap_api_url}/JSON/core/action/setOptionTimeoutInSecs/", 
+                                     params=params, timeout=10)
                 self.logger.info(f"Set ZAP timeout to {timeout_sec} seconds")
             
         except Exception as e:
@@ -197,8 +233,8 @@ class ZAPManager:
         """Cancel a specific spider scan."""
         try:
             params = {'scanId': scan_id}
-            response = requests.get(f"{self.zap_api_url}/JSON/spider/action/stop/", 
-                                  params=params, timeout=10)
+            response = self._make_zap_request(f"{self.zap_api_url}/JSON/spider/action/stop/", 
+                                            params=params, timeout=10)
             
             if response.status_code == 200:
                 self.logger.info(f"Cancelled spider scan: {scan_id}")
@@ -216,8 +252,8 @@ class ZAPManager:
         """Cancel a specific active scan."""
         try:
             params = {'scanId': scan_id}
-            response = requests.get(f"{self.zap_api_url}/JSON/ascan/action/stop/", 
-                                  params=params, timeout=10)
+            response = self._make_zap_request(f"{self.zap_api_url}/JSON/ascan/action/stop/", 
+                                            params=params, timeout=10)
             
             if response.status_code == 200:
                 self.logger.info(f"Cancelled active scan: {scan_id}")
@@ -375,8 +411,8 @@ class ZAPManager:
         
         while time.time() - start_time < timeout:
             try:
-                response = requests.get(f"{self.zap_api_url}/JSON/core/view/version/", 
-                                      timeout=5)
+                response = self._make_zap_request(f"{self.zap_api_url}/JSON/core/view/version/", 
+                                                timeout=5)
                 if response.status_code == 200:
                     self.logger.info(f"ZAP version: {response.json().get('version', 'Unknown')}")
                     return True
@@ -390,8 +426,8 @@ class ZAPManager:
     def is_zap_running(self) -> bool:
         """Check if ZAP is running and accessible."""
         try:
-            response = requests.get(f"{self.zap_api_url}/JSON/core/view/version/", 
-                                  timeout=5)
+            response = self._make_zap_request(f"{self.zap_api_url}/JSON/core/view/version/", 
+                                            timeout=5)
             return response.status_code == 200
         except requests.exceptions.RequestException:
             return False
@@ -456,8 +492,8 @@ class ZAPManager:
                     'subtreeOnly': 'false'
                 }
                 
-                response = requests.get(f"{self.zap_api_url}/JSON/spider/action/scan/", 
-                                      params=params, timeout=30)
+                response = self._make_zap_request(f"{self.zap_api_url}/JSON/spider/action/scan/", 
+                                                params=params, timeout=30)
                 
                 if response.status_code != 200:
                     raise ZAPManagerError(f"Failed to start spider: {response.text}")
@@ -491,13 +527,13 @@ class ZAPManager:
         try:
             # Set max depth
             params = {'Integer': str(max_depth)}
-            requests.get(f"{self.zap_api_url}/JSON/spider/action/setOptionMaxDepth/", 
-                        params=params, timeout=10)
+            self._make_zap_request(f"{self.zap_api_url}/JSON/spider/action/setOptionMaxDepth/", 
+                                 params=params, timeout=10)
             
             # Set max children
             params = {'Integer': str(max_children)}
-            requests.get(f"{self.zap_api_url}/JSON/spider/action/setOptionMaxChildren/", 
-                        params=params, timeout=10)
+            self._make_zap_request(f"{self.zap_api_url}/JSON/spider/action/setOptionMaxChildren/", 
+                                 params=params, timeout=10)
             
             self.logger.debug(f"Spider configured: max_depth={max_depth}, max_children={max_children}")
             
@@ -517,8 +553,8 @@ class ZAPManager:
             
             try:
                 params = {'scanId': scan_id}
-                response = requests.get(f"{self.zap_api_url}/JSON/spider/view/status/", 
-                                      params=params, timeout=10)
+                response = self._make_zap_request(f"{self.zap_api_url}/JSON/spider/view/status/", 
+                                                params=params, timeout=10)
                 
                 if response.status_code == 200:
                     status = response.json().get('status')
@@ -569,8 +605,8 @@ class ZAPManager:
                     'postData': ''
                 }
                 
-                response = requests.get(f"{self.zap_api_url}/JSON/ascan/action/scan/", 
-                                      params=params, timeout=30)
+                response = self._make_zap_request(f"{self.zap_api_url}/JSON/ascan/action/scan/", 
+                                                params=params, timeout=30)
                 
                 if response.status_code != 200:
                     raise ZAPManagerError(f"Failed to start active scan: {response.text}")
@@ -612,8 +648,8 @@ class ZAPManager:
             
             try:
                 params = {'scanId': scan_id}
-                response = requests.get(f"{self.zap_api_url}/JSON/ascan/view/status/", 
-                                      params=params, timeout=10)
+                response = self._make_zap_request(f"{self.zap_api_url}/JSON/ascan/view/status/", 
+                                                params=params, timeout=10)
                 
                 if response.status_code == 200:
                     status = response.json().get('status')
@@ -653,8 +689,8 @@ class ZAPManager:
                 if base_url:
                     params['baseurl'] = base_url
                 
-                response = requests.get(f"{self.zap_api_url}/JSON/core/view/alerts/", 
-                                      params=params, timeout=30)
+                response = self._make_zap_request(f"{self.zap_api_url}/JSON/core/view/alerts/", 
+                                                params=params, timeout=30)
                 
                 if response.status_code != 200:
                     raise ZAPManagerError(f"Failed to get alerts: {response.text}")
@@ -692,7 +728,7 @@ class ZAPManager:
                 raise ZAPManagerError(f"Invalid scan type: {scan_type}")
             
             params = {'scanId': scan_id}
-            response = requests.get(endpoint, params=params, timeout=10)
+            response = self._make_zap_request(endpoint, params=params, timeout=10)
             
             if response.status_code == 200:
                 return response.json()
@@ -717,8 +753,8 @@ class ZAPManager:
         try:
             # Create context
             params = {'contextName': context_name}
-            response = requests.get(f"{self.zap_api_url}/JSON/context/action/newContext/", 
-                                  params=params, timeout=10)
+            response = self._make_zap_request(f"{self.zap_api_url}/JSON/context/action/newContext/", 
+                                            params=params, timeout=10)
             
             if response.status_code != 200:
                 raise ZAPManagerError(f"Failed to create context: {response.text}")
@@ -728,8 +764,8 @@ class ZAPManager:
                 'contextName': context_name,
                 'regex': f"^{target_url}.*"
             }
-            response = requests.get(f"{self.zap_api_url}/JSON/context/action/includeInContext/", 
-                                  params=params, timeout=10)
+            response = self._make_zap_request(f"{self.zap_api_url}/JSON/context/action/includeInContext/", 
+                                            params=params, timeout=10)
             
             if response.status_code == 200:
                 self.logger.info(f"Context '{context_name}' created for {target_url}")

@@ -18,6 +18,7 @@ from datetime import datetime
 from dataclasses import dataclass
 
 from ..utils.logger import get_logger
+from ..utils.proxy_handler import ProxyHandler
 
 
 @dataclass
@@ -83,7 +84,7 @@ class PluginResult:
 class BasePlugin(ABC):
     """Abstract base class for all security plugins with enhanced vulnerability reporting."""
     
-    def __init__(self, zap=None, target=None):
+    def __init__(self, zap=None, target=None, proxy_config: Optional[Dict[str, Any]] = None):
         self.logger = get_logger(f"plugin.{self.__class__.__name__}")
         self.name = self.__class__.__name__
         self.description = getattr(self, 'description', 'No description provided')
@@ -91,6 +92,7 @@ class BasePlugin(ABC):
         self.author = getattr(self, 'author', 'Unknown')
         self.zap = zap
         self.target = target
+        self.proxy_config = proxy_config
     
     @abstractmethod
     def check(self, target_url: str, requests_data: List[Dict[str, Any]], 
@@ -139,16 +141,23 @@ class BasePlugin(ABC):
             Response object or None if request failed
         """
         try:
-            response = requests.request(
-                method=method,
-                url=url,
-                headers=headers,
-                data=data,
-                params=params,
-                timeout=timeout,
-                verify=False,  # Disable SSL verification for testing
-                allow_redirects=True
-            )
+            # Prepare request kwargs
+            request_kwargs = {
+                'method': method,
+                'url': url,
+                'headers': headers,
+                'data': data,
+                'params': params,
+                'timeout': timeout,
+                'verify': False,  # Disable SSL verification for testing
+                'allow_redirects': True
+            }
+            
+            # Add proxy configuration if available
+            if self.proxy_config:
+                request_kwargs.update(self.proxy_config)
+            
+            response = requests.request(**request_kwargs)
             return response
         except requests.exceptions.RequestException as e:
             self.logger.error(f"Request failed for {url}: {e}")
@@ -239,7 +248,7 @@ class BasePlugin(ABC):
 class PluginManager:
     """Manages plugin discovery, loading, and execution with enhanced vulnerability tracking."""
     
-    def __init__(self, plugins_dir: str = "plugins", selected_plugins: Optional[List[str]] = None, ai_config: Optional[Dict[str, Any]] = None):
+    def __init__(self, plugins_dir: str = "plugins", selected_plugins: Optional[List[str]] = None, ai_config: Optional[Dict[str, Any]] = None, proxy_handler: Optional[ProxyHandler] = None):
         self.plugins_dir = Path(plugins_dir)
         self.plugins_dir.mkdir(exist_ok=True)
         self.logger = get_logger(__name__)
@@ -247,6 +256,7 @@ class PluginManager:
         self.selected_plugins = selected_plugins
         self.request_analyzer = None
         self.ai_config = ai_config
+        self.proxy_handler = proxy_handler
         
         # Scan cancellation support
         self._cancellation_requested = False
@@ -330,6 +340,17 @@ class PluginManager:
             self.logger.warning(f"Failed to initialize request analyzer: {e}")
             self.request_analyzer = None
     
+    def get_proxy_config(self) -> Optional[Any]:
+        """
+        Get proxy configuration for plugins.
+        
+        Returns:
+            Proxy configuration object or None if proxy is disabled
+        """
+        if self.proxy_handler and self.proxy_handler.is_enabled():
+            return self.proxy_handler.proxy_config
+        return None
+    
     def get_plugin_list(self) -> List[Dict[str, str]]:
         """Get list of loaded plugins with their metadata."""
         plugins = []
@@ -369,7 +390,8 @@ class PluginManager:
         
         try:
             plugin_class = self.loaded_plugins[plugin_name]
-            plugin_instance = plugin_class(zap=zap, target=target_url)
+            proxy_config = self.get_proxy_config()
+            plugin_instance = plugin_class(zap=zap, target=target_url, proxy_config=proxy_config)
             
             # Configure AI plugin if needed
             if plugin_name == 'AISecurityChecker' and self.ai_config and hasattr(plugin_instance, 'configure'):
