@@ -444,6 +444,9 @@ def scan(ctx, input_file, curl_command, auth_type, auth_name, auth_value,
             # Extract target URL from first request
             target_url = requests_data[0]['url'] if requests_data else 'unknown'
             
+            # Display scan banner
+            _display_scan_banner(scan_id, target_url, scan_mode, no_zap, no_plugins)
+            
             # Create scan record
             plugins_used_str = ','.join(selected_plugins) if selected_plugins else None
             db_manager.create_scan(
@@ -609,16 +612,20 @@ def scan(ctx, input_file, curl_command, auth_type, auth_name, auth_value,
             progress.finish()
         
         # Display results
-        echo("\n" + "="*60)
-        echo("SCAN COMPLETED")
-        echo("="*60)
-        echo(f"Scan ID: {scan_id}")
-        echo(f"Target: {target_url}")
-        echo(f"ZAP Alerts: {len(zap_alerts)}")
-        echo(f"Custom Plugin Alerts: {len(custom_alerts)}")
-        
         # Display issues summary
         _display_issues_summary(zap_alerts, custom_alerts)
+        
+        # Display completion banner
+        scan_duration = scan_summary['scan'].get('total_duration', 0)
+        total_vulnerabilities = len(zap_alerts) + len(custom_alerts)
+        _display_scan_completion_banner(
+            scan_id, 
+            total_vulnerabilities, 
+            len(zap_alerts), 
+            len(custom_alerts), 
+            scan_duration, 
+            True  # Reports will be generated next
+        )
         
         # Show performance stats if requested
         if performance_stats and scan_summary.get('performance_stats'):
@@ -779,8 +786,28 @@ def scan(ctx, input_file, curl_command, auth_type, auth_name, auth_value,
     except KeyboardInterrupt:
         echo("\nScan interrupted by user", err=True)
         if 'scan_id' in locals():
-            db_manager.update_scan_completion(scan_id, 'failed', 'Interrupted by user')
-        sys.exit(1)
+            # Try to get partial results for cancellation banner
+            try:
+                scan_summary = db_manager.get_scan_summary(scan_id)
+                if scan_summary:
+                    zap_alerts = scan_summary.get('zap_alerts', [])
+                    custom_alerts = scan_summary.get('custom_alerts', [])
+                    scan_duration = scan_summary['scan'].get('total_duration', 0)
+                    total_vulnerabilities = len(zap_alerts) + len(custom_alerts)
+                    
+                    _display_scan_cancellation_banner(
+                        scan_id, 
+                        total_vulnerabilities, 
+                        len(zap_alerts), 
+                        len(custom_alerts), 
+                        scan_duration
+                    )
+            except:
+                # If we can't get partial results, just show basic cancellation
+                echo(f"\n🛑 Scan {scan_id} cancelled by user")
+            
+            db_manager.update_scan_completion(scan_id, 'cancelled', 'Cancelled by user')
+        sys.exit(0)
     except Exception as e:
         secho(f"Unexpected error: {e}", fg='red')
         logger.error(f"Unexpected error during scan: {e}", exc_info=True)
@@ -1945,6 +1972,77 @@ def _interactive_scan_setup() -> Dict[str, Any]:
     else:
         echo("Configuration cancelled.")
         sys.exit(0)
+
+
+def _display_scan_banner(scan_id: str, target_url: str, scan_mode: Optional[str] = None, 
+                        no_zap: bool = False, no_plugins: bool = False):
+    """Display a banner for the scan command."""
+    echo("\n" + "="*80)
+    echo("🔒 API SECURITY SCANNER")
+    echo("="*80)
+    echo(f"📋 Scan ID: {scan_id}")
+    echo(f"🎯 Target: {target_url}")
+    
+    if scan_mode and not no_zap:
+        echo(f"⚙️  ZAP Scan Mode: {scan_mode.title()}")
+    elif scan_mode and no_zap:
+        echo(f"⚠️  ZAP Scan Mode: {scan_mode.title()} (ZAP disabled - mode ignored)")
+    
+    if no_zap and no_plugins:
+        echo("🚫 No scanning enabled (both ZAP and plugins disabled)")
+    elif no_zap:
+        echo("🔧 Plugin-only scanning (ZAP disabled)")
+    elif no_plugins:
+        echo("🕷️  ZAP-only scanning (plugins disabled)")
+    else:
+        echo("🔍 Full scanning (ZAP + plugins)")
+    
+    echo("="*80)
+    echo()
+
+
+def _display_scan_completion_banner(scan_id: str, vulnerabilities_found: int, 
+                                   zap_alerts: int, custom_alerts: int, 
+                                   scan_duration: float, reports_generated: bool):
+    """Display a completion banner for the scan."""
+    echo("\n" + "="*80)
+    echo("✅ SCAN COMPLETED SUCCESSFULLY")
+    echo("="*80)
+    echo(f"📋 Scan ID: {scan_id}")
+    echo(f"⏱️  Duration: {scan_duration:.2f} seconds")
+    echo(f"🔍 Total Vulnerabilities Found: {vulnerabilities_found}")
+    
+    if zap_alerts > 0 or custom_alerts > 0:
+        echo(f"   🕷️  ZAP Alerts: {zap_alerts}")
+        echo(f"   🔧 Plugin Alerts: {custom_alerts}")
+    
+    if reports_generated:
+        echo("📊 Reports Generated: ✅")
+    else:
+        echo("📊 Reports Generated: ❌")
+    
+    echo("="*80)
+    echo()
+
+
+def _display_scan_cancellation_banner(scan_id: str, vulnerabilities_found: int, 
+                                     zap_alerts: int, custom_alerts: int, 
+                                     scan_duration: float):
+    """Display a cancellation banner for the scan."""
+    echo("\n" + "="*80)
+    echo("🛑 SCAN CANCELLED BY USER")
+    echo("="*80)
+    echo(f"📋 Scan ID: {scan_id}")
+    echo(f"⏱️  Duration: {scan_duration:.2f} seconds")
+    echo(f"🔍 Vulnerabilities Found Before Cancellation: {vulnerabilities_found}")
+    
+    if zap_alerts > 0 or custom_alerts > 0:
+        echo(f"   🕷️  ZAP Alerts: {zap_alerts}")
+        echo(f"   🔧 Plugin Alerts: {custom_alerts}")
+    
+    echo("📊 Partial results saved to database")
+    echo("="*80)
+    echo()
 
 
 def _display_issues_summary(zap_alerts, custom_alerts):
