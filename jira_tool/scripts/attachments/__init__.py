@@ -1,3 +1,0 @@
-"""
-Jira Tool Attachments Package
-""" 

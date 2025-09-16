@@ -1,0 +1,86 @@
+<?xml version='1.0' encoding='utf-8'?>
+<security_scan_report version="1.0" generated_at="2025-09-14T04:34:46.407910">
+  <scan_information>
+    <scan_id>test_scan_123</scan_id>
+    <target_url>https://api.example.com</target_url>
+    <status>completed</status>
+    <start_time>2023-12-01T10:00:00Z</start_time>
+    <end_time>2023-12-01T10:05:00Z</end_time>
+    <total_duration>300.5</total_duration>
+    <scan_type>comprehensive</scan_type>
+  </scan_information>
+  <risk_summary>
+    <risk_level level="High" count="2" />
+    <risk_level level="Medium" count="1" />
+    <risk_level level="Low" count="1" />
+    <risk_level level="Informational" count="0" />
+  </risk_summary>
+  <vulnerabilities>
+    <vulnerability>
+      <name>SQL Injection</name>
+      <risk>High</risk>
+      <risk_level>High</risk_level>
+      <url>https://api.example.com/users</url>
+      <method>POST</method>
+      <plugin_name>ZAP Scanner</plugin_name>
+      <description>SQL injection vulnerability detected in user input</description>
+      <solution>Use parameterized queries and input validation</solution>
+    </vulnerability>
+    <vulnerability>
+      <name>Missing Security Headers</name>
+      <risk>Medium</risk>
+      <risk_level>Medium</risk_level>
+      <url>https://api.example.com/admin</url>
+      <method>GET</method>
+      <plugin_name>SecurityHeadersChecker</plugin_name>
+      <description>Missing X-Frame-Options header</description>
+      <solution>Add X-Frame-Options: DENY header</solution>
+    </vulnerability>
+    <vulnerability>
+      <name>Weak JWT Algorithm</name>
+      <risk>High</risk>
+      <risk_level>High</risk_level>
+      <url>https://api.example.com/auth</url>
+      <method>POST</method>
+      <plugin_name>JWTSecurityChecker</plugin_name>
+      <description>JWT token uses weak HS256 algorithm</description>
+      <solution>Use RS256 or stronger algorithm</solution>
+    </vulnerability>
+    <vulnerability>
+      <name>Information Disclosure</name>
+      <risk>Low</risk>
+      <risk_level>Low</risk_level>
+      <url>https://api.example.com/debug</url>
+      <method>GET</method>
+      <plugin_name>ZAP Scanner</plugin_name>
+      <description>Debug information exposed in response</description>
+      <solution>Disable debug mode in production</solution>
+    </vulnerability>
+  </vulnerabilities>
+  <performance_statistics>
+    <statistic>
+      <phase_name>Input Parsing</phase_name>
+      <duration>2.5</duration>
+      <start_time>2023-12-01T10:00:00Z</start_time>
+      <end_time>2023-12-01T10:00:02Z</end_time>
+    </statistic>
+    <statistic>
+      <phase_name>ZAP Scanning</phase_name>
+      <duration>180.2</duration>
+      <start_time>2023-12-01T10:00:02Z</start_time>
+      <end_time>2023-12-01T10:03:02Z</end_time>
+    </statistic>
+    <statistic>
+      <phase_name>Custom Plugins</phase_name>
+      <duration>45.8</duration>
+      <start_time>2023-12-01T10:03:02Z</start_time>
+      <end_time>2023-12-01T10:03:48Z</end_time>
+    </statistic>
+    <statistic>
+      <phase_name>Report Generation</phase_name>
+      <duration>1.2</duration>
+      <start_time>2023-12-01T10:03:48Z</start_time>
+      <end_time>2023-12-01T10:03:49Z</end_time>
+    </statistic>
+  </performance_statistics>
+</security_scan_report>

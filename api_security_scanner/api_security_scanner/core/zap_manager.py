@@ -48,6 +48,9 @@ class ZAPManager:
         # Performance tracking
         self.performance_stats = {}
         
+        # Load container configuration
+        self._load_container_config()
+        
         # Auto-detect ZAP path if not provided
         if not self.zap_path:
             self.zap_path = self._get_default_zap_path()

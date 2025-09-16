@@ -1,0 +1,309 @@
+{
+  "scan_metadata": {
+    "scan_id": "1a7fb88b",
+    "target_url": "https://httpbin.org/headers",
+    "start_time": "2025-09-14 06:03:19.288137",
+    "end_time": "2025-09-14 06:04:27.184031",
+    "total_duration": 67.895894,
+    "status": "completed",
+    "error_message": null,
+    "input_type": "curl",
+    "input_source": "curl -X GET https://httpbin.org/headers -H \" Authorization: Bearer eyJhbGciOiAiSFMyNTYiLCAidHlwIjogIkpXVCJ9.eyJzdWIiOiAiMTIzNDU2Nzg5MCIsICJuYW1lIjogIkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjk5OTk5OTk5OTksImFkbWluIjp0cnVlfQ.ZmFrZV9zaWduYXR1cmVfZm9yX3Rlc3Rpbmc\\ --plugins JWTSecurityChecker --no-zap --export-pdf jwt_vulnerability_report.pdf --export-excel jwt_analysis.xlsx",
+    "auth_type": null,
+    "created_at": "2025-09-14 00:33:19"
+  },
+  "vulnerabilities": [
+    {
+      "id": "4a3edcae-0b4b-4c80-a045-650deea774c6",
+      "name": "Missing High Risk Security Headers",
+      "description": "API is missing 2 high risk security headers: Strict-Transport-Security, Content-Security-Policy",
+      "risk": "High",
+      "cvss_score": 8.1,
+      "solution": "Implement the following security headers: Strict-Transport-Security, Content-Security-Policy",
+      "references": [
+        "https://owasp.org/www-community/controls/HTTP_Strict_Transport_Security"
+      ],
+      "cwe_id": "CWE-319",
+      "wasc_id": "WASC-15",
+      "request": "GET https://httpbin.org/headers HTTP/1.1",
+      "response": "HTTP/1.1 200\nDate: Sun, 14 Sep 2025 00:33:25 GMT\nContent-Type: application/json\nContent-Length: 229\nConnection: keep-alive\nServer: gunicorn/19.9.0\nAccess-Control-Allow-Origin: *\nAccess-Control-Allow-Credentials: true\n\n{\n  \"headers\": {\n    \"Accept\": \"*/*\", \n    \"Accept-Encoding\": \"gzip, deflate, br\", \n    \"Host\": \"httpbin.org\", \n    \"User-Agent\": \"python-requests/2.31.0\", \n    \"X-Amzn-Trace-Id\": \"Root=1-68c60d54-1e91d7331e954b707ed6a67d\"\n  }\n}\n",
+      "url": "https://httpbin.org/headers",
+      "parameter": "",
+      "evidence": "Missing headers: Strict-Transport-Security, Content-Security-Policy",
+      "scan_id": "",
+      "timestamp": "2025-09-14 06:03:25.602182"
+    },
+    {
+      "id": "5068feeb-bceb-40ac-8c47-f479072004fb",
+      "name": "Missing Medium Risk Security Headers",
+      "description": "API is missing 2 medium risk security headers: X-Content-Type-Options, X-Frame-Options",
+      "risk": "Medium",
+      "cvss_score": 6.1,
+      "solution": "Implement the following security headers: X-Content-Type-Options, X-Frame-Options",
+      "references": [
+        "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options"
+      ],
+      "cwe_id": "CWE-693",
+      "wasc_id": "WASC-15",
+      "request": "GET https://httpbin.org/headers HTTP/1.1",
+      "response": "HTTP/1.1 200\nDate: Sun, 14 Sep 2025 00:33:25 GMT\nContent-Type: application/json\nContent-Length: 229\nConnection: keep-alive\nServer: gunicorn/19.9.0\nAccess-Control-Allow-Origin: *\nAccess-Control-Allow-Credentials: true\n\n{\n  \"headers\": {\n    \"Accept\": \"*/*\", \n    \"Accept-Encoding\": \"gzip, deflate, br\", \n    \"Host\": \"httpbin.org\", \n    \"User-Agent\": \"python-requests/2.31.0\", \n    \"X-Amzn-Trace-Id\": \"Root=1-68c60d54-1e91d7331e954b707ed6a67d\"\n  }\n}\n",
+      "url": "https://httpbin.org/headers",
+      "parameter": "",
+      "evidence": "Missing headers: X-Content-Type-Options, X-Frame-Options",
+      "scan_id": "",
+      "timestamp": "2025-09-14 06:03:25.602268"
+    },
+    {
+      "id": "7e92c60b-383d-4a4e-b967-2b164401204e",
+      "name": "Missing Low Risk Security Headers",
+      "description": "API is missing 3 low risk security headers: X-XSS-Protection, Referrer-Policy, Permissions-Policy",
+      "risk": "Low",
+      "cvss_score": 4.3,
+      "solution": "Implement the following security headers: X-XSS-Protection, Referrer-Policy, Permissions-Policy",
+      "references": [
+        "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-XSS-Protection"
+      ],
+      "cwe_id": "CWE-79",
+      "wasc_id": "WASC-8",
+      "request": "GET https://httpbin.org/headers HTTP/1.1",
+      "response": "HTTP/1.1 200\nDate: Sun, 14 Sep 2025 00:33:25 GMT\nContent-Type: application/json\nContent-Length: 229\nConnection: keep-alive\nServer: gunicorn/19.9.0\nAccess-Control-Allow-Origin: *\nAccess-Control-Allow-Credentials: true\n\n{\n  \"headers\": {\n    \"Accept\": \"*/*\", \n    \"Accept-Encoding\": \"gzip, deflate, br\", \n    \"Host\": \"httpbin.org\", \n    \"User-Agent\": \"python-requests/2.31.0\", \n    \"X-Amzn-Trace-Id\": \"Root=1-68c60d54-1e91d7331e954b707ed6a67d\"\n  }\n}\n",
+      "url": "https://httpbin.org/headers",
+      "parameter": "",
+      "evidence": "Missing headers: X-XSS-Protection, Referrer-Policy, Permissions-Policy",
+      "scan_id": "",
+      "timestamp": "2025-09-14 06:03:25.602326"
+    },
+    {
+      "id": "41431c6e-a64d-4152-af23-bde9e4c35a6e",
+      "name": "Server Version Disclosure",
+      "description": "Server header contains version information",
+      "risk": "Low",
+      "cvss_score": 3.7,
+      "solution": "Remove version information from Server header",
+      "references": [
+        "https://owasp.org/www-community/controls/Information_Exposure"
+      ],
+      "cwe_id": "CWE-200",
+      "wasc_id": "WASC-13",
+      "request": "GET https://httpbin.org/headers HTTP/1.1",
+      "response": "HTTP/1.1 200\nDate: Sun, 14 Sep 2025 00:33:25 GMT\nContent-Type: application/json\nContent-Length: 229\nConnection: keep-alive\nServer: gunicorn/19.9.0\nAccess-Control-Allow-Origin: *\nAccess-Control-Allow-Credentials: true\n\n{\n  \"headers\": {\n    \"Accept\": \"*/*\", \n    \"Accept-Encoding\": \"gzip, deflate, br\", \n    \"Host\": \"httpbin.org\", \n    \"User-Agent\": \"python-requests/2.31.0\", \n    \"X-Amzn-Trace-Id\": \"Root=1-68c60d54-1e91d7331e954b707ed6a67d\"\n  }\n}\n",
+      "url": "https://httpbin.org/headers",
+      "parameter": "",
+      "evidence": "Server header: gunicorn/19.9.0",
+      "scan_id": "",
+      "timestamp": "2025-09-14 06:03:25.602525"
+    },
+    {
+      "id": "a7b4a8bc-2772-441e-bce1-45ed2dfbc4f5",
+      "name": "Missing API Versioning",
+      "description": "API endpoint does not include version information",
+      "risk": "Low",
+      "cvss_score": 3.7,
+      "solution": "Implement API versioning to manage breaking changes",
+      "references": [
+        "https://restfulapi.net/versioning/"
+      ],
+      "cwe_id": "CWE-1104",
+      "wasc_id": "WASC-15",
+      "request": "GET https://httpbin.org/headers HTTP/1.1",
+      "response": "HTTP/1.1 200\nDate: Sun, 14 Sep 2025 00:33:26 GMT\nContent-Type: application/json\nContent-Length: 229\nConnection: keep-alive\nServer: gunicorn/19.9.0\nAccess-Control-Allow-Origin: *\nAccess-Control-Allow-Credentials: true\n\n{\n  \"headers\": {\n    \"Accept\": \"*/*\", \n    \"Accept-Encoding\": \"gzip, deflate, br\", \n    \"Host\": \"httpbin.org\", \n    \"User-Agent\": \"python-requests/2.31.0\", \n    \"X-Amzn-Trace-Id\": \"Root=1-68c60d56-06a7c19308c4b6f6367481c5\"\n  }\n}\n",
+      "url": "https://httpbin.org/headers",
+      "parameter": "",
+      "evidence": "API endpoint lacks version information",
+      "scan_id": "",
+      "timestamp": "2025-09-14 06:03:49.568208"
+    },
+    {
+      "id": "9815189e-fbaf-4bc1-af2d-2f6b5a33ad49",
+      "name": "CORS Wildcard Origin",
+      "description": "Access-Control-Allow-Origin header set to wildcard (*)",
+      "risk": "High",
+      "cvss_score": 7.5,
+      "solution": "Set Access-Control-Allow-Origin to specific domains instead of wildcard",
+      "references": [
+        "https://owasp.org/www-community/attacks/CORS_OriginHeaderScrutiny"
+      ],
+      "cwe_id": "CWE-942",
+      "wasc_id": "WASC-14",
+      "request": "GET https://httpbin.org/headers HTTP/1.1",
+      "response": "HTTP/1.1 200\nDate: Sun, 14 Sep 2025 00:33:51 GMT\nContent-Type: application/json\nContent-Length: 229\nConnection: keep-alive\nServer: gunicorn/19.9.0\nAccess-Control-Allow-Origin: *\nAccess-Control-Allow-Credentials: true\n\n{\n  \"headers\": {\n    \"Accept\": \"*/*\", \n    \"Accept-Encoding\": \"gzip, deflate, br\", \n    \"Host\": \"httpbin.org\", \n    \"User-Agent\": \"python-requests/2.31.0\", \n    \"X-Amzn-Trace-Id\": \"Root=1-68c60d6e-1e10683d7a391b630d81e7a1\"\n  }\n}\n",
+      "url": "https://httpbin.org/headers",
+      "parameter": "",
+      "evidence": "Access-Control-Allow-Origin: *",
+      "scan_id": "",
+      "timestamp": "2025-09-14 06:03:51.332071"
+    },
+    {
+      "id": "c2022ba8-ef9f-42d1-859c-476da1ee8cf0",
+      "name": "CORS Credentials with Wildcard Origin",
+      "description": "Access-Control-Allow-Credentials is true with wildcard origin",
+      "risk": "Critical",
+      "cvss_score": 9.0,
+      "solution": "Either remove Access-Control-Allow-Credentials or set specific origin",
+      "references": [
+        "https://owasp.org/www-community/attacks/CORS_OriginHeaderScrutiny"
+      ],
+      "cwe_id": "CWE-942",
+      "wasc_id": "WASC-14",
+      "request": "GET https://httpbin.org/headers HTTP/1.1",
+      "response": "HTTP/1.1 200\nDate: Sun, 14 Sep 2025 00:33:51 GMT\nContent-Type: application/json\nContent-Length: 229\nConnection: keep-alive\nServer: gunicorn/19.9.0\nAccess-Control-Allow-Origin: *\nAccess-Control-Allow-Credentials: true\n\n{\n  \"headers\": {\n    \"Accept\": \"*/*\", \n    \"Accept-Encoding\": \"gzip, deflate, br\", \n    \"Host\": \"httpbin.org\", \n    \"User-Agent\": \"python-requests/2.31.0\", \n    \"X-Amzn-Trace-Id\": \"Root=1-68c60d6e-1e10683d7a391b630d81e7a1\"\n  }\n}\n",
+      "url": "https://httpbin.org/headers",
+      "parameter": "",
+      "evidence": "Access-Control-Allow-Credentials: true, Access-Control-Allow-Origin: *",
+      "scan_id": "",
+      "timestamp": "2025-09-14 06:03:51.332136"
+    },
+    {
+      "id": "eec628b6-2f86-473d-9626-dd5ae8dbd764",
+      "name": "Missing CORS Headers",
+      "description": "Missing CORS headers: Access-Control-Allow-Methods, Access-Control-Allow-Headers",
+      "risk": "Medium",
+      "cvss_score": 5.3,
+      "solution": "Implement proper CORS headers for cross-origin requests",
+      "references": [
+        "https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS"
+      ],
+      "cwe_id": "CWE-942",
+      "wasc_id": "WASC-14",
+      "request": "GET https://httpbin.org/headers HTTP/1.1",
+      "response": "HTTP/1.1 200\nDate: Sun, 14 Sep 2025 00:33:51 GMT\nContent-Type: application/json\nContent-Length: 229\nConnection: keep-alive\nServer: gunicorn/19.9.0\nAccess-Control-Allow-Origin: *\nAccess-Control-Allow-Credentials: true\n\n{\n  \"headers\": {\n    \"Accept\": \"*/*\", \n    \"Accept-Encoding\": \"gzip, deflate, br\", \n    \"Host\": \"httpbin.org\", \n    \"User-Agent\": \"python-requests/2.31.0\", \n    \"X-Amzn-Trace-Id\": \"Root=1-68c60d6e-1e10683d7a391b630d81e7a1\"\n  }\n}\n",
+      "url": "https://httpbin.org/headers",
+      "parameter": "",
+      "evidence": "Missing headers: Access-Control-Allow-Methods, Access-Control-Allow-Headers",
+      "scan_id": "",
+      "timestamp": "2025-09-14 06:03:51.332197"
+    },
+    {
+      "id": "9f3bf34c-38e5-42f5-aeb0-3fd236acc7ba",
+      "name": "CORS Allows Suspicious Origins",
+      "description": "API allows requests from 5 suspicious origins: https://evil.com, http://localhost, https://attacker.com, null, https://subdomain.evil.com",
+      "risk": "High",
+      "cvss_score": 7.5,
+      "solution": "Restrict Access-Control-Allow-Origin to trusted domains only",
+      "references": [
+        "https://owasp.org/www-community/attacks/CORS_OriginHeaderScrutiny"
+      ],
+      "cwe_id": "CWE-942",
+      "wasc_id": "WASC-14",
+      "request": "GET https://httpbin.org/headers HTTP/1.1",
+      "response": "HTTP/1.1 200\n\nMultiple CORS origin tests performed",
+      "url": "https://httpbin.org/headers",
+      "parameter": "",
+      "evidence": "Allowed origins: https://evil.com, http://localhost, https://attacker.com, null, https://subdomain.evil.com. Evidence: Origin: https://evil.com, Access-Control-Allow-Origin: https://evil.com; Origin: http://localhost, Access-Control-Allow-Origin: http://localhost; Origin: https://attacker.com, Access-Control-Allow-Origin: https://attacker.com; Origin: null, Access-Control-Allow-Origin: null; Origin: https://subdomain.evil.com, Access-Control-Allow-Origin: https://subdomain.evil.com",
+      "scan_id": "",
+      "timestamp": "2025-09-14 06:03:57.919469"
+    },
+    {
+      "id": "9f6f4680-9b7f-4969-adb4-d415652c5eee",
+      "name": "Missing Rate Limiting Headers",
+      "description": "API does not provide rate limiting information in response headers",
+      "risk": "Medium",
+      "cvss_score": 5.3,
+      "solution": "Implement rate limiting headers to inform clients about rate limits",
+      "references": [
+        "https://tools.ietf.org/id/draft-polli-ratelimit-headers-00.html"
+      ],
+      "cwe_id": "CWE-770",
+      "wasc_id": "WASC-21",
+      "request": "GET https://httpbin.org/headers HTTP/1.1",
+      "response": "HTTP/1.1 200\nDate: Sun, 14 Sep 2025 00:33:59 GMT\nContent-Type: application/json\nContent-Length: 229\nConnection: keep-alive\nServer: gunicorn/19.9.0\nAccess-Control-Allow-Origin: *\nAccess-Control-Allow-Credentials: true\n\n{\n  \"headers\": {\n    \"Accept\": \"*/*\", \n    \"Accept-Encoding\": \"gzip, deflate, br\", \n    \"Host\": \"httpbin.org\", \n    \"User-Agent\": \"python-requests/2.31.0\", \n    \"X-Amzn-Trace-Id\": \"Root=1-68c60d77-53f4ecc44d52cf7f020d70aa\"\n  }\n}\n",
+      "url": "https://httpbin.org/headers",
+      "parameter": "",
+      "evidence": "Missing headers: X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset, X-Rate-Limit-Limit, X-Rate-Limit-Remaining, X-Rate-Limit-Reset",
+      "scan_id": "",
+      "timestamp": "2025-09-14 06:03:59.164317"
+    },
+    {
+      "id": "3fc93830-de6f-45f5-8365-ac97ceffb495",
+      "name": "No Rate Limiting Detected",
+      "description": "All 10 rapid requests returned 200 status code",
+      "risk": "Medium",
+      "cvss_score": 5.3,
+      "solution": "Implement rate limiting to prevent abuse and DDoS attacks",
+      "references": [
+        "https://owasp.org/www-community/controls/Blocking_Brute_Force_Attacks"
+      ],
+      "cwe_id": "CWE-770",
+      "wasc_id": "WASC-21",
+      "request": "GET https://httpbin.org/headers HTTP/1.1",
+      "response": "HTTP/1.1 200\n\nAll requests succeeded",
+      "url": "https://httpbin.org/headers",
+      "parameter": "",
+      "evidence": "All 10 requests returned 200 status code",
+      "scan_id": "",
+      "timestamp": "2025-09-14 06:04:13.109488"
+    },
+    {
+      "id": "e09e0684-4302-4843-b73d-2f4a51c00c2c",
+      "name": "Missing High Risk Security Headers",
+      "description": "API is missing 1 high risk security headers: Strict-Transport-Security",
+      "risk": "High",
+      "cvss_score": 7.5,
+      "solution": "Implement the following security headers: Strict-Transport-Security",
+      "references": [
+        "https://owasp.org/www-project-secure-headers/",
+        "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers"
+      ],
+      "cwe_id": "CWE-693",
+      "wasc_id": "WASC-15",
+      "request": "GET https://httpbin.org/headers HTTP/1.1",
+      "response": "HTTP/1.1 200\nDate: Sun, 14 Sep 2025 00:34:25 GMT\nContent-Type: application/json\nContent-Length: 229\nConnection: keep-alive\nServer: gunicorn/19.9.0\nAccess-Control-Allow-Origin: *\nAccess-Control-Allow-Credentials: true\n\n{\n  \"headers\": {\n    \"Accept\": \"*/*\", \n    \"Accept-Encoding\": \"gzip, deflate, br\", \n    \"Host\": \"httpbin.org\", \n    \"User-Agent\": \"python-requests/2.31.0\", \n    \"X-Amzn-Trace-Id\": \"Root=1-68c60d91-2cea6eb928cccd8b4923187c\"\n  }\n}\n",
+      "url": "https://httpbin.org/headers",
+      "parameter": "",
+      "evidence": "Missing headers: Strict-Transport-Security",
+      "scan_id": "",
+      "timestamp": "2025-09-14 06:04:25.570583"
+    },
+    {
+      "id": "7323984d-e694-4094-8df8-19bc1e9a0d26",
+      "name": "Missing Medium Risk Security Headers",
+      "description": "API is missing 2 medium risk security headers: X-Content-Type-Options, X-Frame-Options",
+      "risk": "Medium",
+      "cvss_score": 6.1,
+      "solution": "Implement the following security headers: X-Content-Type-Options, X-Frame-Options",
+      "references": [
+        "https://owasp.org/www-project-secure-headers/",
+        "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers"
+      ],
+      "cwe_id": "CWE-693",
+      "wasc_id": "WASC-15",
+      "request": "GET https://httpbin.org/headers HTTP/1.1",
+      "response": "HTTP/1.1 200\nDate: Sun, 14 Sep 2025 00:34:25 GMT\nContent-Type: application/json\nContent-Length: 229\nConnection: keep-alive\nServer: gunicorn/19.9.0\nAccess-Control-Allow-Origin: *\nAccess-Control-Allow-Credentials: true\n\n{\n  \"headers\": {\n    \"Accept\": \"*/*\", \n    \"Accept-Encoding\": \"gzip, deflate, br\", \n    \"Host\": \"httpbin.org\", \n    \"User-Agent\": \"python-requests/2.31.0\", \n    \"X-Amzn-Trace-Id\": \"Root=1-68c60d91-2cea6eb928cccd8b4923187c\"\n  }\n}\n",
+      "url": "https://httpbin.org/headers",
+      "parameter": "",
+      "evidence": "Missing headers: X-Content-Type-Options, X-Frame-Options",
+      "scan_id": "",
+      "timestamp": "2025-09-14 06:04:25.570647"
+    },
+    {
+      "id": "d7e5b9b5-e922-474b-bce3-f6df0ccd1327",
+      "name": "Potential Authentication Bypass",
+      "description": "The endpoint appears to return sensitive data without proper authentication, potentially allowing unauthorized access to protected resources.",
+      "risk": "High",
+      "cvss_score": 8.1,
+      "solution": "Implement proper authentication and authorization checks. Ensure all sensitive endpoints require valid authentication tokens.",
+      "references": [
+        "https://owasp.org/www-community/controls/Authentication",
+        "https://cwe.mitre.org/data/definitions/287.html"
+      ],
+      "cwe_id": "CWE-287",
+      "wasc_id": "WASC-1",
+      "request": "GET https://httpbin.org/headers HTTP/1.1",
+      "response": "HTTP/1.1 200\nDate: Sun, 14 Sep 2025 00:34:25 GMT\nContent-Type: application/json\nContent-Length: 229\nConnection: keep-alive\nServer: gunicorn/19.9.0\nAccess-Control-Allow-Origin: *\nAccess-Control-Allow-Credentials: true\n\n{\n  \"headers\": {\n    \"Accept\": \"*/*\", \n    \"Accept-Encoding\": \"gzip, deflate, br\", \n    \"Host\": \"httpbin.org\", \n    \"User-Agent\": \"python-requests/2.31.0\", \n    \"X-Amzn-Trace-Id\": \"Root=1-68c60d91-2cea6eb928cccd8b4923187c\"\n  }\n}\n",
+      "url": "https://httpbin.org/headers",
+      "parameter": "",
+      "evidence": "Endpoint returned sensitive data without authentication: {\n  \"headers\": {\n    \"Accept\": \"*/*\", \n    \"Accept-Encoding\": \"gzip, deflate, br\", \n    \"Host\": \"httpbin.org\", \n    \"User-Agent\": \"python-requests/2.31.0\", \n    \"X-Amzn-Trace-Id\": \"Root=1-68c60d91-2ce...",
+      "scan_id": "",
+      "timestamp": "2025-09-14 06:04:25.570709"
+    }
+  ],
+  "performance_stats": [],
+  "risk_counts": {
+    "High": 5,
+    "Medium": 5,
+    "Low": 3,
+    "Informational": 0
+  },
+  "generated_at": "2025-09-14T06:04:27.332648",
+  "report_version": "2.0"
+}
