@@ -156,6 +156,7 @@ class ReportGenerator:
             justify-content: space-between;
             align-items: center;
         }
+        .alert-critical { background-color: #f8d7da; border-left: 6px solid #dc3545; box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3); }
         .alert-high { background-color: #f8d7da; border-left: 4px solid #dc3545; }
         .alert-medium { background-color: #fff3cd; border-left: 4px solid #ffc107; }
         .alert-low { background-color: #d1ecf1; border-left: 4px solid #17a2b8; }
@@ -174,6 +175,7 @@ class ReportGenerator:
             font-weight: bold;
             text-transform: uppercase;
         }
+        .risk-critical { background-color: #dc3545; color: white; font-weight: bold; box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3); }
         .risk-high { background-color: #dc3545; color: white; }
         .risk-medium { background-color: #ffc107; color: #212529; }
         .risk-low { background-color: #17a2b8; color: white; }
@@ -275,6 +277,16 @@ class ReportGenerator:
         .summary-text li {
             margin: 5px 0;
         }
+        .risk-critical {
+            background: #f8d7da;
+            border: 2px solid #dc3545;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            color: #721c24;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
+        }
         .risk-high {
             background: #f8d7da;
             border: 1px solid #f5c6cb;
@@ -325,6 +337,10 @@ class ReportGenerator:
         }
         .issues-table tr:hover {
             background: #f8f9fa;
+        }
+        .issues-table tr.severity-critical {
+            border-left: 6px solid #dc3545;
+            background-color: #fff5f5;
         }
         .issues-table tr.severity-high {
             border-left: 4px solid #dc3545;
@@ -492,6 +508,7 @@ class ReportGenerator:
                         <h3>Key Findings:</h3>
                         <ul>
                             <li><strong>Total Issues Identified:</strong> {{ all_vulnerabilities|length }}</li>
+                            <li><strong>Critical Risk Issues:</strong> {{ risk_counts.Critical or 0 }}</li>
                             <li><strong>High Risk Issues:</strong> {{ risk_counts.High or 0 }}</li>
                             <li><strong>Medium Risk Issues:</strong> {{ risk_counts.Medium or 0 }}</li>
                             <li><strong>Low Risk Issues:</strong> {{ risk_counts.Low or 0 }}</li>
@@ -515,9 +532,14 @@ class ReportGenerator:
                         {% endif %}
                         
                         <h3>Risk Assessment:</h3>
+                        {% if (risk_counts.Critical or 0) > 0 %}
+                        <div class="risk-critical">
+                            <strong>🚨 CRITICAL RISK:</strong> {{ risk_counts.Critical or 0 }} critical vulnerabilities require immediate attention and should be fixed immediately. These issues pose severe security risks and could lead to complete system compromise.
+                        </div>
+                        {% endif %}
                         {% if (risk_counts.High or 0) > 0 %}
                         <div class="risk-high">
-                            <strong>⚠️ HIGH RISK:</strong> {{ risk_counts.High or 0 }} critical vulnerabilities require immediate attention. These issues pose significant security risks and should be addressed as a priority.
+                            <strong>⚠️ HIGH RISK:</strong> {{ risk_counts.High or 0 }} high-risk vulnerabilities require immediate attention. These issues pose significant security risks and should be addressed as a priority.
                         </div>
                         {% endif %}
                         {% if (risk_counts.Medium or 0) > 0 %}
@@ -842,14 +864,17 @@ class ReportGenerator:
         """
         try:
             with LoggedTimer(self.logger, "Report generation"):
+                # Sort vulnerabilities by severity (Critical → High → Medium → Low → Informational)
+                sorted_vulnerabilities = self._sort_vulnerabilities_by_severity(vulnerabilities)
+                
                 # Calculate risk counts
                 risk_counts = self._calculate_risk_counts_from_vulnerabilities(vulnerabilities)
                 
                 # Prepare template data
                 template_data = {
                     'scan_data': scan_data,
-                    'vulnerabilities': vulnerabilities,
-                    'all_vulnerabilities': vulnerabilities,  # For the issues table
+                    'vulnerabilities': sorted_vulnerabilities,  # Use sorted vulnerabilities
+                    'all_vulnerabilities': sorted_vulnerabilities,  # For the issues table
                     'performance_stats': performance_stats,
                     'risk_counts': risk_counts,
                     'parsed_requests': parsed_requests or [],
@@ -877,6 +902,7 @@ class ReportGenerator:
     def _calculate_risk_counts_from_vulnerabilities(self, vulnerabilities: List[Dict[str, Any]]) -> Dict[str, int]:
         """Calculate risk level counts from vulnerabilities."""
         risk_counts = {
+            'Critical': 0,
             'High': 0,
             'Medium': 0,
             'Low': 0,
@@ -890,6 +916,29 @@ class ReportGenerator:
                 risk_counts[risk_level] += 1
         
         return risk_counts
+    
+    def _sort_vulnerabilities_by_severity(self, vulnerabilities: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Sort vulnerabilities by severity level (Critical → High → Medium → Low → Informational)."""
+        severity_order = {
+            'Critical': 0,
+            'High': 1,
+            'Medium': 2,
+            'Low': 3,
+            'Informational': 4
+        }
+        
+        def get_severity_priority(vuln):
+            risk_level = self._get_vuln_attr(vuln, 'risk', 'Informational')
+            return severity_order.get(risk_level, 5)  # Unknown severity goes last
+        
+        # Sort by severity, then by CVSS score (descending), then by name
+        sorted_vulns = sorted(vulnerabilities, key=lambda v: (
+            get_severity_priority(v),
+            -float(self._get_vuln_attr(v, 'cvss_score', 0) or 0),  # Negative for descending order
+            self._get_vuln_attr(v, 'name', '').lower()
+        ))
+        
+        return sorted_vulns
     
     def generate_json_report(self, scan_data: Dict[str, Any], vulnerabilities: List[Any], 
                            performance_stats: List[Dict[str, Any]], output_path: str) -> bool:
@@ -907,9 +956,12 @@ class ReportGenerator:
         """
         try:
             with LoggedTimer(self.logger, "JSON report generation"):
+                # Sort vulnerabilities by severity (Critical → High → Medium → Low → Informational)
+                sorted_vulnerabilities = self._sort_vulnerabilities_by_severity(vulnerabilities)
+                
                 # Convert Vulnerability objects to dictionaries for JSON serialization
                 vuln_dicts = []
-                for vuln in vulnerabilities:
+                for vuln in sorted_vulnerabilities:
                     if isinstance(vuln, dict):
                         vuln_dicts.append(vuln)
                     else:
@@ -1049,6 +1101,9 @@ class ReportGenerator:
         
         try:
             with LoggedTimer(self.logger, "PDF report generation"):
+                # Sort vulnerabilities by severity (Critical → High → Medium → Low → Informational)
+                sorted_vulnerabilities = self._sort_vulnerabilities_by_severity(vulnerabilities)
+                
                 doc = SimpleDocTemplate(output_path, pagesize=A4)
                 story = []
                 
@@ -1135,11 +1190,11 @@ class ReportGenerator:
                 story.append(Spacer(1, 20))
                 
                 # Vulnerabilities
-                if vulnerabilities:
+                if sorted_vulnerabilities:
                     story.append(Paragraph("Vulnerability Details", heading_style))
                     
                     vuln_data = [["Risk", "CVSS", "Name", "URL", "Source"]]
-                    for vuln in vulnerabilities[:20]:  # Limit to first 20 for PDF
+                    for vuln in sorted_vulnerabilities[:20]:  # Limit to first 20 for PDF
                         risk = self._get_vuln_attr(vuln, 'risk', self._get_vuln_attr(vuln, 'risk_level', 'Unknown'))
                         cvss_score = self._get_vuln_attr(vuln, 'cvss_score', 'N/A')
                         name = str(self._get_vuln_attr(vuln, 'name', 'Unknown'))[:40]  # Truncate long names
@@ -1214,6 +1269,9 @@ class ReportGenerator:
         
         try:
             with LoggedTimer(self.logger, "Excel report generation"):
+                # Sort vulnerabilities by severity (Critical → High → Medium → Low → Informational)
+                sorted_vulnerabilities = self._sort_vulnerabilities_by_severity(vulnerabilities)
+                
                 wb = Workbook()
                 # Remove default sheet if it exists and is not None
                 default_sheet = wb.active
@@ -1222,12 +1280,12 @@ class ReportGenerator:
                 
                 # Summary sheet
                 summary_ws = wb.create_sheet("Summary")
-                self._create_summary_sheet(summary_ws, scan_data, vulnerabilities, performance_stats)
+                self._create_summary_sheet(summary_ws, scan_data, sorted_vulnerabilities, performance_stats)
                 
                 # Vulnerabilities sheet
-                if vulnerabilities:
+                if sorted_vulnerabilities:
                     vuln_ws = wb.create_sheet("Vulnerabilities")
-                    self._create_vulnerabilities_sheet(vuln_ws, vulnerabilities)
+                    self._create_vulnerabilities_sheet(vuln_ws, sorted_vulnerabilities)
                 
                 # Performance sheet
                 if performance_stats:
@@ -1260,6 +1318,9 @@ class ReportGenerator:
         """
         try:
             with LoggedTimer(self.logger, "XML report generation"):
+                # Sort vulnerabilities by severity (Critical → High → Medium → Low → Informational)
+                sorted_vulnerabilities = self._sort_vulnerabilities_by_severity(vulnerabilities)
+                
                 # Create root element
                 root = ET.Element("security_scan_report")
                 root.set("version", "1.0")
@@ -1272,7 +1333,7 @@ class ReportGenerator:
                     elem.text = str(value)
                 
                 # Risk summary
-                risk_counts = self._calculate_risk_counts(vulnerabilities)
+                risk_counts = self._calculate_risk_counts(sorted_vulnerabilities)
                 risk_summary = ET.SubElement(root, "risk_summary")
                 for risk_level, count in risk_counts.items():
                     risk_elem = ET.SubElement(risk_summary, "risk_level")
@@ -1280,9 +1341,9 @@ class ReportGenerator:
                     risk_elem.set("count", str(count))
                 
                 # Vulnerabilities
-                if vulnerabilities:
+                if sorted_vulnerabilities:
                     vulns_elem = ET.SubElement(root, "vulnerabilities")
-                    for vuln in vulnerabilities:
+                    for vuln in sorted_vulnerabilities:
                         vuln_elem = ET.SubElement(vulns_elem, "vulnerability")
                         
                         # Handle both dict and Vulnerability object
@@ -1474,7 +1535,7 @@ class ReportGenerator:
     
     def _calculate_risk_counts(self, vulnerabilities: List[Any]) -> Dict[str, int]:
         """Calculate risk level counts from vulnerabilities."""
-        risk_counts = {'High': 0, 'Medium': 0, 'Low': 0, 'Informational': 0}
+        risk_counts = {'Critical': 0, 'High': 0, 'Medium': 0, 'Low': 0, 'Informational': 0}
         
         for vuln in vulnerabilities:
             risk = self._get_vuln_attr(vuln, 'risk', self._get_vuln_attr(vuln, 'risk_level', 'Informational'))
