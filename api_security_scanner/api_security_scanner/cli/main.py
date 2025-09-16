@@ -412,7 +412,8 @@ def scan(ctx, input_file, curl_command, auth_type, auth_name, auth_value,
                 input_source=input_source,
                 auth_type=auth_type,
                 plugins_used=plugins_used_str,
-                template_used=template
+                template_used=template,
+                scan_mode=scan_mode
             )
             
             # Phase 4: Initialize components

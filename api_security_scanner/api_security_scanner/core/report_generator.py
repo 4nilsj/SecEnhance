@@ -801,6 +801,9 @@ class ReportGenerator:
                     <strong>End Time:</strong> {{ scan_data.end_time or 'N/A' }}<br>
                     <strong>Input Type:</strong> {{ scan_data.input_type }}<br>
                     <strong>Input Source:</strong> {{ scan_data.input_source }}<br>
+                    {% if scan_data.scan_mode %}
+                    <strong>Scan Mode:</strong> {{ scan_data.scan_mode|title }}<br>
+                    {% endif %}
                     {% if scan_data.auth_type %}
                     <strong>Authentication:</strong> {{ scan_data.auth_type }}<br>
                     {% endif %}
@@ -1083,7 +1086,9 @@ class ReportGenerator:
                     ["Duration:", f"{scan_data.get('total_duration', 0):.2f}s"]
                 ]
                 
-                # Add template and plugin information if available
+                # Add template, scan mode, and plugin information if available
+                if scan_data.get('scan_mode'):
+                    scan_info.append(["Scan Mode:", scan_data.get('scan_mode', '').title()])
                 if scan_data.get('template_used'):
                     scan_info.append(["Scan Template:", scan_data.get('template_used')])
                 if scan_data.get('plugins_used'):
@@ -1352,7 +1357,9 @@ class ReportGenerator:
             ("Duration", f"{scan_data.get('total_duration', 0):.2f}s")
         ]
         
-        # Add template and plugin information if available
+        # Add template, scan mode, and plugin information if available
+        if scan_data.get('scan_mode'):
+            scan_info.append(("Scan Mode", scan_data.get('scan_mode', '').title()))
         if scan_data.get('template_used'):
             scan_info.append(("Scan Template", scan_data.get('template_used')))
         if scan_data.get('plugins_used'):

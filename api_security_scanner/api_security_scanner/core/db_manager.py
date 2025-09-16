@@ -46,9 +46,18 @@ class DatabaseManager:
                         auth_type TEXT,
                         plugins_used TEXT,
                         template_used TEXT,
+                        scan_mode TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
                 """)
+                
+                # Add scan_mode column if it doesn't exist (migration)
+                try:
+                    cursor.execute("ALTER TABLE scans ADD COLUMN scan_mode TEXT")
+                    self.logger.info("Added scan_mode column to scans table")
+                except sqlite3.OperationalError:
+                    # Column already exists, ignore
+                    pass
                 
                 # Create zap_alerts table
                 cursor.execute("""
@@ -234,15 +243,16 @@ class DatabaseManager:
     
     def create_scan(self, scan_id: str, target_url: str, input_type: str, 
                    input_source: str, auth_type: Optional[str] = None,
-                   plugins_used: Optional[str] = None, template_used: Optional[str] = None) -> bool:
+                   plugins_used: Optional[str] = None, template_used: Optional[str] = None,
+                   scan_mode: Optional[str] = None) -> bool:
         """Create a new scan record."""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
-                    INSERT INTO scans (scan_id, target_url, start_time, status, input_type, input_source, auth_type, plugins_used, template_used)
-                    VALUES (?, ?, ?, 'running', ?, ?, ?, ?, ?)
-                """, (scan_id, target_url, datetime.now(), input_type, input_source, auth_type, plugins_used, template_used))
+                    INSERT INTO scans (scan_id, target_url, start_time, status, input_type, input_source, auth_type, plugins_used, template_used, scan_mode)
+                    VALUES (?, ?, ?, 'running', ?, ?, ?, ?, ?, ?)
+                """, (scan_id, target_url, datetime.now(), input_type, input_source, auth_type, plugins_used, template_used, scan_mode))
                 conn.commit()
                 self.logger.info(f"Created scan record: {scan_id}")
                 return True
