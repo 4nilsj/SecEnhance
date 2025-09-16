@@ -1,0 +1,28 @@
+{
+  "scan_metadata": {
+    "scan_id": "1a2f9153",
+    "target_url": "https://httpbin.org/status/200",
+    "start_time": "2025-09-16 19:19:20.689401",
+    "end_time": "2025-09-16 19:19:24.805049",
+    "total_duration": 4.115648,
+    "status": "completed",
+    "error_message": null,
+    "input_type": "curl",
+    "input_source": "curl -X GET https://httpbin.org/status/200",
+    "auth_type": null,
+    "plugins_used": null,
+    "template_used": null,
+    "scan_mode": "safe",
+    "created_at": "2025-09-16 13:49:20"
+  },
+  "vulnerabilities": [],
+  "performance_stats": [],
+  "risk_counts": {
+    "High": 0,
+    "Medium": 0,
+    "Low": 0,
+    "Informational": 0
+  },
+  "generated_at": "2025-09-16T19:19:24.917971",
+  "report_version": "2.0"
+}
