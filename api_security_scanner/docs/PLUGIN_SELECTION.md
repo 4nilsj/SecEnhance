@@ -30,15 +30,68 @@ By default, the scanner runs all available plugins with intelligent conditional 
    - Identifies missing rate limiting headers
    - Analyzes rate limiting effectiveness
 
-5. **ComprehensiveSecurityChecker** - General security analysis
-   - Authentication bypass detection
-   - Input validation issues
-   - Authorization problems
+### OWASP API Top 10 Security Plugins
 
-6. **EnhancedSecurityChecker** - Advanced security checks
-   - Advanced vulnerability detection
-   - Complex security pattern analysis
-   - Enhanced reporting
+5. **BOLAChecker** - Broken Object Level Authorization (API1)
+   - Detects BOLA and IDOR vulnerabilities
+   - Tests for unauthorized access to other users' resources
+   - Identifies predictable object identifiers
+   - Tests horizontal and vertical privilege escalation
+
+6. **SSRFSecurityChecker** - Server-Side Request Forgery (API8)
+   - Detects SSRF vulnerabilities
+   - Tests external URL access
+   - Identifies internal network access
+   - Tests cloud metadata access
+
+7. **BrokenAuthenticationChecker** - Broken Authentication (API2)
+   - Detects weak authentication mechanisms
+   - Tests session management security
+   - Identifies authentication bypasses
+   - Tests role escalation vulnerabilities
+
+8. **ExcessiveDataExposureChecker** - Excessive Data Exposure (API3)
+   - Detects sensitive data in API responses
+   - Identifies unnecessary field exposure
+   - Tests for information disclosure
+   - Analyzes large dataset exposure
+
+### Advanced Security Plugins
+
+9. **GraphQLSecurityChecker** - GraphQL-specific security
+   - Detects GraphQL introspection vulnerabilities
+   - Tests query complexity attacks
+   - Identifies GraphQL injection vulnerabilities
+   - Tests authorization bypasses
+
+10. **gRPCSecurityChecker** - gRPC endpoint security
+    - Detects insecure gRPC configurations
+    - Tests protobuf security
+    - Identifies streaming vulnerabilities
+    - Tests metadata security
+
+11. **AISecurityChecker** - AI-powered detection
+    - Machine learning-based vulnerability detection
+    - Anomaly detection and classification
+    - Intelligent risk scoring
+    - Advanced threat identification
+
+### General Security Plugins
+
+12. **ComprehensiveSecurityChecker** - General security analysis
+    - Authentication bypass detection
+    - Input validation issues
+    - Authorization problems
+
+13. **EnhancedSecurityChecker** - Advanced security checks
+    - Advanced vulnerability detection
+    - Complex security pattern analysis
+    - Enhanced reporting
+
+14. **ParameterPollutionChecker** - HTTP parameter pollution
+    - Detects parameter pollution vulnerabilities
+    - Tests for parameter manipulation
+    - Identifies injection points
 
 ## Usage
 
@@ -58,6 +111,18 @@ python main.py scan -f collection.json --plugins SecurityHeadersChecker
 
 # Run only JWT security plugin
 python main.py scan -f collection.json --plugins JWTSecurityChecker
+
+# Run OWASP API Top 10 security plugins
+python main.py scan -f collection.json --plugins BOLAChecker,SSRFSecurityChecker,BrokenAuthenticationChecker,ExcessiveDataExposureChecker
+
+# Run GraphQL-specific security checks
+python main.py scan -f graphql-collection.json --plugins GraphQLSecurityChecker
+
+# Run gRPC security analysis
+python main.py scan -f grpc-endpoints.json --plugins gRPCSecurityChecker
+
+# Run AI-powered security detection
+python main.py scan -f collection.json --plugins AISecurityChecker
 
 # Run multiple specific plugins
 python main.py scan -f collection.json --plugins SecurityHeadersChecker,CORSChecker,JWTSecurityChecker

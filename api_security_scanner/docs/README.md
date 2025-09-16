@@ -22,6 +22,7 @@ Welcome to the comprehensive documentation for the API Security Scanner. This do
 
 - **[Plugin Selection](PLUGIN_SELECTION.md)** - Guide to selecting and configuring security plugins
 - **[Custom Plugin Development](CUSTOM_PLUGIN_DEVELOPMENT.md)** - Guide for developing custom security plugins
+- **[OWASP API Top 10 Plugins](OWASP_API_TOP_10_PLUGINS.md)** - Comprehensive guide to OWASP API Top 10 security plugins
 - **[HAR File Support](HAR_FILE_SUPPORT.md)** - Support for HAR (HTTP Archive) files from various tools
 - **[Multi-Format Reporting](MULTI_FORMAT_REPORTING.md)** - Comprehensive reporting capabilities
 

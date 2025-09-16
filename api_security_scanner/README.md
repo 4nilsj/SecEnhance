@@ -407,6 +407,18 @@ python main.py scan -f collection.json --plugins SecurityHeadersChecker
 # Run only JWT security plugin
 python main.py scan -f collection.json --plugins JWTSecurityChecker
 
+# Run OWASP API Top 10 security plugins
+python main.py scan -f collection.json --plugins BOLAChecker,SSRFSecurityChecker,BrokenAuthenticationChecker,ExcessiveDataExposureChecker
+
+# Run GraphQL-specific security checks
+python main.py scan -f graphql-collection.json --plugins GraphQLSecurityChecker
+
+# Run gRPC security analysis
+python main.py scan -f grpc-endpoints.json --plugins gRPCSecurityChecker
+
+# Run AI-powered security detection
+python main.py scan -f collection.json --plugins AISecurityChecker
+
 # Run multiple specific plugins
 python main.py scan -f collection.json --plugins SecurityHeadersChecker,CORSChecker,JWTSecurityChecker
 
@@ -415,6 +427,9 @@ python main.py scan -u "curl -X GET https://api.com" --plugins SecurityHeadersCh
 
 # Run with HAR file and JWT plugin only
 python main.py scan -f export.har --plugins JWTSecurityChecker --export-pdf jwt-analysis.pdf
+
+# Run comprehensive OWASP API Top 10 scan
+python main.py scan -f collection.json --plugins BOLAChecker,SSRFSecurityChecker,BrokenAuthenticationChecker,ExcessiveDataExposureChecker,GraphQLSecurityChecker
 ```
 
 #### Plugin Selection Benefits
@@ -427,12 +442,27 @@ python main.py scan -f export.har --plugins JWTSecurityChecker --export-pdf jwt-
 
 #### Plugin Categories
 
+**Core Security Plugins:**
 - **SecurityHeadersChecker**: HTTP security headers analysis
 - **CORSChecker**: Cross-Origin Resource Sharing security
 - **JWTSecurityChecker**: JWT token and OAuth flow security
 - **RateLimitingChecker**: API rate limiting analysis
+
+**OWASP API Top 10 Security Plugins:**
+- **BOLAChecker**: Broken Object Level Authorization (BOLA) and IDOR detection
+- **SSRFSecurityChecker**: Server-Side Request Forgery (SSRF) vulnerability detection
+- **BrokenAuthenticationChecker**: Authentication mechanism security analysis
+- **ExcessiveDataExposureChecker**: Data exposure and information leakage detection
+
+**Advanced Security Plugins:**
+- **GraphQLSecurityChecker**: GraphQL-specific security vulnerabilities
+- **gRPCSecurityChecker**: gRPC endpoint security analysis
+- **AISecurityChecker**: AI-powered vulnerability detection and anomaly analysis
+
+**General Security Plugins:**
 - **ComprehensiveSecurityChecker**: General security analysis
 - **EnhancedSecurityChecker**: Advanced security checks
+- **ParameterPollutionChecker**: HTTP parameter pollution detection
 
 ### Advanced Scan with Reporting
 
@@ -569,11 +599,29 @@ For detailed plugin development instructions, see:
 
 ### Built-in Plugins
 
-The scanner comes with several built-in plugins:
+The scanner comes with a comprehensive set of built-in security plugins:
 
-1. **RateLimitingChecker** - Checks for rate limiting headers and mechanisms
-2. **CORSChecker** - Checks for CORS misconfigurations
-3. **SecurityHeadersChecker** - Checks for security headers implementation
+#### Core Security Plugins
+1. **SecurityHeadersChecker** - HTTP security headers analysis and validation
+2. **CORSChecker** - Cross-Origin Resource Sharing (CORS) misconfiguration detection
+3. **JWTSecurityChecker** - JWT token security and OAuth flow analysis
+4. **RateLimitingChecker** - API rate limiting headers and mechanism detection
+
+#### OWASP API Top 10 Security Plugins
+5. **BOLAChecker** - Broken Object Level Authorization (BOLA) and Insecure Direct Object Reference (IDOR) detection
+6. **SSRFSecurityChecker** - Server-Side Request Forgery (SSRF) vulnerability detection and testing
+7. **BrokenAuthenticationChecker** - Authentication mechanism security analysis and weak authentication detection
+8. **ExcessiveDataExposureChecker** - Data exposure and information leakage detection in API responses
+
+#### Advanced Security Plugins
+9. **GraphQLSecurityChecker** - GraphQL-specific security vulnerabilities including introspection, query complexity, and injection attacks
+10. **gRPCSecurityChecker** - gRPC endpoint security analysis, protobuf security, and streaming vulnerability detection
+11. **AISecurityChecker** - AI-powered vulnerability detection with machine learning-based anomaly detection and risk scoring
+
+#### General Security Plugins
+12. **ComprehensiveSecurityChecker** - General security analysis and common vulnerability patterns
+13. **EnhancedSecurityChecker** - Advanced security checks and comprehensive vulnerability scanning
+14. **ParameterPollutionChecker** - HTTP parameter pollution detection and testing
 
 ## Database Schema
 
