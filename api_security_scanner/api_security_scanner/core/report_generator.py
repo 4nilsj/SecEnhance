@@ -802,7 +802,7 @@ class ReportGenerator:
                     <strong>Input Type:</strong> {{ scan_data.input_type }}<br>
                     <strong>Input Source:</strong> {{ scan_data.input_source }}<br>
                     {% if scan_data.scan_mode %}
-                    <strong>Scan Mode:</strong> {{ scan_data.scan_mode|title }}<br>
+                    <strong>ZAP Scan Mode:</strong> {{ scan_data.scan_mode|title }}<br>
                     {% endif %}
                     {% if scan_data.auth_type %}
                     <strong>Authentication:</strong> {{ scan_data.auth_type }}<br>
@@ -1088,7 +1088,7 @@ class ReportGenerator:
                 
                 # Add template, scan mode, and plugin information if available
                 if scan_data.get('scan_mode'):
-                    scan_info.append(["Scan Mode:", scan_data.get('scan_mode', '').title()])
+                    scan_info.append(["ZAP Scan Mode:", scan_data.get('scan_mode', '').title()])
                 if scan_data.get('template_used'):
                     scan_info.append(["Scan Template:", scan_data.get('template_used')])
                 if scan_data.get('plugins_used'):
@@ -1359,7 +1359,7 @@ class ReportGenerator:
         
         # Add template, scan mode, and plugin information if available
         if scan_data.get('scan_mode'):
-            scan_info.append(("Scan Mode", scan_data.get('scan_mode', '').title()))
+            scan_info.append(("ZAP Scan Mode", scan_data.get('scan_mode', '').title()))
         if scan_data.get('template_used'):
             scan_info.append(("Scan Template", scan_data.get('template_used')))
         if scan_data.get('plugins_used'):
