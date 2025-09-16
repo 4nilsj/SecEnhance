@@ -38,6 +38,7 @@ from ..core.zap_manager import ZAPManager, ZAPManagerError
 from ..core.scanner_plugins import PluginManager
 from ..core.report_generator import ReportGenerator
 from ..core.config import get_config_manager, get_config
+from ..core.scan_mode_manager import ScanModeManager
 
 
 class UnifiedScanProgress:
@@ -233,6 +234,8 @@ def config(ctx, env_file: str, save_config: bool, show_config: bool, wizard: boo
 @click.option('--max-scan-time', type=int, help='Maximum scan time in minutes (time-bound scanning)')
 @click.option('--no-progress', is_flag=True, help='Disable progress bars (useful for verbose output)')
 @click.option('--template', help='Use predefined scan template (quick, comprehensive, jwt-focused)')
+@click.option('--scan-mode', type=click.Choice(['safe', 'attack', 'spidering', 'comprehensive', 'stealth', 'aggressive', 'quick', 'api-focused']), 
+              default='safe', help='Select scan mode (safe, attack, spidering, comprehensive, stealth, aggressive, quick, api-focused)')
 @click.option('--ai-detection/--no-ai-detection', default=True, help='Enable/disable AI-powered vulnerability detection')
 @click.option('--ai-anomaly-detection/--no-ai-anomaly-detection', default=True, help='Enable/disable AI anomaly detection')
 @click.option('--ai-vulnerability-classification/--no-ai-vulnerability-classification', default=True, help='Enable/disable AI vulnerability classification')
@@ -244,16 +247,22 @@ def scan(ctx, input_file, curl_command, auth_type, auth_name, auth_value,
          zap_path, zap_port, zap_host, db_path, export, export_json, export_pdf, 
          export_excel, export_xml, performance_stats, no_zap, no_plugins, plugins,
          spider_depth, spider_children, max_scan_time, no_progress, template,
-         ai_detection, ai_anomaly_detection, ai_vulnerability_classification,
+         scan_mode, ai_detection, ai_anomaly_detection, ai_vulnerability_classification,
          ai_risk_scoring, ai_intelligent_fuzzing, ai_learning):
     """🔍 Perform security scan on API endpoints.
     
     This command performs comprehensive security testing on your API endpoints
-    using OWASP ZAP and custom security plugins.
+    using OWASP ZAP and custom security plugins with configurable scan modes.
     
     Examples:
-      # Quick scan with Postman collection
-      python main.py scan -f collection.json
+      # Safe mode scan for production environments
+      python main.py scan -f collection.json --scan-mode safe
+      
+      # Aggressive penetration testing
+      python main.py scan -f collection.json --scan-mode attack
+      
+      # Quick development scan
+      python main.py scan -f collection.json --scan-mode quick
       
       # Interactive guided scan
       python main.py --interactive scan
@@ -263,6 +272,9 @@ def scan(ctx, input_file, curl_command, auth_type, auth_name, auth_value,
       
       # Scan with specific plugins only
       python main.py scan -f collection.json --plugins JWTSecurityChecker
+      
+      # List available scan modes
+      python main.py scan-modes
     """
     logger = ctx.obj['logger']
     interactive_mode = ctx.obj.get('interactive', False)
@@ -284,6 +296,38 @@ def scan(ctx, input_file, curl_command, auth_type, auth_name, auth_value,
                 for key, value in template_config.items():
                     if key not in locals() or locals()[key] is None:
                         locals()[key] = value
+        
+        # Handle scan mode configuration
+        scan_mode_manager = ScanModeManager()
+        mode_config = scan_mode_manager.get_scan_mode_config(scan_mode)
+        if mode_config:
+            # Apply scan mode configuration
+            if not no_zap and not mode_config.zap_enabled:
+                no_zap = True
+            if not no_plugins and not mode_config.plugins_enabled:
+                no_plugins = True
+            if spider_depth == 5:  # Only override if using default
+                spider_depth = mode_config.spider_depth
+            if spider_children == 10:  # Only override if using default
+                spider_children = mode_config.spider_children
+            if max_scan_time is None:
+                max_scan_time = mode_config.max_scan_time // 60  # Convert to minutes
+            
+            # Get recommended plugins for the mode
+            if not plugins and not no_plugins:
+                recommended_plugins = scan_mode_manager.get_recommended_plugins_for_mode(scan_mode)
+                if recommended_plugins:
+                    plugins = ','.join(recommended_plugins)
+            
+            # Display scan mode information
+            mode_info = scan_mode_manager.get_mode_info(scan_mode)
+            if mode_info:
+                echo(f"\n🎯 Scan Mode: {mode_info.name}")
+                echo(f"   Description: {mode_info.description}")
+                echo(f"   Use Case: {mode_info.use_case}")
+                echo(f"   Duration: {mode_info.duration}")
+                echo(f"   Risk Level: {mode_info.risk_level}")
+                echo()
         
         # Validate input
         if not input_file and not curl_command:
@@ -1163,6 +1207,58 @@ def clear_reports_by_pattern(ctx, reports_dir, pattern, confirm):
 
 @cli.command()
 @click.pass_context
+def scan_modes(ctx):
+    """🎯 List available scan modes with detailed descriptions."""
+    echo("\n🎯 AVAILABLE SCAN MODES")
+    echo("="*80)
+    
+    scan_mode_manager = ScanModeManager()
+    modes = scan_mode_manager.list_all_modes()
+    
+    for mode_name, mode_info in modes.items():
+        echo(f"\n🔹 {mode_name.upper()}")
+        echo(f"   Name: {mode_info.name}")
+        echo(f"   Description: {mode_info.description}")
+        echo(f"   Use Case: {mode_info.use_case}")
+        echo(f"   Duration: {mode_info.duration}")
+        echo(f"   Risk Level: {mode_info.risk_level}")
+        
+        # Show key configuration details
+        config = mode_info.config
+        echo(f"   ZAP Enabled: {'Yes' if config['zap_enabled'] else 'No'}")
+        echo(f"   Plugins Enabled: {'Yes' if config['plugins_enabled'] else 'No'}")
+        echo(f"   Spider Depth: {config['spider_depth']}")
+        echo(f"   Request Delay: {config['request_delay']}s")
+        echo(f"   Concurrent Requests: {config['concurrent_requests']}")
+        echo(f"   Aggressive Scanning: {'Yes' if config['aggressive_scanning'] else 'No'}")
+        echo(f"   Stealth Mode: {'Yes' if config['stealth_mode'] else 'No'}")
+    
+    echo("\n💡 USAGE EXAMPLES:")
+    echo("-" * 50)
+    echo("python main.py scan -f collection.json --scan-mode safe")
+    echo("python main.py scan -f collection.json --scan-mode attack")
+    echo("python main.py scan -f collection.json --scan-mode spidering")
+    echo("python main.py scan -f collection.json --scan-mode comprehensive")
+    echo("python main.py scan -f collection.json --scan-mode stealth")
+    echo("python main.py scan -f collection.json --scan-mode aggressive")
+    echo("python main.py scan -f collection.json --scan-mode quick")
+    echo("python main.py scan -f collection.json --scan-mode api-focused")
+    
+    echo("\n🔧 SCAN MODE COMPARISON:")
+    echo("-" * 50)
+    echo("Mode          | ZAP | Plugins | Duration | Risk Level")
+    echo("-" * 50)
+    for mode_name, mode_info in modes.items():
+        config = mode_info.config
+        zap_status = "✓" if config['zap_enabled'] else "✗"
+        plugins_status = "✓" if config['plugins_enabled'] else "✗"
+        duration = mode_info.duration.split('-')[0].strip()  # Get first part of duration range
+        risk = mode_info.risk_level
+        echo(f"{mode_name:<13} | {zap_status:<3} | {plugins_status:<7} | {duration:<8} | {risk}")
+
+
+@cli.command()
+@click.pass_context
 def templates(ctx):
     """📋 List available scan templates with descriptions."""
     echo("\n📋 AVAILABLE SCAN TEMPLATES")
@@ -1291,6 +1387,7 @@ def help_cmd(ctx):
     echo("\n🔧 COMMON COMMANDS:")
     echo("-" * 30)
     echo("scan          - Perform security scan")
+    echo("scan-modes    - List available scan modes")
     echo("plugins       - List available plugins")
     echo("templates     - Show scan templates")
     echo("list-scans    - Show recent scans")
@@ -1314,7 +1411,18 @@ def help_cmd(ctx):
     echo("• HAR files (.har)")
     echo("• cURL commands")
     
-    echo("\n🎯 SCAN TEMPLATES:")
+    echo("\n🎯 SCAN MODES:")
+    echo("-" * 30)
+    echo("• safe         - Conservative scanning (15-30 min)")
+    echo("• attack       - Aggressive vulnerability testing (1-2 hours)")
+    echo("• spidering    - Endpoint discovery and mapping (30-60 min)")
+    echo("• comprehensive - Complete security assessment (2-3 hours)")
+    echo("• stealth      - Minimal footprint scanning (10-15 min)")
+    echo("• aggressive   - Maximum intensity scanning (3-4 hours)")
+    echo("• quick        - Fast development testing (2-5 min)")
+    echo("• api-focused  - Specialized API security testing (20-30 min)")
+    
+    echo("\n📋 SCAN TEMPLATES:")
     echo("-" * 30)
     echo("• quick        - Fast security check (1-2 min)")
     echo("• comprehensive - Full security assessment (10-30 min)")
@@ -1332,20 +1440,32 @@ def help_cmd(ctx):
     
     echo("\n💡 EXAMPLES:")
     echo("-" * 30)
+    echo("# Safe mode scan for production")
+    echo("python main.py scan -f api.json --scan-mode safe")
+    echo("")
+    echo("# Aggressive penetration testing")
+    echo("python main.py scan -f api.json --scan-mode attack")
+    echo("")
     echo("# Quick development scan")
-    echo("python main.py scan -f api.json --template quick")
+    echo("python main.py scan -f api.json --scan-mode quick")
     echo("")
     echo("# Comprehensive security assessment")
-    echo("python main.py scan -f api.json --template comprehensive")
+    echo("python main.py scan -f api.json --scan-mode comprehensive")
     echo("")
-    echo("# JWT-focused scan with custom reports")
-    echo("python main.py scan -f api.json --template jwt-focused --export-pdf jwt_report.pdf")
+    echo("# Stealth mode to avoid detection")
+    echo("python main.py scan -f api.json --scan-mode stealth")
+    echo("")
+    echo("# API-focused scanning")
+    echo("python main.py scan -f api.json --scan-mode api-focused")
     echo("")
     echo("# Interactive guided scan")
     echo("python main.py --interactive scan")
     echo("")
     echo("# Scan with specific plugins only")
     echo("python main.py scan -f api.json --plugins JWTSecurityChecker,SecurityHeadersChecker")
+    echo("")
+    echo("# List available scan modes")
+    echo("python main.py scan-modes")
     echo("")
     echo("# Setup autocomplete for your shell")
     echo("python main.py autocomplete")

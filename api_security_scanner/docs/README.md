@@ -18,6 +18,10 @@ Welcome to the comprehensive documentation for the API Security Scanner. This do
 - **[Docker Usage Guide](DOCKER_USAGE_GUIDE.md)** - Complete guide for containerized deployment
 - **[macOS Setup Guide](MACOS_SETUP_GUIDE.md)** - Setup guide for macOS users
 
+### 🎯 Scan Modes
+
+- **[Scan Modes Guide](SCAN_MODES_GUIDE.md)** - Complete guide to all available scan modes (Safe, Attack, Spidering, etc.)
+
 ### 🔧 Advanced Features
 
 - **[Plugin Selection](PLUGIN_SELECTION.md)** - Guide to selecting and configuring security plugins
@@ -36,8 +40,17 @@ Welcome to the comprehensive documentation for the API Security Scanner. This do
 ### Basic Usage
 
 ```bash
-# Scan a Postman collection
-python main.py scan -f collection.json
+# Scan a Postman collection (safe mode - default)
+python main.py scan -f collection.json --scan-mode safe
+
+# Quick development scan
+python main.py scan -f collection.json --scan-mode quick
+
+# Aggressive penetration testing
+python main.py scan -f collection.json --scan-mode attack
+
+# List all available scan modes
+python main.py scan-modes
 
 # Scan with AI detection
 python main.py scan -f collection.json --ai-detection
@@ -58,6 +71,12 @@ docker-compose run --rm scanner scan -f /workspace/collection.json
 ```
 
 ## 🔍 Key Features
+
+### 🎯 Multiple Scan Modes
+- **8 Predefined Modes**: Safe, Attack, Spidering, Comprehensive, Stealth, Aggressive, Quick, API-Focused
+- **Optimized Configurations**: Each mode tailored for specific testing scenarios
+- **Risk-Based Selection**: Choose appropriate mode based on environment and requirements
+- **Flexible Override**: Customize any mode with command-line parameters
 
 ### 🤖 AI-Powered Detection
 - **Anomaly Detection**: Identifies unusual patterns in API requests

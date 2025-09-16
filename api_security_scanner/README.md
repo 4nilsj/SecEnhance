@@ -4,6 +4,7 @@ A highly customizable command-line interface (CLI) tool for automated API securi
 
 ## Features
 
+- **🎯 Multiple Scan Modes**: 8 predefined scan modes (Safe, Attack, Spidering, Comprehensive, Stealth, Aggressive, Quick, API-Focused) for different testing scenarios
 - **Multiple Input Formats**: Supports Postman Collections, OpenAPI/Swagger specs, curl commands, and HAR files
 - **OWASP ZAP Integration**: Leverages OWASP ZAP for comprehensive security testing
 - **🤖 AI-Powered Detection**: Machine learning-based vulnerability detection with anomaly detection, classification, and risk scoring
@@ -219,17 +220,38 @@ podman-compose run --rm scanner scan -f /workspace/collection.json
 #### Basic Scan
 
 ```bash
-# Scan a Postman collection
-python main.py scan -f collection.json
+# Scan a Postman collection (safe mode - default)
+python main.py scan -f collection.json --scan-mode safe
 
-# Scan an OpenAPI spec
-python main.py scan -f api-spec.yaml
+# Quick development scan
+python main.py scan -f collection.json --scan-mode quick
 
-# Scan a curl command
-python main.py scan -u "curl -X GET https://api.example.com/users"
+# Aggressive penetration testing
+python main.py scan -f collection.json --scan-mode attack
 
-# Scan a HAR file (from Insomnia, Postman, etc.)
-python main.py scan -f insomnia-export.har
+# Comprehensive security audit
+python main.py scan -f collection.json --scan-mode comprehensive
+
+# Stealth mode to avoid detection
+python main.py scan -f collection.json --scan-mode stealth
+
+# API-focused scanning
+python main.py scan -f collection.json --scan-mode api-focused
+
+# List all available scan modes
+python main.py scan-modes
+```
+
+**Scan Mode Examples:**
+```bash
+# Scan an OpenAPI spec with specific mode
+python main.py scan -f api-spec.yaml --scan-mode safe
+
+# Scan a curl command with quick mode
+python main.py scan -u "curl -X GET https://api.example.com/users" --scan-mode quick
+
+# Scan a HAR file with comprehensive mode
+python main.py scan -f insomnia-export.har --scan-mode comprehensive
 ```
 
 ### AI-Powered Detection
@@ -264,6 +286,55 @@ python main.py scan -f collection.json --plugins AISecurityChecker
 For detailed AI detection documentation, see:
 - **[AI Detection Guide](docs/AI_DETECTION_GUIDE.md)** - Complete user guide
 - **[AI Detection Quick Reference](docs/AI_DETECTION_QUICK_REFERENCE.md)** - Quick reference
+
+### 🎯 Scan Modes
+
+The scanner provides 8 predefined scan modes optimized for different testing scenarios:
+
+```bash
+# List all available scan modes
+python main.py scan-modes
+
+# Safe mode for production environments (default)
+python main.py scan -f collection.json --scan-mode safe
+
+# Quick mode for development and CI/CD
+python main.py scan -f collection.json --scan-mode quick
+
+# Attack mode for penetration testing
+python main.py scan -f collection.json --scan-mode attack
+
+# Comprehensive mode for full security audits
+python main.py scan -f collection.json --scan-mode comprehensive
+
+# Stealth mode to avoid detection
+python main.py scan -f collection.json --scan-mode stealth
+
+# API-focused mode for REST/GraphQL/gRPC APIs
+python main.py scan -f collection.json --scan-mode api-focused
+
+# Spidering mode for endpoint discovery
+python main.py scan -f collection.json --scan-mode spidering
+
+# Aggressive mode for maximum coverage
+python main.py scan -f collection.json --scan-mode aggressive
+```
+
+**Scan Mode Comparison:**
+
+| Mode | Duration | Risk Level | ZAP | Plugins | Use Case |
+|------|----------|------------|-----|---------|----------|
+| Safe | 15-30 min | Low | ✓ | ✓ | Production |
+| Quick | 2-5 min | Very Low | ✗ | ✓ | Development |
+| Attack | 1-2 hours | High | ✓ | ✓ | Penetration Testing |
+| Comprehensive | 2-3 hours | Medium | ✓ | ✓ | Full Audit |
+| Stealth | 10-15 min | Very Low | ✗ | ✓ | Covert Testing |
+| API-Focused | 20-30 min | Low | ✗ | ✓ | API Testing |
+| Spidering | 30-60 min | Very Low | ✓ | ✗ | Discovery |
+| Aggressive | 3-4 hours | Very High | ✓ | ✓ | Red Team |
+
+For detailed scan mode documentation, see:
+- **[Scan Modes Guide](docs/SCAN_MODES_GUIDE.md)** - Complete guide to all scan modes
 - **[AI Detection Architecture](docs/AI_DETECTION_ARCHITECTURE.md)** - Technical details
 
 ### Scan with Authentication
