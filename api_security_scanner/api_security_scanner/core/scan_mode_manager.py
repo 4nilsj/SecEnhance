@@ -33,7 +33,6 @@ class ScanModeManager:
                 description='Conservative scanning with minimal impact on target systems',
                 config={
                     'zap_enabled': True,
-                    'plugins_enabled': True,
                     'spider_depth': 3,
                     'spider_children': 5,
                     'max_scan_time': 1800,  # 30 minutes
@@ -67,7 +66,6 @@ class ScanModeManager:
                 description='Aggressive scanning with comprehensive vulnerability testing',
                 config={
                     'zap_enabled': True,
-                    'plugins_enabled': True,
                     'spider_depth': 10,
                     'spider_children': 20,
                     'max_scan_time': 7200,  # 2 hours
@@ -101,7 +99,6 @@ class ScanModeManager:
                 description='Focus on discovery and mapping of endpoints',
                 config={
                     'zap_enabled': True,
-                    'plugins_enabled': False,
                     'spider_depth': 15,
                     'spider_children': 50,
                     'max_scan_time': 3600,  # 1 hour
@@ -135,7 +132,6 @@ class ScanModeManager:
                 description='Complete security assessment with all available tools',
                 config={
                     'zap_enabled': True,
-                    'plugins_enabled': True,
                     'spider_depth': 8,
                     'spider_children': 15,
                     'max_scan_time': 10800,  # 3 hours
@@ -169,7 +165,6 @@ class ScanModeManager:
                 description='Minimal footprint scanning to avoid detection',
                 config={
                     'zap_enabled': False,
-                    'plugins_enabled': True,
                     'spider_depth': 2,
                     'spider_children': 3,
                     'max_scan_time': 900,  # 15 minutes
@@ -204,7 +199,6 @@ class ScanModeManager:
                 description='Maximum intensity scanning with all attack vectors',
                 config={
                     'zap_enabled': True,
-                    'plugins_enabled': True,
                     'spider_depth': 20,
                     'spider_children': 100,
                     'max_scan_time': 14400,  # 4 hours
@@ -238,7 +232,6 @@ class ScanModeManager:
                 description='Fast scanning for development and CI/CD pipelines',
                 config={
                     'zap_enabled': False,
-                    'plugins_enabled': True,
                     'spider_depth': 1,
                     'spider_children': 5,
                     'max_scan_time': 300,  # 5 minutes
@@ -272,7 +265,6 @@ class ScanModeManager:
                 description='Specialized scanning for REST/GraphQL/gRPC APIs',
                 config={
                     'zap_enabled': False,
-                    'plugins_enabled': True,
                     'spider_depth': 5,
                     'spider_children': 10,
                     'max_scan_time': 1800,  # 30 minutes
@@ -313,7 +305,6 @@ class ScanModeManager:
         return ScanModeConfig(
             mode=mode,
             zap_enabled=config_dict.get('zap_enabled', True),
-            plugins_enabled=config_dict.get('plugins_enabled', True),
             spider_depth=config_dict.get('spider_depth', 5),
             spider_children=config_dict.get('spider_children', 10),
             max_scan_time=config_dict.get('max_scan_time', 3600),
@@ -355,42 +346,3 @@ class ScanModeManager:
         """Validate if a scan mode exists."""
         return mode in self.presets
     
-    def get_recommended_plugins_for_mode(self, mode: str) -> List[str]:
-        """Get recommended plugins for a specific scan mode."""
-        mode_config = self.get_scan_mode_config(mode)
-        if not mode_config:
-            return []
-        
-        recommended = []
-        
-        if mode_config.headers_analysis:
-            recommended.append('SecurityHeadersChecker')
-        
-        if mode_config.cors_analysis:
-            recommended.append('CORSChecker')
-        
-        if mode_config.jwt_analysis:
-            recommended.append('JWTSecurityChecker')
-        
-        if mode_config.graphql_analysis:
-            recommended.append('GraphQLSecurityChecker')
-        
-        if mode_config.grpc_analysis:
-            recommended.append('GRPCSecurityChecker')
-        
-        if mode_config.authentication_tests:
-            recommended.extend(['BrokenAuthenticationChecker', 'BOLAChecker'])
-        
-        if mode_config.rate_limiting_tests:
-            recommended.append('RateLimitingChecker')
-        
-        if mode_config.injection_tests:
-            recommended.append('SSRFSecurityChecker')
-        
-        if mode_config.fuzzing_enabled:
-            recommended.append('AISecurityChecker')
-        
-        # Always include these for comprehensive analysis
-        recommended.extend(['ExcessiveDataExposureChecker', 'EnhancedSecurityChecker'])
-        
-        return list(set(recommended))  # Remove duplicates

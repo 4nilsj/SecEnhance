@@ -51,10 +51,9 @@ class LoggingConfig:
 
 @dataclass
 class ScanModeConfig:
-    """Scan mode configuration settings."""
+    """ZAP scan mode configuration settings."""
     mode: str = "safe"  # safe, attack, spidering, comprehensive, stealth, aggressive
     zap_enabled: bool = True
-    plugins_enabled: bool = True
     spider_depth: int = 5
     spider_children: int = 10
     max_scan_time: int = 3600  # seconds
@@ -367,9 +366,6 @@ class ConfigManager:
         scan_mode_zap_enabled = os.getenv("SCAN_MODE_ZAP_ENABLED")
         if scan_mode_zap_enabled:
             self.config.scan_mode.zap_enabled = scan_mode_zap_enabled.lower() == "true"
-        scan_mode_plugins_enabled = os.getenv("SCAN_MODE_PLUGINS_ENABLED")
-        if scan_mode_plugins_enabled:
-            self.config.scan_mode.plugins_enabled = scan_mode_plugins_enabled.lower() == "true"
         scan_mode_spider_depth = os.getenv("SCAN_MODE_SPIDER_DEPTH")
         if scan_mode_spider_depth:
             self.config.scan_mode.spider_depth = int(scan_mode_spider_depth)
@@ -530,7 +526,6 @@ class ConfigManager:
         env_content.append("# Scan Mode Configuration")
         env_content.append(f"SCAN_MODE={self.config.scan_mode.mode}")
         env_content.append(f"SCAN_MODE_ZAP_ENABLED={str(self.config.scan_mode.zap_enabled).lower()}")
-        env_content.append(f"SCAN_MODE_PLUGINS_ENABLED={str(self.config.scan_mode.plugins_enabled).lower()}")
         env_content.append(f"SCAN_MODE_SPIDER_DEPTH={self.config.scan_mode.spider_depth}")
         env_content.append(f"SCAN_MODE_SPIDER_CHILDREN={self.config.scan_mode.spider_children}")
         env_content.append(f"SCAN_MODE_MAX_SCAN_TIME={self.config.scan_mode.max_scan_time}")

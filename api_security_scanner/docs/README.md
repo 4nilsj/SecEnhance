@@ -18,9 +18,9 @@ Welcome to the comprehensive documentation for the API Security Scanner. This do
 - **[Docker Usage Guide](DOCKER_USAGE_GUIDE.md)** - Complete guide for containerized deployment
 - **[macOS Setup Guide](MACOS_SETUP_GUIDE.md)** - Setup guide for macOS users
 
-### 🎯 Scan Modes
+### 🎯 ZAP Scan Modes
 
-- **[Scan Modes Guide](SCAN_MODES_GUIDE.md)** - Complete guide to all available scan modes (Safe, Attack, Spidering, etc.)
+- **[ZAP Scan Modes Guide](SCAN_MODES_GUIDE.md)** - Complete guide to all available ZAP scan modes (Safe, Attack, Spidering, etc.)
 
 ### 🔧 Advanced Features
 
@@ -40,14 +40,17 @@ Welcome to the comprehensive documentation for the API Security Scanner. This do
 ### Basic Usage
 
 ```bash
-# Scan a Postman collection (safe mode - default)
+# Scan a Postman collection with ZAP (safe mode)
 python main.py scan -f collection.json --scan-mode safe
 
-# Quick development scan
+# Quick ZAP development scan
 python main.py scan -f collection.json --scan-mode quick
 
-# Aggressive penetration testing
+# Aggressive ZAP penetration testing
 python main.py scan -f collection.json --scan-mode attack
+
+# Plugin-only scan (no ZAP, no scan mode)
+python main.py scan -f collection.json --no-zap
 
 # List all available scan modes
 python main.py scan-modes

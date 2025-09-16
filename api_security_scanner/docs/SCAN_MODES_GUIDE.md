@@ -1,6 +1,8 @@
-# Scan Modes Guide
+# ZAP Scan Modes Guide
 
-The API Security Scanner provides multiple scan modes to suit different testing scenarios and environments. Each mode is optimized for specific use cases with different levels of aggressiveness, coverage, and impact on target systems.
+The API Security Scanner provides multiple ZAP scan modes to suit different testing scenarios and environments. Each mode is optimized for specific use cases with different levels of aggressiveness, coverage, and impact on target systems.
+
+**Important:** Scan modes only apply to ZAP scanning. Custom plugins run independently and are not affected by scan modes. For plugin-only scanning, use `--no-zap` without specifying a scan mode.
 
 ## Available Scan Modes
 
@@ -12,7 +14,6 @@ The API Security Scanner provides multiple scan modes to suit different testing 
 
 **Configuration:**
 - ZAP Enabled: Yes
-- Plugins Enabled: Yes
 - Spider Depth: 3
 - Request Delay: 500ms
 - Concurrent Requests: 1
@@ -42,7 +43,6 @@ The API Security Scanner provides multiple scan modes to suit different testing 
 
 **Configuration:**
 - ZAP Enabled: Yes
-- Plugins Enabled: Yes
 - Spider Depth: 10
 - Request Delay: 100ms
 - Concurrent Requests: 5
@@ -73,7 +73,6 @@ The API Security Scanner provides multiple scan modes to suit different testing 
 
 **Configuration:**
 - ZAP Enabled: Yes
-- Plugins Enabled: No
 - Spider Depth: 15
 - Request Delay: 200ms
 - Concurrent Requests: 3
@@ -103,7 +102,6 @@ The API Security Scanner provides multiple scan modes to suit different testing 
 
 **Configuration:**
 - ZAP Enabled: Yes
-- Plugins Enabled: Yes
 - Spider Depth: 8
 - Request Delay: 200ms
 - Concurrent Requests: 3
@@ -133,7 +131,6 @@ The API Security Scanner provides multiple scan modes to suit different testing 
 
 **Configuration:**
 - ZAP Enabled: No
-- Plugins Enabled: Yes
 - Spider Depth: 2
 - Request Delay: 2 seconds
 - Concurrent Requests: 1
@@ -164,7 +161,6 @@ The API Security Scanner provides multiple scan modes to suit different testing 
 
 **Configuration:**
 - ZAP Enabled: Yes
-- Plugins Enabled: Yes
 - Spider Depth: 20
 - Request Delay: 50ms
 - Concurrent Requests: 10
@@ -195,7 +191,6 @@ The API Security Scanner provides multiple scan modes to suit different testing 
 
 **Configuration:**
 - ZAP Enabled: No
-- Plugins Enabled: Yes
 - Spider Depth: 1
 - Request Delay: 100ms
 - Concurrent Requests: 5
@@ -225,7 +220,6 @@ The API Security Scanner provides multiple scan modes to suit different testing 
 
 **Configuration:**
 - ZAP Enabled: No
-- Plugins Enabled: Yes
 - Spider Depth: 5
 - Request Delay: 200ms
 - Concurrent Requests: 3
@@ -350,18 +344,20 @@ export SCAN_MODE_STEALTH=true
 5. **Compliance**: Use comprehensive mode for compliance testing
 6. **Development**: Use quick mode for development workflows
 
-## Mode Comparison
+## ZAP Mode Comparison
 
-| Mode | ZAP | Plugins | Duration | Risk | Use Case |
-|------|-----|---------|----------|------|----------|
-| Safe | ✓ | ✓ | 15-30 min | Low | Production |
-| Attack | ✓ | ✓ | 1-2 hours | High | Penetration |
-| Spidering | ✓ | ✗ | 30-60 min | Very Low | Discovery |
-| Comprehensive | ✓ | ✓ | 2-3 hours | Medium | Full Audit |
-| Stealth | ✗ | ✓ | 10-15 min | Very Low | Covert |
-| Aggressive | ✓ | ✓ | 3-4 hours | Very High | Red Team |
-| Quick | ✗ | ✓ | 2-5 min | Very Low | Development |
-| API-Focused | ✗ | ✓ | 20-30 min | Low | API Testing |
+| Mode | ZAP | Duration | Risk | Use Case |
+|------|-----|----------|------|----------|
+| Safe | ✓ | 15-30 min | Low | Production |
+| Attack | ✓ | 1-2 hours | High | Penetration |
+| Spidering | ✓ | 30-60 min | Very Low | Discovery |
+| Comprehensive | ✓ | 2-3 hours | Medium | Full Audit |
+| Stealth | ✓ | 10-15 min | Very Low | Covert |
+| Aggressive | ✓ | 3-4 hours | Very High | Red Team |
+| Quick | ✓ | 2-5 min | Very Low | Development |
+| API-Focused | ✓ | 20-30 min | Low | API Testing |
+
+**Note:** All scan modes now use ZAP. For plugin-only scanning without ZAP, use `--no-zap` without specifying a scan mode.
 
 ## Troubleshooting
 
