@@ -1,0 +1,130 @@
+{
+  "scan_metadata": {
+    "scan_id": "5d78014a",
+    "target_url": "https://httpbin.org/status/200",
+    "start_time": "2025-09-16 20:09:11.268875",
+    "end_time": "2025-09-16 20:09:56.034112",
+    "total_duration": 44.765237,
+    "status": "completed",
+    "error_message": null,
+    "input_type": "curl",
+    "input_source": "curl -X GET https://httpbin.org/status/200",
+    "auth_type": null,
+    "plugins_used": null,
+    "template_used": null,
+    "scan_mode": null,
+    "created_at": "2025-09-16 14:39:11"
+  },
+  "vulnerabilities": [
+    {
+      "id": "eb9061fd-c469-4afb-b9a6-3bf9b8a5ea8c",
+      "name": "Missing High Risk Security Headers",
+      "description": "API is missing 2 high risk security headers: Strict-Transport-Security, Content-Security-Policy",
+      "risk": "High",
+      "cvss_score": 8.1,
+      "solution": "Implement the following security headers: Strict-Transport-Security, Content-Security-Policy",
+      "references": [
+        "https://owasp.org/www-community/controls/HTTP_Strict_Transport_Security"
+      ],
+      "cwe_id": "CWE-319",
+      "wasc_id": "WASC-15",
+      "request": "GET https://httpbin.org/status/200 HTTP/1.1",
+      "response": "HTTP/1.1 200\n\nResponse Headers:\n  Date: Tue, 16 Sep 2025 14:39:12 GMT\n  Content-Type: text/html; charset=utf-8\n  Content-Length: 0\n  Connection: keep-alive\n  Server: gunicorn/19.9.0\n  Access-Control-Allow-Origin: *\n  Access-Control-Allow-Credentials: true",
+      "url": "https://httpbin.org/status/200",
+      "parameter": "",
+      "evidence": "Missing headers: Strict-Transport-Security, Content-Security-Policy",
+      "scan_id": "",
+      "timestamp": "2025-09-16 20:09:12.908223"
+    },
+    {
+      "id": "788c1565-0e0c-41b2-85c8-f85e70aaeffa",
+      "name": "Missing Medium Risk Security Headers",
+      "description": "API is missing 2 medium risk security headers: X-Content-Type-Options, X-Frame-Options",
+      "risk": "Medium",
+      "cvss_score": 6.1,
+      "solution": "Implement the following security headers: X-Content-Type-Options, X-Frame-Options",
+      "references": [
+        "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options"
+      ],
+      "cwe_id": "CWE-693",
+      "wasc_id": "WASC-15",
+      "request": "GET https://httpbin.org/status/200 HTTP/1.1",
+      "response": "HTTP/1.1 200\n\nResponse Headers:\n  Date: Tue, 16 Sep 2025 14:39:12 GMT\n  Content-Type: text/html; charset=utf-8\n  Content-Length: 0\n  Connection: keep-alive\n  Server: gunicorn/19.9.0\n  Access-Control-Allow-Origin: *\n  Access-Control-Allow-Credentials: true",
+      "url": "https://httpbin.org/status/200",
+      "parameter": "",
+      "evidence": "Missing headers: X-Content-Type-Options, X-Frame-Options",
+      "scan_id": "",
+      "timestamp": "2025-09-16 20:09:12.908311"
+    },
+    {
+      "id": "81394f6b-de61-4a8f-ab32-3b96c0fb5308",
+      "name": "Missing Low Risk Security Headers",
+      "description": "API is missing 3 low risk security headers: X-XSS-Protection, Referrer-Policy, Permissions-Policy",
+      "risk": "Low",
+      "cvss_score": 4.3,
+      "solution": "Implement the following security headers: X-XSS-Protection, Referrer-Policy, Permissions-Policy",
+      "references": [
+        "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-XSS-Protection"
+      ],
+      "cwe_id": "CWE-79",
+      "wasc_id": "WASC-8",
+      "request": "GET https://httpbin.org/status/200 HTTP/1.1",
+      "response": "HTTP/1.1 200\n\nResponse Headers:\n  Date: Tue, 16 Sep 2025 14:39:12 GMT\n  Content-Type: text/html; charset=utf-8\n  Content-Length: 0\n  Connection: keep-alive\n  Server: gunicorn/19.9.0\n  Access-Control-Allow-Origin: *\n  Access-Control-Allow-Credentials: true",
+      "url": "https://httpbin.org/status/200",
+      "parameter": "",
+      "evidence": "Missing headers: X-XSS-Protection, Referrer-Policy, Permissions-Policy",
+      "scan_id": "",
+      "timestamp": "2025-09-16 20:09:12.908349"
+    },
+    {
+      "id": "c47c409b-9b8a-4d54-9fce-5873b8ed0d1d",
+      "name": "Missing API Versioning",
+      "description": "API endpoint does not include version information",
+      "risk": "Low",
+      "cvss_score": 3.7,
+      "solution": "Implement API versioning to manage breaking changes",
+      "references": [
+        "https://restfulapi.net/versioning/"
+      ],
+      "cwe_id": "CWE-1104",
+      "wasc_id": "WASC-15",
+      "request": "GET https://httpbin.org/status/200 HTTP/1.1",
+      "response": "HTTP/1.1 200\n\nResponse Headers:\n  Date: Tue, 16 Sep 2025 14:39:14 GMT\n  Content-Type: text/html; charset=utf-8\n  Content-Length: 0\n  Connection: keep-alive\n  Server: gunicorn/19.9.0\n  Access-Control-Allow-Origin: *\n  Access-Control-Allow-Credentials: true",
+      "url": "https://httpbin.org/status/200",
+      "parameter": "",
+      "evidence": "API endpoint lacks version information",
+      "scan_id": "",
+      "timestamp": "2025-09-16 20:09:55.861414"
+    },
+    {
+      "id": "079839ae-7bf6-45c7-b1d3-6507f3a9c2af",
+      "name": "Server Version Disclosure",
+      "description": "Server header contains version information",
+      "risk": "Low",
+      "cvss_score": 3.7,
+      "solution": "Remove version information from Server header",
+      "references": [
+        "https://owasp.org/www-community/controls/Information_Exposure"
+      ],
+      "cwe_id": "CWE-200",
+      "wasc_id": "WASC-13",
+      "request": "GET https://httpbin.org/status/200 HTTP/1.1",
+      "response": "HTTP/1.1 200\n\nResponse Headers:\n  Date: Tue, 16 Sep 2025 14:39:12 GMT\n  Content-Type: text/html; charset=utf-8\n  Content-Length: 0\n  Connection: keep-alive\n  Server: gunicorn/19.9.0\n  Access-Control-Allow-Origin: *\n  Access-Control-Allow-Credentials: true",
+      "url": "https://httpbin.org/status/200",
+      "parameter": "",
+      "evidence": "Server header: gunicorn/19.9.0",
+      "scan_id": "",
+      "timestamp": "2025-09-16 20:09:12.908786"
+    }
+  ],
+  "performance_stats": [],
+  "risk_counts": {
+    "Critical": 0,
+    "High": 1,
+    "Medium": 1,
+    "Low": 3,
+    "Informational": 0
+  },
+  "generated_at": "2025-09-16T20:09:56.229529",
+  "report_version": "2.0"
+}

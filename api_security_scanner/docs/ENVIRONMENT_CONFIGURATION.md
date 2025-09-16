@@ -6,7 +6,7 @@ The API Security Scanner uses `.env` files for configuration management, making 
 
 1. **Copy the template:**
    ```bash
-   cp env.template .env
+   cp config/env.template .env
    ```
 
 2. **Edit the configuration:**
@@ -282,7 +282,7 @@ python -m api_security_scanner.cli.main config --env-file .env.production --show
 
 1. **Create .env file:**
    ```bash
-   cp env.template .env
+   cp config/env.template .env
    # Edit .env as needed
    ```
 
@@ -310,7 +310,7 @@ docker run -e ZAP_HOST=external-zap -e ZAP_EXTERNAL=true \
 ### 1. **Environment Separation**
 - Use different `.env` files for different environments
 - Never commit sensitive data to version control
-- Use `.env.example` for documentation
+- Use `config/env.example` for documentation
 
 ### 2. **Security**
 - Keep API keys and passwords in environment variables
@@ -324,7 +324,7 @@ docker run -e ZAP_HOST=external-zap -e ZAP_EXTERNAL=true \
 
 ### 4. **Documentation**
 - Document custom configurations
-- Keep `.env.example` up to date
+- Keep `config/env.example` up to date
 - Use comments in `.env` files for clarity
 
 ### 5. **Backup and Version Control**

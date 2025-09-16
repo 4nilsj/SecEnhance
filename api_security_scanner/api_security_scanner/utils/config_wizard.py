@@ -583,7 +583,7 @@ class ConfigurationWizard:
             }
         }
         
-        with open('config.yaml', 'w') as f:
+        with open('config/config.yaml', 'w') as f:
             yaml.dump(yaml_config, f, default_flow_style=False, indent=2)
         
         # Generate JSON config
@@ -596,12 +596,12 @@ class ConfigurationWizard:
             }
         }
         
-        with open('config.json', 'w') as f:
+        with open('config/config.json', 'w') as f:
             json.dump(json_config, f, indent=2)
         
         echo("📁 Additional configuration files generated:")
-        echo("  - config.yaml (YAML format)")
-        echo("  - config.json (JSON format)")
+        echo("  - config/config.yaml (YAML format)")
+        echo("  - config/config.json (JSON format)")
     
     def _show_next_steps(self):
         """Show next steps after configuration."""

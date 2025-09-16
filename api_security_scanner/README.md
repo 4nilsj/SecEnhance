@@ -129,7 +129,7 @@ The scanner uses `.env` files for configuration management. Start by setting up 
 
 ```bash
 # Copy the configuration template
-cp env.template .env
+cp config/env.template .env
 
 # Edit the configuration (optional)
 nano .env
@@ -165,7 +165,7 @@ docker run --rm -v $(pwd):/workspace api-security-scanner scan -f /workspace/ins
 
 ```bash
 # Set up configuration
-cp env.template .env
+cp config/env.template .env
 # Edit .env for Docker environment (ZAP_HOST=zap, ZAP_EXTERNAL=true)
 
 # Start ZAP service

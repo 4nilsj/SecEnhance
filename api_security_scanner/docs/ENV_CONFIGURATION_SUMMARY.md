@@ -14,8 +14,8 @@ The API Security Scanner now has comprehensive `.env` configuration management i
 - **Configuration validation** - Built-in validation and error reporting
 
 ### 2. **Configuration Templates**
-- **`env.template`** - Comprehensive template with all configuration options
-- **`env.example`** - Simple example configuration for quick setup
+- **`config/env.template`** - Comprehensive template with all configuration options
+- **`config/env.example`** - Simple example configuration for quick setup
 - **Organized by category** - Database, ZAP, Logging, Reports, Security, Plugins, Container
 
 ### 3. **Core Module Integration**
@@ -74,7 +74,7 @@ The API Security Scanner now has comprehensive `.env` configuration management i
 ### **Basic Setup**
 ```bash
 # Copy template
-cp env.template .env
+cp config/env.template .env
 
 # Show current config
 python -m api_security_scanner.cli.main config --show-config
@@ -96,11 +96,11 @@ docker-compose up -d
 ### **Environment-Specific Configs**
 ```bash
 # Development
-cp env.template .env.development
+cp config/env.template .env.development
 echo "DEBUG=true" >> .env.development
 
 # Production
-cp env.template .env.production
+cp config/env.template .env.production
 echo "LOG_LEVEL=WARNING" >> .env.production
 ```
 
@@ -108,8 +108,8 @@ echo "LOG_LEVEL=WARNING" >> .env.production
 
 ### **New Files**
 - `api_security_scanner/core/config.py` - Configuration management system
-- `env.template` - Comprehensive configuration template
-- `env.example` - Simple example configuration
+- `config/env.template` - Comprehensive configuration template
+- `config/env.example` - Simple example configuration
 - `docs/ENVIRONMENT_CONFIGURATION.md` - Complete documentation
 - `ENV_CONFIGURATION_SUMMARY.md` - This summary
 
@@ -153,13 +153,13 @@ echo "LOG_LEVEL=WARNING" >> .env.production
 ## 🔄 Migration Guide
 
 ### **For Existing Users**
-1. Copy `env.template` to `.env`
+1. Copy `config/env.template` to `.env`
 2. Review and adjust settings as needed
 3. Use `config --show-config` to verify settings
 4. All existing functionality remains unchanged
 
 ### **For Docker Users**
-1. Copy `env.template` to `.env`
+1. Copy `config/env.template` to `.env`
 2. Set `ZAP_HOST=zap` and `ZAP_EXTERNAL=true` for Docker Compose
 3. Docker Compose will automatically load the `.env` file
 
@@ -172,7 +172,7 @@ echo "LOG_LEVEL=WARNING" >> .env.production
 
 The `.env` configuration system is now fully implemented and ready for use. Users can:
 
-1. **Start using immediately** - Copy `env.template` to `.env` and customize
+1. **Start using immediately** - Copy `config/env.template` to `.env` and customize
 2. **Integrate with CI/CD** - Use environment variables for automated deployments
 3. **Customize for environments** - Create environment-specific `.env` files
 4. **Extend configuration** - Add custom configuration options as needed

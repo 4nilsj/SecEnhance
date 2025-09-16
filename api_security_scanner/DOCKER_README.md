@@ -125,8 +125,8 @@ api_security_scanner/
 ├── build-docker.bat          # Windows build script
 ├── setup-container.sh        # Linux/macOS setup script
 ├── setup-container.bat       # Windows setup script
-├── env.example               # Example environment file
-├── env.template              # Comprehensive environment template
+├── config/env.example        # Example environment file
+├── config/env.template       # Comprehensive environment template
 ├── container-config.py       # Container configuration utilities
 ├── data/                     # Persistent database storage
 ├── logs/                     # Application logs

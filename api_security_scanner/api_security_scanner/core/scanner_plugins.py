@@ -279,6 +279,7 @@ class PluginManager:
         
         # Find all Python files in plugins directory
         plugin_files = list(self.plugins_dir.glob("*.py"))
+        loaded_plugin_names = []
         
         for plugin_file in plugin_files:
             if plugin_file.name.startswith('__'):
@@ -308,12 +309,16 @@ class PluginManager:
                         # Instantiate to get plugin info
                         plugin_instance = obj()
                         self.loaded_plugins[plugin_instance.name] = obj
-                        self.logger.info(f"Loaded plugin: {plugin_instance.name} v{plugin_instance.version}")
+                        loaded_plugin_names.append(f"{plugin_instance.name} v{plugin_instance.version}")
                         
             except Exception as e:
                 self.logger.error(f"Failed to load plugin {plugin_file}: {e}")
         
-        self.logger.info(f"Loaded {len(self.loaded_plugins)} plugins")
+        # Show single summary message with all loaded plugins
+        if loaded_plugin_names:
+            self.logger.info(f"Loaded {len(self.loaded_plugins)} plugins: {', '.join(loaded_plugin_names)}")
+        else:
+            self.logger.warning("No plugins were loaded")
     
     def _initialize_request_analyzer(self):
         """Initialize the request analyzer for JWT/OAuth detection."""
@@ -376,7 +381,8 @@ class PluginManager:
             end_time = datetime.now()
             
             result.execution_time = (end_time - start_time).total_seconds()
-            self.logger.info(f"Plugin {plugin_name} executed in {result.execution_time:.2f}s, found {len(result.vulnerabilities)} vulnerabilities")
+            # Log execution time and results at debug level to reduce CLI verbosity
+            self.logger.debug(f"Plugin {plugin_name} executed in {result.execution_time:.2f}s, found {len(result.vulnerabilities)} vulnerabilities")
             
             return result
             
@@ -418,6 +424,11 @@ class PluginManager:
         
         self.logger.info(f"Executing {len(plugins_to_run)} plugins (conditional scanning enabled)")
         
+        # Track execution results for summary
+        successful_plugins = []
+        failed_plugins = []
+        total_vulnerabilities = 0
+        
         for plugin_name in plugins_to_run:
             # Check for cancellation before each plugin
             if self.is_cancellation_requested():
@@ -429,11 +440,18 @@ class PluginManager:
                 results.append(result)
                 
                 if result.success:
-                    self.logger.info(f"Plugin {plugin_name} found {len(result.vulnerabilities)} vulnerabilities")
+                    successful_plugins.append(f"{plugin_name}: {len(result.vulnerabilities)} vulnerabilities")
+                    total_vulnerabilities += len(result.vulnerabilities)
                 else:
-                    self.logger.warning(f"Plugin {plugin_name} failed: {result.error}")
+                    failed_plugins.append(f"{plugin_name}: {result.error}")
             else:
-                self.logger.warning(f"Plugin {plugin_name} not found in loaded plugins")
+                failed_plugins.append(f"{plugin_name}: not found")
+        
+        # Show execution summary
+        if successful_plugins:
+            self.logger.info(f"Plugin execution completed: {', '.join(successful_plugins)}")
+        if failed_plugins:
+            self.logger.warning(f"Plugin execution issues: {', '.join(failed_plugins)}")
         
         return results
     
