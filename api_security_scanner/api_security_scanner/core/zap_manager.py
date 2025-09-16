@@ -25,7 +25,8 @@ class ZAPManager:
     """Manages ZAP operations and integration."""
     
     def __init__(self, zap_path: Optional[str] = None, zap_port: Optional[int] = None, 
-                 zap_host: Optional[str] = None, api_key: Optional[str] = None):
+                 zap_host: Optional[str] = None, api_key: Optional[str] = None,
+                 scan_mode_config: Optional[Dict[str, Any]] = None):
         self.logger = get_logger(__name__)
         config = get_config()
         
@@ -39,6 +40,10 @@ class ZAPManager:
         self.spider_depth = config.zap.spider_depth
         self.max_children = config.zap.max_children
         self.thread_count = config.zap.thread_count
+        
+        # Apply scan mode configuration if provided
+        if scan_mode_config:
+            self._apply_scan_mode_config(scan_mode_config)
         
         self.zap_process = None
         self.zap_api_url = f"http://{self.zap_host}:{self.zap_port}"
@@ -56,6 +61,94 @@ class ZAPManager:
             self.zap_path = self._get_default_zap_path()
         
         self.logger.info(f"ZAP Manager initialized: host={self.zap_host}, port={self.zap_port}, external={self.use_external_zap}")
+    
+    def _apply_scan_mode_config(self, scan_mode_config: Dict[str, Any]):
+        """Apply scan mode configuration to ZAP settings."""
+        try:
+            # Apply spider settings
+            if 'spider_depth' in scan_mode_config:
+                self.spider_depth = scan_mode_config['spider_depth']
+            if 'spider_children' in scan_mode_config:
+                self.max_children = scan_mode_config['spider_children']
+            
+            # Apply scan timing settings
+            if 'max_scan_time' in scan_mode_config:
+                self.max_scan_time = scan_mode_config['max_scan_time']
+            if 'timeout' in scan_mode_config:
+                self.timeout = scan_mode_config['timeout']
+            
+            # Apply concurrency settings
+            if 'concurrent_requests' in scan_mode_config:
+                self.thread_count = scan_mode_config['concurrent_requests']
+            
+            # Store scan mode specific settings for later use
+            self.scan_mode_config = scan_mode_config
+            
+            self.logger.info(f"Applied scan mode configuration: spider_depth={self.spider_depth}, "
+                           f"max_children={self.max_children}, thread_count={self.thread_count}")
+            
+        except Exception as e:
+            self.logger.warning(f"Failed to apply some scan mode settings: {e}")
+    
+    def _get_scan_policy(self, default_policy: str) -> str:
+        """Determine scan policy based on scan mode configuration."""
+        if hasattr(self, 'scan_mode_config') and self.scan_mode_config:
+            aggressive = self.scan_mode_config.get('aggressive_scanning', False)
+            if aggressive:
+                return "Attack Policy"  # More aggressive scanning
+            else:
+                return "Default Policy"  # Conservative scanning
+        return default_policy
+    
+    def _configure_scan_settings(self):
+        """Configure ZAP settings based on scan mode."""
+        if not hasattr(self, 'scan_mode_config') or not self.scan_mode_config:
+            return
+        
+        try:
+            config = self.scan_mode_config
+            
+            # Configure request delay
+            if 'request_delay' in config:
+                delay_ms = int(config['request_delay'] * 1000)  # Convert to milliseconds
+                params = {'Integer': str(delay_ms)}
+                requests.get(f"{self.zap_api_url}/JSON/ascan/action/setOptionDelayInMs/", 
+                           params=params, timeout=10)
+                self.logger.info(f"Set ZAP request delay to {delay_ms}ms")
+            
+            # Configure thread count
+            if 'concurrent_requests' in config:
+                thread_count = config['concurrent_requests']
+                params = {'Integer': str(thread_count)}
+                requests.get(f"{self.zap_api_url}/JSON/ascan/action/setOptionThreadPerHost/", 
+                           params=params, timeout=10)
+                self.logger.info(f"Set ZAP thread count to {thread_count}")
+            
+            # Configure user agent for stealth mode
+            if config.get('stealth_mode', False) and 'custom_user_agent' in config:
+                user_agent = config['custom_user_agent']
+                params = {'String': user_agent}
+                requests.get(f"{self.zap_api_url}/JSON/core/action/setOptionDefaultUserAgent/", 
+                           params=params, timeout=10)
+                self.logger.info(f"Set ZAP user agent to: {user_agent}")
+            elif config.get('stealth_mode', False):
+                # Use a common browser user agent for stealth
+                stealth_ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+                params = {'String': stealth_ua}
+                requests.get(f"{self.zap_api_url}/JSON/core/action/setOptionDefaultUserAgent/", 
+                           params=params, timeout=10)
+                self.logger.info("Set ZAP to stealth mode with common browser user agent")
+            
+            # Configure timeout
+            if 'timeout' in config:
+                timeout_sec = config['timeout']
+                params = {'Integer': str(timeout_sec)}
+                requests.get(f"{self.zap_api_url}/JSON/core/action/setOptionTimeoutInSecs/", 
+                           params=params, timeout=10)
+                self.logger.info(f"Set ZAP timeout to {timeout_sec} seconds")
+            
+        except Exception as e:
+            self.logger.warning(f"Failed to configure some ZAP settings: {e}")
     
     def _load_container_config(self):
         """Load container-specific configuration."""
@@ -364,12 +457,18 @@ class ZAPManager:
         """
         try:
             with LoggedTimer(self.logger, f"Active scanning {target_url}"):
+                # Determine scan policy based on scan mode
+                scan_policy = self._get_scan_policy(policy)
+                
+                # Configure ZAP settings based on scan mode
+                self._configure_scan_settings()
+                
                 # Start active scan
                 params = {
                     'url': target_url,
                     'recurse': 'true',
                     'inScopeOnly': 'false',
-                    'scanPolicyName': policy,
+                    'scanPolicyName': scan_policy,
                     'method': 'GET',
                     'postData': ''
                 }

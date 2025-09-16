@@ -422,7 +422,22 @@ def scan(ctx, input_file, curl_command, auth_type, auth_name, auth_value,
             plugin_manager = None
             
             if not no_zap:
-                zap_manager = ZAPManager(zap_path, zap_port, zap_host)
+                # Prepare scan mode configuration for ZAP
+                scan_mode_config = None
+                if mode_config:
+                    scan_mode_config = {
+                        'spider_depth': mode_config.spider_depth,
+                        'spider_children': mode_config.spider_children,
+                        'max_scan_time': mode_config.max_scan_time,
+                        'request_delay': mode_config.request_delay,
+                        'concurrent_requests': mode_config.concurrent_requests,
+                        'aggressive_scanning': mode_config.aggressive_scanning,
+                        'stealth_mode': mode_config.stealth_mode,
+                        'custom_user_agent': mode_config.custom_user_agent,
+                        'timeout': mode_config.timeout
+                    }
+                
+                zap_manager = ZAPManager(zap_path, zap_port, zap_host, api_key=None, scan_mode_config=scan_mode_config)
             
             if not no_plugins:
                 # Configure AI detection settings
