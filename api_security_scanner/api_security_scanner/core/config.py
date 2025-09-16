@@ -8,7 +8,7 @@ import logging
 from pathlib import Path
 from typing import Dict, Any, Optional, Union
 from dataclasses import dataclass, field
-from dotenv import load_dotenv
+from dotenv import load_dotenv  # type: ignore
 
 
 @dataclass

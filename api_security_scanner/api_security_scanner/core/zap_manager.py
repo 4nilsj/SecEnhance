@@ -240,7 +240,7 @@ class ZAPManager:
             container_config_path = Path(__file__).parent.parent / 'container-config.py'
             if container_config_path.exists():
                 sys.path.insert(0, str(container_config_path.parent))
-                from container_config import container_config
+                from container_config import container_config  # type: ignore
                 self.container_config = container_config
                 self.logger.debug("Container configuration loaded")
             else:
