@@ -1,0 +1,21 @@
+{
+  "name": "web-recon",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^11.0.0",
+    "jsdom": "^24.0.0",
+    "node-fetch": "^2.6.7",
+    "xlsx": "^0.18.5",
+    "xlsx-style": "^0.8.13"
+  }
+}
