@@ -1,0 +1,108 @@
+[
+    {
+        "vulnerability": "Introspection Enabled",
+        "severity": "Low (Information Disclosure)",
+        "description": "GraphQL Introspection is enabled. This allows attackers to map the API schema.",
+        "status": "VULNERABLE",
+        "details": "Found 16 types."
+    },
+    {
+        "vulnerability": "Query Depth Limit",
+        "severity": "Medium (DOS)",
+        "status": "WARNING",
+        "description": "Server accepted a query with depth 100. It might be vulnerable to DOS.",
+        "details": "No depth limit error returned."
+    },
+    {
+        "vulnerability": "Alias Overloading",
+        "severity": "Medium (DoS)",
+        "status": "WARNING",
+        "description": "Server processed 100 aliases in a single query."
+    },
+    {
+        "vulnerability": "Batch Queries",
+        "status": "SAFE",
+        "description": "Server does not appear to support batch queries (did not return array)."
+    },
+    {
+        "vulnerability": "Field Duplication",
+        "severity": "Low (DoS)",
+        "status": "WARNING",
+        "description": "Server accepted 500 duplicate fields."
+    },
+    {
+        "vulnerability": "Directives Overloading",
+        "severity": "Low (DoS)",
+        "status": "WARNING",
+        "description": "Server processed 50 directives on a single field."
+    },
+    {
+        "vulnerability": "Circular Fragments",
+        "status": "SAFE",
+        "description": "Server detected and blocked circular fragments."
+    },
+    {
+        "vulnerability": "GET Method Support",
+        "severity": "Low (Potential CSRF)",
+        "status": "WARNING",
+        "description": "Server accepts GraphQL queries via GET. Verify if mutations are also allowed via GET."
+    },
+    {
+        "vulnerability": "POST urlencoded Support",
+        "severity": "High (CSRF)",
+        "status": "VULNERABLE",
+        "description": "Server accepts x-www-form-urlencoded. This allows CSRF attacks from simple HTML forms."
+    },
+    {
+        "vulnerability": "Tracing/Debug Enabled",
+        "status": "SAFE",
+        "description": "Tracing info not found."
+    },
+    {
+        "vulnerability": "Field Suggestions",
+        "status": "SAFE",
+        "description": "No suggestions found in errors."
+    },
+    {
+        "vulnerability": "GraphiQL/Playground Exposed",
+        "status": "SAFE",
+        "description": "No common specific UI endpoints found."
+    },
+    {
+        "vulnerability": "Injection (Syntax error) - Low Confidence",
+        "severity": "High",
+        "status": "WARNING",
+        "description": "Field 'createUser' arg 'name' triggered error, but SAFE payload also failed.",
+        "details": "['Syntax Error: Unterminated string.\\n\\nGraphQL request:1:50\\n1 | mutation { createUser(name: \"\"\") {..."
+    },
+    {
+        "vulnerability": "Stack Trace Leakage",
+        "severity": "Low (Info Leak)",
+        "status": "VULNERABLE",
+        "description": "Server reveals stack traces on syntax errors."
+    },
+    {
+        "vulnerability": "Large Payload",
+        "status": "SAFE",
+        "description": "Server handled large payload query."
+    },
+    {
+        "vulnerability": "Hidden Directive Found: @admin",
+        "severity": "Medium (Logic)",
+        "status": "VULNERABLE",
+        "description": "Server accepted directive @admin without error."
+    },
+    {
+        "vulnerability": "Hidden Directive Found: @deprecated",
+        "severity": "Medium (Logic)",
+        "status": "VULNERABLE",
+        "description": "Directive @deprecated exists but location was wrong.",
+        "details": "[\"Directive '@deprecated' may not be used on field.\\n\\nGraphQL request:1:20\\n1 | query { __typename "
+    },
+    {
+        "vulnerability": "Type Leakage via Interface",
+        "severity": "Low (Info Leak)",
+        "status": "WARNING",
+        "description": "Found sensitive types implementing public interfaces: AdminUser implements Character"
+    }
+]

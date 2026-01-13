@@ -1,0 +1,7 @@
+requests
+typer
+rich
+flask
+graphql-core
+graphene
+

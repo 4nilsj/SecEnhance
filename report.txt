@@ -1,0 +1,97 @@
+GraphQL Vulnerability Scan Results
+==================================
+
+Vulnerability: Introspection Enabled
+Status: VULNERABLE
+Severity: Low (Information Disclosure)
+Description: GraphQL Introspection is enabled. This allows attackers to map the API schema.
+Details: Found 16 types.
+----------------------------------------
+Vulnerability: Query Depth Limit
+Status: WARNING
+Severity: Medium (DOS)
+Description: Server accepted a query with depth 100. It might be vulnerable to DOS.
+Details: No depth limit error returned.
+----------------------------------------
+Vulnerability: Alias Overloading
+Status: WARNING
+Severity: Medium (DoS)
+Description: Server processed 100 aliases in a single query.
+----------------------------------------
+Vulnerability: Batch Queries
+Status: SAFE
+Severity: -
+Description: Server does not appear to support batch queries (did not return array).
+----------------------------------------
+Vulnerability: Field Duplication
+Status: WARNING
+Severity: Low (DoS)
+Description: Server accepted 500 duplicate fields.
+----------------------------------------
+Vulnerability: Directives Overloading
+Status: WARNING
+Severity: Low (DoS)
+Description: Server processed 50 directives on a single field.
+----------------------------------------
+Vulnerability: Circular Fragments
+Status: SAFE
+Severity: -
+Description: Server detected and blocked circular fragments.
+----------------------------------------
+Vulnerability: GET Method Support
+Status: WARNING
+Severity: Low (Potential CSRF)
+Description: Server accepts GraphQL queries via GET. Verify if mutations are also allowed via GET.
+----------------------------------------
+Vulnerability: POST urlencoded Support
+Status: VULNERABLE
+Severity: High (CSRF)
+Description: Server accepts x-www-form-urlencoded. This allows CSRF attacks from simple HTML forms.
+----------------------------------------
+Vulnerability: Tracing/Debug Enabled
+Status: SAFE
+Severity: -
+Description: Tracing info not found.
+----------------------------------------
+Vulnerability: Field Suggestions
+Status: SAFE
+Severity: -
+Description: No suggestions found in errors.
+----------------------------------------
+Vulnerability: GraphiQL/Playground Exposed
+Status: SAFE
+Severity: -
+Description: No common specific UI endpoints found.
+----------------------------------------
+Vulnerability: Injection (Syntax error) - Low Confidence
+Status: WARNING
+Severity: High
+Description: Field 'createUser' arg 'name' triggered error, but SAFE payload also failed.
+Details: ['Syntax Error: Unterminated string.\n\nGraphQL request:1:50\n1 | mutation { createUser(name: """) {...
+----------------------------------------
+Vulnerability: Stack Trace Leakage
+Status: VULNERABLE
+Severity: Low (Info Leak)
+Description: Server reveals stack traces on syntax errors.
+----------------------------------------
+Vulnerability: Large Payload
+Status: SAFE
+Severity: -
+Description: Server handled large payload query.
+----------------------------------------
+Vulnerability: Hidden Directive Found: @admin
+Status: VULNERABLE
+Severity: Medium (Logic)
+Description: Server accepted directive @admin without error.
+----------------------------------------
+Vulnerability: Hidden Directive Found: @deprecated
+Status: VULNERABLE
+Severity: Medium (Logic)
+Description: Directive @deprecated exists but location was wrong.
+Details: ["Directive '@deprecated' may not be used on field.\n\nGraphQL request:1:20\n1 | query { __typename 
+----------------------------------------
+Vulnerability: Type Leakage via Interface
+Status: WARNING
+Severity: Low (Info Leak)
+Description: Found sensitive types implementing public interfaces: AdminUser implements Character
+----------------------------------------
