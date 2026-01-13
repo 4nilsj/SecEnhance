@@ -95,7 +95,7 @@
                 <h1>GraphQL Security Report</h1>
                 <div class="meta-info">
                     <div>Target: <strong>http://127.0.0.1:5020/graphql</strong></div>
-                    <div>Date: <strong>2026-01-13 19:03:58</strong></div>
+                    <div>Date: <strong>2026-01-14 00:39:37</strong></div>
                 </div>
             </div>
         </header>
@@ -104,7 +104,7 @@
             <div class="summary">
                 <div class="card high">
                     <h3>High Risk</h3>
-                    <div class="count">26</div>
+                    <div class="count">23</div>
                 </div>
                 <div class="card medium">
                     <h3>Medium Risk</h3>
@@ -369,15 +369,15 @@
         
                 <details class="vulnerability-item status-warning">
                     <summary class="vulnerability-summary">
-                        <div class="vulnerability-title">Injection (Syntax error) - Low Confidence</div>
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error) - Low Confidence</div>
                         <div><span class="badge warning">WARNING</span></div>
                         <div class="severity-badge severity-high">High</div>
                         <div style="text-align: right; color: #999;">▼</div>
                     </summary>
                     
                     <div class="expanded-details">
-                        <p class="description"><strong>Description:</strong> Field 'createUser' arg 'name' triggered error, but SAFE payload also failed.</p>
-                        <div class='detail-box full-width'><div class='meta-title'>Details</div><pre>['Syntax Error: Unterminated string.\n\nGraphQL request:1:50\n1 | mutation { createUser(name: """) {...</pre></div>
+                        <p class="description"><strong>Description:</strong> Field 'createUser' arg 'name' type 'String' triggered error with payload: "</p>
+                        
                         
                         <div class="detail-grid">
                             <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
@@ -394,15 +394,15 @@
         
                 <details class="vulnerability-item status-warning">
                     <summary class="vulnerability-summary">
-                        <div class="vulnerability-title">Injection (Syntax error) - Low Confidence</div>
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error) - Low Confidence</div>
                         <div><span class="badge warning">WARNING</span></div>
                         <div class="severity-badge severity-high">High</div>
                         <div style="text-align: right; color: #999;">▼</div>
                     </summary>
                     
                     <div class="expanded-details">
-                        <p class="description"><strong>Description:</strong> Field 'createUser' arg 'name' triggered error, but SAFE payload also failed.</p>
-                        <div class='detail-box full-width'><div class='meta-title'>Details</div><pre>['Syntax Error: Expected \':\', found String \'1\'.\n\nGraphQL request:1:35\n1 | mutation { createUs...</pre></div>
+                        <p class="description"><strong>Description:</strong> Field 'createUser' arg 'name' type 'String' triggered error with payload: " OR "1"="1</p>
+                        
                         
                         <div class="detail-grid">
                             <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
@@ -419,15 +419,15 @@
         
                 <details class="vulnerability-item status-warning">
                     <summary class="vulnerability-summary">
-                        <div class="vulnerability-title">Injection (Syntax error) - Low Confidence</div>
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error) - Low Confidence</div>
                         <div><span class="badge warning">WARNING</span></div>
                         <div class="severity-badge severity-high">High</div>
                         <div style="text-align: right; color: #999;">▼</div>
                     </summary>
                     
                     <div class="expanded-details">
-                        <p class="description"><strong>Description:</strong> Field 'createUser' arg 'name' triggered error, but SAFE payload also failed.</p>
-                        <div class='detail-box full-width'><div class='meta-title'>Details</div><pre>['Syntax Error: Expected Name, found \'$\'.\n\nGraphQL request:1:32\n1 | mutation { createUser(name:...</pre></div>
+                        <p class="description"><strong>Description:</strong> Field 'createUser' arg 'name' type 'String' triggered error with payload: {"$ne": null}</p>
+                        
                         
                         <div class="detail-grid">
                             <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
@@ -444,15 +444,15 @@
         
                 <details class="vulnerability-item status-warning">
                     <summary class="vulnerability-summary">
-                        <div class="vulnerability-title">Injection (Syntax error) - Low Confidence</div>
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error) - Low Confidence</div>
                         <div><span class="badge warning">WARNING</span></div>
                         <div class="severity-badge severity-high">High</div>
                         <div style="text-align: right; color: #999;">▼</div>
                     </summary>
                     
                     <div class="expanded-details">
-                        <p class="description"><strong>Description:</strong> Field 'createUser' arg 'name' triggered error, but SAFE payload also failed.</p>
-                        <div class='detail-box full-width'><div class='meta-title'>Details</div><pre>['Syntax Error: Expected Name, found \'$\'.\n\nGraphQL request:1:32\n1 | mutation { createUser(name:...</pre></div>
+                        <p class="description"><strong>Description:</strong> Field 'createUser' arg 'name' type 'String' triggered error with payload: {"$gt": ""}</p>
+                        
                         
                         <div class="detail-grid">
                             <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
@@ -469,15 +469,15 @@
         
                 <details class="vulnerability-item status-warning">
                     <summary class="vulnerability-summary">
-                        <div class="vulnerability-title">Injection (Syntax error) - Low Confidence</div>
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error) - Low Confidence</div>
                         <div><span class="badge warning">WARNING</span></div>
                         <div class="severity-badge severity-high">High</div>
                         <div style="text-align: right; color: #999;">▼</div>
                     </summary>
                     
                     <div class="expanded-details">
-                        <p class="description"><strong>Description:</strong> Field 'createUser' arg 'id' triggered error, but SAFE payload also failed.</p>
-                        <div class='detail-box full-width'><div class='meta-title'>Details</div><pre>['Syntax Error: Unterminated string.\n\nGraphQL request:1:48\n1 | mutation { createUser(id: """) { _...</pre></div>
+                        <p class="description"><strong>Description:</strong> Field 'createUser' arg 'id' type 'String' triggered error with payload: "</p>
+                        
                         
                         <div class="detail-grid">
                             <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
@@ -494,15 +494,15 @@
         
                 <details class="vulnerability-item status-warning">
                     <summary class="vulnerability-summary">
-                        <div class="vulnerability-title">Injection (Syntax error) - Low Confidence</div>
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error) - Low Confidence</div>
                         <div><span class="badge warning">WARNING</span></div>
                         <div class="severity-badge severity-high">High</div>
                         <div style="text-align: right; color: #999;">▼</div>
                     </summary>
                     
                     <div class="expanded-details">
-                        <p class="description"><strong>Description:</strong> Field 'createUser' arg 'id' triggered error, but SAFE payload also failed.</p>
-                        <div class='detail-box full-width'><div class='meta-title'>Details</div><pre>['Syntax Error: Expected \':\', found String \'1\'.\n\nGraphQL request:1:33\n1 | mutation { createUs...</pre></div>
+                        <p class="description"><strong>Description:</strong> Field 'createUser' arg 'id' type 'String' triggered error with payload: " OR "1"="1</p>
+                        
                         
                         <div class="detail-grid">
                             <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
@@ -519,15 +519,15 @@
         
                 <details class="vulnerability-item status-warning">
                     <summary class="vulnerability-summary">
-                        <div class="vulnerability-title">Injection (Syntax error) - Low Confidence</div>
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error) - Low Confidence</div>
                         <div><span class="badge warning">WARNING</span></div>
                         <div class="severity-badge severity-high">High</div>
                         <div style="text-align: right; color: #999;">▼</div>
                     </summary>
                     
                     <div class="expanded-details">
-                        <p class="description"><strong>Description:</strong> Field 'createUser' arg 'id' triggered error, but SAFE payload also failed.</p>
-                        <div class='detail-box full-width'><div class='meta-title'>Details</div><pre>['Syntax Error: Expected Name, found \'$\'.\n\nGraphQL request:1:30\n1 | mutation { createUser(id: "...</pre></div>
+                        <p class="description"><strong>Description:</strong> Field 'createUser' arg 'id' type 'String' triggered error with payload: {"$ne": null}</p>
+                        
                         
                         <div class="detail-grid">
                             <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
@@ -544,15 +544,15 @@
         
                 <details class="vulnerability-item status-warning">
                     <summary class="vulnerability-summary">
-                        <div class="vulnerability-title">Injection (Syntax error) - Low Confidence</div>
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error) - Low Confidence</div>
                         <div><span class="badge warning">WARNING</span></div>
                         <div class="severity-badge severity-high">High</div>
                         <div style="text-align: right; color: #999;">▼</div>
                     </summary>
                     
                     <div class="expanded-details">
-                        <p class="description"><strong>Description:</strong> Field 'createUser' arg 'id' triggered error, but SAFE payload also failed.</p>
-                        <div class='detail-box full-width'><div class='meta-title'>Details</div><pre>['Syntax Error: Expected Name, found \'$\'.\n\nGraphQL request:1:30\n1 | mutation { createUser(id: "...</pre></div>
+                        <p class="description"><strong>Description:</strong> Field 'createUser' arg 'id' type 'String' triggered error with payload: {"$gt": ""}</p>
+                        
                         
                         <div class="detail-grid">
                             <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
@@ -569,15 +569,15 @@
         
                 <details class="vulnerability-item status-warning">
                     <summary class="vulnerability-summary">
-                        <div class="vulnerability-title">Injection (Syntax error) - Low Confidence</div>
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error) - Low Confidence</div>
                         <div><span class="badge warning">WARNING</span></div>
                         <div class="severity-badge severity-high">High</div>
                         <div style="text-align: right; color: #999;">▼</div>
                     </summary>
                     
                     <div class="expanded-details">
-                        <p class="description"><strong>Description:</strong> Field 'hello' arg 'name' triggered error, but SAFE payload also failed.</p>
-                        <div class='detail-box full-width'><div class='meta-title'>Details</div><pre>['Syntax Error: Unterminated string.\n\nGraphQL request:1:42\n1 | query { hello(name: """) { __typen...</pre></div>
+                        <p class="description"><strong>Description:</strong> Field 'hello' arg 'name' type 'String' triggered error with payload: "</p>
+                        
                         
                         <div class="detail-grid">
                             <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
@@ -594,15 +594,15 @@
         
                 <details class="vulnerability-item status-warning">
                     <summary class="vulnerability-summary">
-                        <div class="vulnerability-title">Injection (Syntax error) - Low Confidence</div>
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error) - Low Confidence</div>
                         <div><span class="badge warning">WARNING</span></div>
                         <div class="severity-badge severity-high">High</div>
                         <div style="text-align: right; color: #999;">▼</div>
                     </summary>
                     
                     <div class="expanded-details">
-                        <p class="description"><strong>Description:</strong> Field 'hello' arg 'name' triggered error, but SAFE payload also failed.</p>
-                        <div class='detail-box full-width'><div class='meta-title'>Details</div><pre>['Syntax Error: Expected \':\', found String \'1\'.\n\nGraphQL request:1:27\n1 | query { hello(name:...</pre></div>
+                        <p class="description"><strong>Description:</strong> Field 'hello' arg 'name' type 'String' triggered error with payload: " OR "1"="1</p>
+                        
                         
                         <div class="detail-grid">
                             <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
@@ -619,15 +619,15 @@
         
                 <details class="vulnerability-item status-warning">
                     <summary class="vulnerability-summary">
-                        <div class="vulnerability-title">Injection (Syntax error) - Low Confidence</div>
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error) - Low Confidence</div>
                         <div><span class="badge warning">WARNING</span></div>
                         <div class="severity-badge severity-high">High</div>
                         <div style="text-align: right; color: #999;">▼</div>
                     </summary>
                     
                     <div class="expanded-details">
-                        <p class="description"><strong>Description:</strong> Field 'hello' arg 'name' triggered error, but SAFE payload also failed.</p>
-                        <div class='detail-box full-width'><div class='meta-title'>Details</div><pre>['Syntax Error: Expected Name, found \'$\'.\n\nGraphQL request:1:24\n1 | query { hello(name: "{"$ne"...</pre></div>
+                        <p class="description"><strong>Description:</strong> Field 'hello' arg 'name' type 'String' triggered error with payload: {"$ne": null}</p>
+                        
                         
                         <div class="detail-grid">
                             <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
@@ -644,15 +644,15 @@
         
                 <details class="vulnerability-item status-warning">
                     <summary class="vulnerability-summary">
-                        <div class="vulnerability-title">Injection (Syntax error) - Low Confidence</div>
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error) - Low Confidence</div>
                         <div><span class="badge warning">WARNING</span></div>
                         <div class="severity-badge severity-high">High</div>
                         <div style="text-align: right; color: #999;">▼</div>
                     </summary>
                     
                     <div class="expanded-details">
-                        <p class="description"><strong>Description:</strong> Field 'hello' arg 'name' triggered error, but SAFE payload also failed.</p>
-                        <div class='detail-box full-width'><div class='meta-title'>Details</div><pre>['Syntax Error: Expected Name, found \'$\'.\n\nGraphQL request:1:24\n1 | query { hello(name: "{"$gt"...</pre></div>
+                        <p class="description"><strong>Description:</strong> Field 'hello' arg 'name' type 'String' triggered error with payload: {"$gt": ""}</p>
+                        
                         
                         <div class="detail-grid">
                             <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
@@ -669,15 +669,15 @@
         
                 <details class="vulnerability-item status-vulnerable">
                     <summary class="vulnerability-summary">
-                        <div class="vulnerability-title">Injection (SQL syntax)</div>
+                        <div class="vulnerability-title">Injection/Fuzzing (SQL syntax)</div>
                         <div><span class="badge vulnerable">VULNERABLE</span></div>
                         <div class="severity-badge severity-high">High</div>
                         <div style="text-align: right; color: #999;">▼</div>
                     </summary>
                     
                     <div class="expanded-details">
-                        <p class="description"><strong>Description:</strong> Field 'user' arg 'id' triggered DB error with payload: '</p>
-                        <div class='detail-box full-width'><div class='meta-title'>Details</div><pre>['SQL syntax error: syntax error at or near "\'"\n\nGraphQL request:1:9\n1 | query { user(id: "\'") ...</pre></div>
+                        <p class="description"><strong>Description:</strong> Field 'user' arg 'id' type 'String' triggered error with payload: '</p>
+                        
                         
                         <div class="detail-grid">
                             <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
@@ -696,15 +696,15 @@
         
                 <details class="vulnerability-item status-vulnerable">
                     <summary class="vulnerability-summary">
-                        <div class="vulnerability-title">Injection (SQL syntax)</div>
+                        <div class="vulnerability-title">Injection/Fuzzing (SQL syntax)</div>
                         <div><span class="badge vulnerable">VULNERABLE</span></div>
                         <div class="severity-badge severity-high">High</div>
                         <div style="text-align: right; color: #999;">▼</div>
                     </summary>
                     
                     <div class="expanded-details">
-                        <p class="description"><strong>Description:</strong> Field 'user' arg 'id' triggered DB error with payload: ' OR '1'='1</p>
-                        <div class='detail-box full-width'><div class='meta-title'>Details</div><pre>['SQL syntax error: syntax error at or near "\'"\n\nGraphQL request:1:9\n1 | query { user(id: "\' OR...</pre></div>
+                        <p class="description"><strong>Description:</strong> Field 'user' arg 'id' type 'String' triggered error with payload: ' OR '1'='1</p>
+                        
                         
                         <div class="detail-grid">
                             <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
@@ -723,15 +723,15 @@
         
                 <details class="vulnerability-item status-vulnerable">
                     <summary class="vulnerability-summary">
-                        <div class="vulnerability-title">Injection (Syntax error)</div>
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error)</div>
                         <div><span class="badge vulnerable">VULNERABLE</span></div>
                         <div class="severity-badge severity-high">High</div>
                         <div style="text-align: right; color: #999;">▼</div>
                     </summary>
                     
                     <div class="expanded-details">
-                        <p class="description"><strong>Description:</strong> Field 'user' arg 'id' triggered DB error with payload: "</p>
-                        <div class='detail-box full-width'><div class='meta-title'>Details</div><pre>['Syntax Error: Unterminated string.\n\nGraphQL request:1:39\n1 | query { user(id: """) { __typename...</pre></div>
+                        <p class="description"><strong>Description:</strong> Field 'user' arg 'id' type 'String' triggered error with payload: "</p>
+                        
                         
                         <div class="detail-grid">
                             <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
@@ -748,15 +748,15 @@
         
                 <details class="vulnerability-item status-vulnerable">
                     <summary class="vulnerability-summary">
-                        <div class="vulnerability-title">Injection (Syntax error)</div>
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error)</div>
                         <div><span class="badge vulnerable">VULNERABLE</span></div>
                         <div class="severity-badge severity-high">High</div>
                         <div style="text-align: right; color: #999;">▼</div>
                     </summary>
                     
                     <div class="expanded-details">
-                        <p class="description"><strong>Description:</strong> Field 'user' arg 'id' triggered DB error with payload: " OR "1"="1</p>
-                        <div class='detail-box full-width'><div class='meta-title'>Details</div><pre>['Syntax Error: Expected \':\', found String \'1\'.\n\nGraphQL request:1:24\n1 | query { user(id: ""...</pre></div>
+                        <p class="description"><strong>Description:</strong> Field 'user' arg 'id' type 'String' triggered error with payload: " OR "1"="1</p>
+                        
                         
                         <div class="detail-grid">
                             <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
@@ -773,15 +773,15 @@
         
                 <details class="vulnerability-item status-vulnerable">
                     <summary class="vulnerability-summary">
-                        <div class="vulnerability-title">Injection (SQL syntax)</div>
+                        <div class="vulnerability-title">Injection/Fuzzing (SQL syntax)</div>
                         <div><span class="badge vulnerable">VULNERABLE</span></div>
                         <div class="severity-badge severity-high">High</div>
                         <div style="text-align: right; color: #999;">▼</div>
                     </summary>
                     
                     <div class="expanded-details">
-                        <p class="description"><strong>Description:</strong> Field 'user' arg 'id' triggered DB error with payload: '; --</p>
-                        <div class='detail-box full-width'><div class='meta-title'>Details</div><pre>['SQL syntax error: syntax error at or near "\'"\n\nGraphQL request:1:9\n1 | query { user(id: "\'; -...</pre></div>
+                        <p class="description"><strong>Description:</strong> Field 'user' arg 'id' type 'String' triggered error with payload: '; --</p>
+                        
                         
                         <div class="detail-grid">
                             <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
@@ -800,15 +800,15 @@
         
                 <details class="vulnerability-item status-vulnerable">
                     <summary class="vulnerability-summary">
-                        <div class="vulnerability-title">Injection (SQL syntax)</div>
+                        <div class="vulnerability-title">Injection/Fuzzing (SQL syntax)</div>
                         <div><span class="badge vulnerable">VULNERABLE</span></div>
                         <div class="severity-badge severity-high">High</div>
                         <div style="text-align: right; color: #999;">▼</div>
                     </summary>
                     
                     <div class="expanded-details">
-                        <p class="description"><strong>Description:</strong> Field 'user' arg 'id' triggered DB error with payload: ) OR ('1'='1</p>
-                        <div class='detail-box full-width'><div class='meta-title'>Details</div><pre>['SQL syntax error: syntax error at or near "\'"\n\nGraphQL request:1:9\n1 | query { user(id: ") OR ...</pre></div>
+                        <p class="description"><strong>Description:</strong> Field 'user' arg 'id' type 'String' triggered error with payload: ) OR ('1'='1</p>
+                        
                         
                         <div class="detail-grid">
                             <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
@@ -827,15 +827,15 @@
         
                 <details class="vulnerability-item status-vulnerable">
                     <summary class="vulnerability-summary">
-                        <div class="vulnerability-title">Injection (SQL syntax)</div>
+                        <div class="vulnerability-title">Injection/Fuzzing (SQL syntax)</div>
                         <div><span class="badge vulnerable">VULNERABLE</span></div>
                         <div class="severity-badge severity-high">High</div>
                         <div style="text-align: right; color: #999;">▼</div>
                     </summary>
                     
                     <div class="expanded-details">
-                        <p class="description"><strong>Description:</strong> Field 'user' arg 'id' triggered DB error with payload: admin' --</p>
-                        <div class='detail-box full-width'><div class='meta-title'>Details</div><pre>['SQL syntax error: syntax error at or near "\'"\n\nGraphQL request:1:9\n1 | query { user(id: "admin...</pre></div>
+                        <p class="description"><strong>Description:</strong> Field 'user' arg 'id' type 'String' triggered error with payload: admin' --</p>
+                        
                         
                         <div class="detail-grid">
                             <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
@@ -854,15 +854,15 @@
         
                 <details class="vulnerability-item status-vulnerable">
                     <summary class="vulnerability-summary">
-                        <div class="vulnerability-title">Injection (Syntax error)</div>
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error)</div>
                         <div><span class="badge vulnerable">VULNERABLE</span></div>
                         <div class="severity-badge severity-high">High</div>
                         <div style="text-align: right; color: #999;">▼</div>
                     </summary>
                     
                     <div class="expanded-details">
-                        <p class="description"><strong>Description:</strong> Field 'user' arg 'id' triggered DB error with payload: {"$ne": null}</p>
-                        <div class='detail-box full-width'><div class='meta-title'>Details</div><pre>['Syntax Error: Expected Name, found \'$\'.\n\nGraphQL request:1:21\n1 | query { user(id: "{"$ne": n...</pre></div>
+                        <p class="description"><strong>Description:</strong> Field 'user' arg 'id' type 'String' triggered error with payload: {"$ne": null}</p>
+                        
                         
                         <div class="detail-grid">
                             <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
@@ -879,15 +879,15 @@
         
                 <details class="vulnerability-item status-vulnerable">
                     <summary class="vulnerability-summary">
-                        <div class="vulnerability-title">Injection (Syntax error)</div>
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error)</div>
                         <div><span class="badge vulnerable">VULNERABLE</span></div>
                         <div class="severity-badge severity-high">High</div>
                         <div style="text-align: right; color: #999;">▼</div>
                     </summary>
                     
                     <div class="expanded-details">
-                        <p class="description"><strong>Description:</strong> Field 'user' arg 'id' triggered DB error with payload: {"$gt": ""}</p>
-                        <div class='detail-box full-width'><div class='meta-title'>Details</div><pre>['Syntax Error: Expected Name, found \'$\'.\n\nGraphQL request:1:21\n1 | query { user(id: "{"$gt": "...</pre></div>
+                        <p class="description"><strong>Description:</strong> Field 'user' arg 'id' type 'String' triggered error with payload: {"$gt": ""}</p>
+                        
                         
                         <div class="detail-grid">
                             <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
@@ -896,106 +896,6 @@
   "data": null,
   "errors": [
     "Syntax Error: Expected Name, found '$'.\n\nGraphQL request:1:21\n1 | query { user(id: \"{\"$gt\": \"\"}\") { __typename } }\n  |                     ^"
-  ]
-}</div></div>
-                        </div>
-                    </div>
-                </details>
-        
-                <details class="vulnerability-item status-warning">
-                    <summary class="vulnerability-summary">
-                        <div class="vulnerability-title">Injection (Syntax error) - Low Confidence</div>
-                        <div><span class="badge warning">WARNING</span></div>
-                        <div class="severity-badge severity-high">High</div>
-                        <div style="text-align: right; color: #999;">▼</div>
-                    </summary>
-                    
-                    <div class="expanded-details">
-                        <p class="description"><strong>Description:</strong> Field 'echoInt' arg 'val' triggered error, but SAFE payload also failed.</p>
-                        <div class='detail-box full-width'><div class='meta-title'>Details</div><pre>['Syntax Error: Unterminated string.\n\nGraphQL request:1:43\n1 | query { echoInt(val: """) { __type...</pre></div>
-                        
-                        <div class="detail-grid">
-                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
-                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Use Parameterized Queries / ORM. Validate and sanitize all input arguments.</div></div>
-                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>query { echoInt(val: """) { __typename } }</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{
-  "data": null,
-  "errors": [
-    "Syntax Error: Unterminated string.\n\nGraphQL request:1:43\n1 | query { echoInt(val: \"\"\") { __typename } }\n  |                                           ^"
-  ]
-}</div></div>
-                        </div>
-                    </div>
-                </details>
-        
-                <details class="vulnerability-item status-warning">
-                    <summary class="vulnerability-summary">
-                        <div class="vulnerability-title">Injection (Syntax error) - Low Confidence</div>
-                        <div><span class="badge warning">WARNING</span></div>
-                        <div class="severity-badge severity-high">High</div>
-                        <div style="text-align: right; color: #999;">▼</div>
-                    </summary>
-                    
-                    <div class="expanded-details">
-                        <p class="description"><strong>Description:</strong> Field 'echoInt' arg 'val' triggered error, but SAFE payload also failed.</p>
-                        <div class='detail-box full-width'><div class='meta-title'>Details</div><pre>['Syntax Error: Expected \':\', found String \'1\'.\n\nGraphQL request:1:28\n1 | query { echoInt(val...</pre></div>
-                        
-                        <div class="detail-grid">
-                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
-                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Use Parameterized Queries / ORM. Validate and sanitize all input arguments.</div></div>
-                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>query { echoInt(val: "" OR "1"="1") { __typename } }</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{
-  "data": null,
-  "errors": [
-    "Syntax Error: Expected ':', found String '1'.\n\nGraphQL request:1:28\n1 | query { echoInt(val: \"\" OR \"1\"=\"1\") { __typename } }\n  |                            ^"
-  ]
-}</div></div>
-                        </div>
-                    </div>
-                </details>
-        
-                <details class="vulnerability-item status-warning">
-                    <summary class="vulnerability-summary">
-                        <div class="vulnerability-title">Injection (Syntax error) - Low Confidence</div>
-                        <div><span class="badge warning">WARNING</span></div>
-                        <div class="severity-badge severity-high">High</div>
-                        <div style="text-align: right; color: #999;">▼</div>
-                    </summary>
-                    
-                    <div class="expanded-details">
-                        <p class="description"><strong>Description:</strong> Field 'echoInt' arg 'val' triggered error, but SAFE payload also failed.</p>
-                        <div class='detail-box full-width'><div class='meta-title'>Details</div><pre>['Syntax Error: Expected Name, found \'$\'.\n\nGraphQL request:1:25\n1 | query { echoInt(val: "{"$ne...</pre></div>
-                        
-                        <div class="detail-grid">
-                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
-                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Use Parameterized Queries / ORM. Validate and sanitize all input arguments.</div></div>
-                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>query { echoInt(val: "{"$ne": null}") { __typename } }</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{
-  "data": null,
-  "errors": [
-    "Syntax Error: Expected Name, found '$'.\n\nGraphQL request:1:25\n1 | query { echoInt(val: \"{\"$ne\": null}\") { __typename } }\n  |                         ^"
-  ]
-}</div></div>
-                        </div>
-                    </div>
-                </details>
-        
-                <details class="vulnerability-item status-warning">
-                    <summary class="vulnerability-summary">
-                        <div class="vulnerability-title">Injection (Syntax error) - Low Confidence</div>
-                        <div><span class="badge warning">WARNING</span></div>
-                        <div class="severity-badge severity-high">High</div>
-                        <div style="text-align: right; color: #999;">▼</div>
-                    </summary>
-                    
-                    <div class="expanded-details">
-                        <p class="description"><strong>Description:</strong> Field 'echoInt' arg 'val' triggered error, but SAFE payload also failed.</p>
-                        <div class='detail-box full-width'><div class='meta-title'>Details</div><pre>['Syntax Error: Expected Name, found \'$\'.\n\nGraphQL request:1:25\n1 | query { echoInt(val: "{"$gt...</pre></div>
-                        
-                        <div class="detail-grid">
-                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
-                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Use Parameterized Queries / ORM. Validate and sanitize all input arguments.</div></div>
-                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>query { echoInt(val: "{"$gt": ""}") { __typename } }</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{
-  "data": null,
-  "errors": [
-    "Syntax Error: Expected Name, found '$'.\n\nGraphQL request:1:25\n1 | query { echoInt(val: \"{\"$gt\": \"\"}\") { __typename } }\n  |                         ^"
   ]
 }</div></div>
                         </div>
@@ -1097,6 +997,26 @@
                         <div class="detail-grid">
                             <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Might leak the existence of hidden/admin types if they implement public interfaces.</div></div>
                             <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Ensure internal types do not implement public interfaces or are completely hidden from the schema.</div></div>
+                            
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-vulnerable">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Potential IDOR / Access Control</div>
+                        <div><span class="badge vulnerable">VULNERABLE</span></div>
+                        <div class="severity-badge severity-high">High</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Field 'user' (id: 1) was accessible by Secondary User (Client B).</p>
+                        <div class='detail-box full-width'><div class='meta-title'>Details</div><pre>Response data: {'user': {'__typename': 'User'}}...</pre></div>
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>High: Users can access private data belonging to others.</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Implement robust Access Control checks in every resolver. verify requestor owns the resource.</div></div>
                             
                         </div>
                     </div>

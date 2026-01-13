@@ -1,14 +1,14 @@
 from typing import Dict, Any, List
 from graphql_scanner.core.client import GraphQLClient
 
-def check_alias_overloading(client: GraphQLClient) -> Dict[str, Any]:
+async def check_alias_overloading(client: GraphQLClient) -> Dict[str, Any]:
     print("[-] Checking for Alias Overloading...")
     count = 100
     aliases = [f"a{i}: __typename" for i in range(count)]
     query = f"queryAliases {{ {', '.join(aliases)} }}"
     
     try:
-        result = client.query(query)
+        result = await client.query(query)
         # If we get result with 100 aliases, it might be vulnerable or just processing heavy
         if isinstance(result, dict) and "data" in result:
              return {
@@ -16,6 +16,8 @@ def check_alias_overloading(client: GraphQLClient) -> Dict[str, Any]:
                 "severity": "Medium (DoS)",
                 "status": "WARNING",
                 "description": f"Server processed {count} aliases in a single query.",
+                "query": query,
+                "response": result
             }
         elif isinstance(result, dict) and "errors" in result:
              # Check if error mentions alias limit
@@ -28,19 +30,21 @@ def check_alias_overloading(client: GraphQLClient) -> Dict[str, Any]:
     except Exception as e:
         return {"vulnerability": "Alias Overloading", "status": "UNKNOWN", "description": str(e)}
 
-def check_batch_queries(client: GraphQLClient) -> Dict[str, Any]:
+async def check_batch_queries(client: GraphQLClient) -> Dict[str, Any]:
     print("[-] Checking for Batch Queries...")
     count = 10
     queries = [{"query": "query { __typename }"} for _ in range(count)]
     
     try:
-        result = client.batch_query(queries)
+        result = await client.batch_query(queries)
         if isinstance(result, list) and len(result) == count:
              return {
                 "vulnerability": "Batch Queries",
                 "severity": "Medium (DoS)",
                 "status": "VULNERABLE",
                 "description": "Server supports batch queries (Array of operations).",
+                "query": queries,
+                "response": result
             }
         return {
             "vulnerability": "Batch Queries",
@@ -51,62 +55,51 @@ def check_batch_queries(client: GraphQLClient) -> Dict[str, Any]:
          # If it fails (e.g. 500 or 400 because it doesn't like arrays), it's safe from standard batching
          return {"vulnerability": "Batch Queries", "status": "SAFE", "description": "Request failed or rejected batch format."}
 
-def check_field_duplication(client: GraphQLClient) -> Dict[str, Any]:
+async def check_field_duplication(client: GraphQLClient) -> Dict[str, Any]:
     print("[-] Checking for Field Duplication...")
     count = 500
     fields = "__typename " * count
     query = f"query {{ {fields} }}"
     
     try:
-        result = client.query(query)
+        result = await client.query(query)
         if isinstance(result, dict) and "data" in result:
              return {
                 "vulnerability": "Field Duplication",
                 "severity": "Low (DoS)",
                 "status": "WARNING",
-                "description": f"Server accepted {count} duplicate fields."
+                "description": f"Server accepted {count} duplicate fields.",
+                "query": query,
+                "response": result
             }
         return {"vulnerability": "Field Duplication", "status": "SAFE", "description": "Server rejected or failed to process."}
     except Exception as e:
         return {"vulnerability": "Field Duplication", "status": "UNKNOWN", "description": str(e)}
 
-def check_directive_overloading(client: GraphQLClient) -> Dict[str, Any]:
+async def check_directive_overloading(client: GraphQLClient) -> Dict[str, Any]:
     print("[-] Checking for Directives Overloading...")
     count = 50
     directives = "@skip(if: false) " * count
     query = f"query {{ __typename {directives} }}"
     
     try:
-        result = client.query(query)
+        result = await client.query(query)
         if isinstance(result, dict) and "data" in result:
             return {
                 "vulnerability": "Directives Overloading",
                 "severity": "Low (DoS)",
                 "status": "WARNING",
-                "description": f"Server processed {count} directives on a single field."
+                "description": f"Server processed {count} directives on a single field.",
+                "query": query,
+                "response": result
             }
         return {"vulnerability": "Directives Overloading", "status": "SAFE", "description": "Server rejected."}
     except Exception as e:
         return {"vulnerability": "Directives Overloading", "status": "UNKNOWN", "description": str(e)}
 
-def check_circular_fragments(client: GraphQLClient) -> Dict[str, Any]:
+async def check_circular_fragments(client: GraphQLClient) -> Dict[str, Any]:
     print("[-] Checking for Circular Fragment Spreads...")
-    # Definitions: Fragment A refers to B, B refers to A
-    query = """
-    query CircularFragment {
-        ...A
-    }
-    
-    fragment A on __Type {
-        name
-        ...B
-    }
-    
-    fragment B on __Type {
-        name
-        ...A
-    }
-    """
+    # ... (skipping long query string for brevity in targetContent but it must match exactly)
     
     try:
         # We need a type to query on. __Type is usually available.
@@ -134,7 +127,7 @@ def check_circular_fragments(client: GraphQLClient) -> Dict[str, Any]:
         }
         """
         
-        result = client.query(real_query)
+        result = await client.query(real_query)
         
         if isinstance(result, dict) and "errors" in result:
             errors = str(result["errors"])

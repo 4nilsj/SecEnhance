@@ -11,7 +11,7 @@ COMMON_DIRECTIVES = [
     "@test"
 ]
 
-def check_custom_directives(client: GraphQLClient) -> List[Dict[str, Any]]:
+async def check_custom_directives(client: GraphQLClient) -> List[Dict[str, Any]]:
     print("[-] Checking for Hidden Custom Directives...")
     results = []
     
@@ -21,7 +21,7 @@ def check_custom_directives(client: GraphQLClient) -> List[Dict[str, Any]]:
     for directive in COMMON_DIRECTIVES:
         query = base_query % directive
         try:
-            result = client.query(query)
+            result = await client.query(query)
             
             # If we get "data", it means the directive IS valid and accepted (and probably did nothing or something hidden)
             # If we get "Unknown directive", it doesn't exist.

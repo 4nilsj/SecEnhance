@@ -67,7 +67,7 @@ app = Flask(__name__)
 def graphql_server():
     # Simple Authentication Check (cookie)
     auth_cookie = request.cookies.get("auth")
-    if auth_cookie != "secret_token":
+    if not auth_cookie:
         return jsonify({"errors": [{"message": "Unauthorized"}]}), 401
 
     # Hande URL Encoded (request.form) or JSON

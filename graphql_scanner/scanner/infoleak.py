@@ -1,10 +1,10 @@
 from typing import Dict, Any, List
 from graphql_scanner.core.client import GraphQLClient
 
-def check_tracing_enabled(client: GraphQLClient) -> Dict[str, Any]:
+async def check_tracing_enabled(client: GraphQLClient) -> Dict[str, Any]:
     print("[-] Checking for Tracing/Debug mode...")
     try:
-        result = client.query("{ __typename }")
+        result = await client.query("{ __typename }")
         if isinstance(result, dict) and "extensions" in result:
             ext = result["extensions"]
             if "tracing" in ext or "debug" in ext:
@@ -12,7 +12,9 @@ def check_tracing_enabled(client: GraphQLClient) -> Dict[str, Any]:
                     "vulnerability": "Tracing/Debug Enabled",
                     "severity": "Low (Info Leak)",
                     "status": "VULNERABLE",
-                    "description": "Response contains 'extensions' with tracing/debug info."
+                    "description": "Response contains 'extensions' with tracing/debug info.",
+                    "query": "{ __typename }",
+                    "response": result
                 }
     except Exception:
         pass
@@ -23,11 +25,11 @@ def check_tracing_enabled(client: GraphQLClient) -> Dict[str, Any]:
         "description": "Tracing info not found."
     }
 
-def check_field_suggestions(client: GraphQLClient) -> Dict[str, Any]:
+async def check_field_suggestions(client: GraphQLClient) -> Dict[str, Any]:
     print("[-] Checking for Field Suggestions...")
     try:
         # Send a typo
-        result = client.query("{ __typenam }")
+        result = await client.query("{ __typenam }")
         if isinstance(result, dict) and "errors" in result:
             errors = str(result["errors"])
             if "did you mean" in errors.lower():
@@ -46,28 +48,19 @@ def check_field_suggestions(client: GraphQLClient) -> Dict[str, Any]:
         "description": "No suggestions found in errors."
     }
 
-def check_graphiql(client: GraphQLClient) -> Dict[str, Any]:
+async def check_graphiql(client: GraphQLClient) -> Dict[str, Any]:
     print("[-] Checking for GraphiQL/Playground...")
-    paths = ["/graphiql", "/graphql", "/playground", "/explorer", "/_graphql"]
-    found = []
-    
-    base_url = client.url.rsplit('/', 1)[0] # Try to guess base
-    # If client.url is http://site.com/graphql, base is http://site.com
-    
-    # Actually, we should check relative to the current URL or widely known paths.
-    # The current URL might BE the graphiql endpoint too if it accepts GET.
-    
-    # Just check a few common variations based on client.url
-    targets = [client.url] # Check if the endpoint itself renders UI on GET text/html
-    # And replace suffix
+    # ...
+    targets = [client.url]
     if client.url.endswith("/graphql"):
         targets.append(client.url.replace("/graphql", "/graphiql"))
         targets.append(client.url.replace("/graphql", "/playground"))
     
+    found = []
     for target in targets:
         try:
              # Request with Accept: text/html
-             res = client.send_request(method="GET", headers={"Accept": "text/html"}, payload=None)
+             res = await client.send_request(method="GET", headers={"Accept": "text/html"}, payload=None)
              # If res is text and contains "GraphiQL" or "Playground"
              if isinstance(res, str) and ("GraphiQL" in res or "Playground" in res):
                  found.append(target)
@@ -79,7 +72,8 @@ def check_graphiql(client: GraphQLClient) -> Dict[str, Any]:
             "vulnerability": "GraphiQL/Playground Exposed",
             "severity": "Low (Info Leak)",
             "status": "VULNERABLE",
-            "description": f"Found interfaces at: {', '.join(found)}"
+            "description": f"Found interfaces at: {', '.join(found)}",
+            "details": f"Checked paths: {', '.join(targets)}"
         }
         
     return {

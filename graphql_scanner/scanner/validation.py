@@ -1,7 +1,7 @@
 from typing import Dict, Any, List, Optional
 from graphql_scanner.core.client import GraphQLClient
 
-def check_input_validation(client: GraphQLClient, schema: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
+async def check_input_validation(client: GraphQLClient, schema: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
     print("[-] Checking for Input Validation (Int Limits / Logic)...")
     results = []
     
@@ -57,8 +57,8 @@ def check_input_validation(client: GraphQLClient, schema: Optional[Dict[str, Any
                     operation_type = "mutation" if field.get("_is_mutation") else "query"
                     query = f'{operation_type} {{ {field_name}({arg_name}: {payload}) {{ __typename }} }}'
                     try:
-                        result = client.query(query)
-                        if "errors" in result:
+                        result = await client.query(query)
+                        if isinstance(result, dict) and "errors" in result:
                             err = str(result["errors"])
                             # Look for numeric overflow or generic exceptions
                             if "overflow" in err.lower() or "too large" in err.lower():
@@ -79,7 +79,7 @@ def check_input_validation(client: GraphQLClient, schema: Optional[Dict[str, Any
 
     return results
 
-def check_large_payload(client: GraphQLClient) -> Dict[str, Any]:
+async def check_large_payload(client: GraphQLClient) -> Dict[str, Any]:
     print("[-] Checking for Large Payload Handling...")
     # Send a query with a massive string in a variable or alias
     # Using aliases is easier to simulate without valid schema args
@@ -91,7 +91,7 @@ def check_large_payload(client: GraphQLClient) -> Dict[str, Any]:
     
     try:
         # Just check status. If it times out or 500s.
-        result = client.query(query)
+        result = await client.query(query)
         return {
             "vulnerability": "Large Payload",
             "status": "SAFE",
@@ -104,3 +104,4 @@ def check_large_payload(client: GraphQLClient) -> Dict[str, Any]:
             "description": "Request failed with large payload. Possible DoS vector.",
             "details": str(e)
         }
+

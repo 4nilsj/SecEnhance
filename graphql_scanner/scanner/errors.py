@@ -1,13 +1,13 @@
 from typing import Dict, Any
 from graphql_scanner.core.client import GraphQLClient
 
-def check_stack_trace(client: GraphQLClient) -> Dict[str, Any]:
+async def check_stack_trace(client: GraphQLClient) -> Dict[str, Any]:
     print("[-] Checking for Stack Trace Leakage...")
     # Trigger an error by sending invalid type or malformed query
     # Case 1: Syntax Error
     try:
         # Invalid syntax
-        result = client.query("query { invalid syntax }")
+        result = await client.query("query { invalid syntax }")
         if "errors" in result:
             err_str = str(result["errors"])
             if is_stack_trace(err_str):
@@ -15,7 +15,9 @@ def check_stack_trace(client: GraphQLClient) -> Dict[str, Any]:
                     "vulnerability": "Stack Trace Leakage",
                     "severity": "Low (Info Leak)",
                     "status": "VULNERABLE",
-                    "description": "Server reveals stack traces on syntax errors."
+                    "description": "Server reveals stack traces on syntax errors.",
+                    "query": "query { invalid syntax }",
+                    "response": result
                 }
     except:
         pass

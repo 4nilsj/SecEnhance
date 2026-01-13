@@ -95,7 +95,7 @@ INTROSPECTION_QUERY = """
     }
 """
 
-def fetch_schema(client: GraphQLClient) -> Optional[Dict[str, Any]]:
+async def fetch_schema(client: GraphQLClient) -> Optional[Dict[str, Any]]:
     """
     Tries to fetch the GraphQL schema using introspection.
     
@@ -106,11 +106,11 @@ def fetch_schema(client: GraphQLClient) -> Optional[Dict[str, Any]]:
         The schema JSON dict if successful, None otherwise.
     """
     try:
-        result = client.query(INTROSPECTION_QUERY)
-        if result.get("errors"):
+        result = await client.query(INTROSPECTION_QUERY)
+        if isinstance(result, dict) and result.get("errors"):
             print("Introspection query returned errors.")
             return None
-        return result.get("data")
+        return result.get("data") if isinstance(result, dict) else None
     except Exception as e:
         print(f"Failed to fetch schema: {e}")
         return None

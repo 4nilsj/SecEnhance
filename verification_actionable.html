@@ -1,0 +1,1117 @@
+
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>GraphQL Security Scan Report</title>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+        <style>
+            :root {
+                --primary: #E10098; /* GraphQL Pink */
+                --primary-dark: #9c006b;
+                --secondary: #171E26; /* Dark background */
+                --bg: #F4F6F8;
+                --surface: #FFFFFF;
+                --text: #333333;
+                --text-secondary: #666666;
+                --border: #E1E4E8;
+                
+                --high: #D32F2F;
+                --medium: #F57C00;
+                --low: #1976D2;
+                --info: #0288D1;
+                --safe: #388E3C;
+            }
+            
+            body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 0; line-height: 1.6; }
+            
+            header { background-color: var(--secondary); color: white; padding: 2rem 0; margin-bottom: 2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+            .header-content { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; }
+            h1 { margin: 0; font-size: 1.8rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+            h1::before { content: ''; display: block; width: 30px; height: 30px; background: url('https://upload.wikimedia.org/wikipedia/commons/1/17/GraphQL_Logo.svg') no-repeat center/contain; }
+            .meta-info { font-size: 0.9rem; color: rgba(255,255,255,0.7); text-align: right; }
+            
+            .container { max-width: 1200px; margin: 0 auto; padding: 0 20px 40px; }
+            
+            /* Summary Cards */
+            .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+            .card { background: var(--surface); padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); text-align: center; border-top: 4px solid transparent; transition: transform 0.2s; }
+            .card:hover { transform: translateY(-5px); }
+            .card h3 { margin: 0; font-size: 0.9rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+            .card .count { font-size: 2.5rem; font-weight: 700; margin: 10px 0 0; color: var(--text); }
+            
+            .card.high { border-color: var(--high); } .card.high .count { color: var(--high); }
+            .card.medium { border-color: var(--medium); } .card.medium .count { color: var(--medium); }
+            .card.low { border-color: var(--low); } .card.low .count { color: var(--low); }
+            .card.info { border-color: var(--info); } .card.info .count { color: var(--info); }
+            
+            /* Results Table */
+            .results-section { background: var(--surface); border-radius: 12px; box-shadow: 0 2px 15px rgba(0,0,0,0.05); overflow: hidden; }
+            .results-header { padding: 20px 30px; border-bottom: 1px solid var(--border); background: #FAFBFD; }
+            .results-header h2 { margin: 0; font-size: 1.2rem; color: var(--secondary); }
+            
+            .vulnerability-item { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+            .vulnerability-item:last-child { border-bottom: none; }
+            .vulnerability-item:hover { background-color: #FAFAFA; }
+            
+            .vulnerability-summary { padding: 15px 30px; display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 20px; align-items: center; cursor: pointer; }
+            .vulnerability-title { font-weight: 600; color: var(--secondary); }
+            
+            .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; }
+            .badge.vulnerable { background: #FDEDEC; color: var(--high); }
+            .badge.warning { background: #FEF5E7; color: var(--medium); }
+            .badge.safe { background: #E8F5E9; color: var(--safe); }
+            
+            .severity-badge { font-weight: 700; font-size: 0.9rem; }
+            .severity-high { color: var(--high); }
+            .severity-medium { color: var(--medium); }
+            .severity-low { color: var(--low); }
+            
+            /* Details Section */
+            details { width: 100%; }
+            summary { list-style: none; outline: none; }
+            summary::-webkit-details-marker { display: none; }
+            
+            .expanded-details { padding: 0 30px 20px 30px; margin-top: -10px; border-left: 4px solid transparent; animation: slideDown 0.3s ease-out; }
+            .status-vulnerable .expanded-details { border-color: var(--high); }
+            .status-warning .expanded-details { border-color: var(--medium); }
+            
+            @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+            
+            .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px; }
+            .detail-box { background: #F8F9FA; padding: 15px; border-radius: 8px; border: 1px solid var(--border); }
+            .full-width { grid-column: 1 / -1; }
+            
+            h4 { margin: 0 0 10px 0; font-size: 0.85rem; text-transform: uppercase; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
+            
+            .code-block { background: #2D3436; color: #DFE6E9; padding: 15px; border-radius: 8px; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 0.85rem; overflow-x: auto; white-space: pre-wrap; word-break: break-all; border-left: 4px solid var(--primary); margin-top: 5px; }
+            .description { color: var(--text); font-size: 0.95rem; margin-bottom: 20px; }
+            .meta-title { font-weight: 700; font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 5px; display: flex; align-items: center; gap: 5px; }
+            .meta-title::before { content: '•'; color: var(--primary); }
+            .meta-content { font-size: 0.9rem; }
+            pre { margin: 0; }
+        </style>
+    </head>
+    <body>
+        <header>
+            <div class="header-content">
+                <h1>GraphQL Security Report</h1>
+                <div class="meta-info">
+                    <div>Target: <strong>http://127.0.0.1:5020/graphql</strong></div>
+                    <div>Date: <strong>2026-01-14 00:52:32</strong></div>
+                </div>
+            </div>
+        </header>
+        
+        <div class="container">
+            <div class="summary">
+                <div class="card high">
+                    <h3>High Risk</h3>
+                    <div class="count">23</div>
+                </div>
+                <div class="card medium">
+                    <h3>Medium Risk</h3>
+                    <div class="count">5</div>
+                </div>
+                <div class="card low">
+                    <h3>Low Risk</h3>
+                    <div class="count">6</div>
+                </div>
+                <div class="card info">
+                    <h3>Info / Safe</h3>
+                    <div class="count">5</div> 
+                </div> 
+            </div>
+            
+            <div class="results-section">
+                <div class="results-header">
+                    <h2>Scan Findings</h2>
+                </div>
+                
+                <div class="vulnerability-list">
+    
+                <details class="vulnerability-item status-vulnerable">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Introspection Enabled</div>
+                        <div><span class="badge vulnerable">VULNERABLE</span></div>
+                        <div class="severity-badge severity-low (information disclosure)">Low (Information Disclosure)</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> GraphQL Introspection is enabled. This allows attackers to map the API schema.</p>
+                        <div class='detail-box full-width'><div class='meta-title'>Details</div><pre>Found 16 types.</pre></div>
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Attackers can map the entire API schema, finding hidden fields, arguments, and types.</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Disable introspection in production. Use a whitelist of allowed queries if possible.</div></div>
+                            
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-warning">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Query Depth Limit</div>
+                        <div><span class="badge warning">WARNING</span></div>
+                        <div class="severity-badge severity-medium (dos)">Medium (DOS)</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Server accepted a query with depth 100. It might be vulnerable to DOS.</p>
+                        <div class='detail-box full-width'><div class='meta-title'>Details</div><pre>No depth limit error returned.</pre></div>
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Unknown</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Review manually.</div></div>
+                            
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-warning">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Alias Overloading</div>
+                        <div><span class="badge warning">WARNING</span></div>
+                        <div class="severity-badge severity-medium (dos)">Medium (DoS)</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Server processed 100 aliases in a single query.</p>
+                        
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Attackers can bypass rate limits or cause DoS by requesting the same field thousands of times in one query.</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Limit the maximum number of aliases allowed in a single query.</div></div>
+                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>queryAliases { a0: __typename, a1: __typename, a2: __typename, a3: __typename, a4: __typename, a5: __typename, a6: __typename, a7: __typename, a8: __typename, a9: __typename, a10: __typename, a11: __typename, a12: __typename, a13: __typename, a14: __typename, a15: __typename, a16: __typename, a17: __typename, a18: __typename, a19: __typename, a20: __typename, a21: __typename, a22: __typename, a23: __typename, a24: __typename, a25: __typename, a26: __typename, a27: __typename, a28: __typename, a29: __typename, a30: __typename, a31: __typename, a32: __typename, a33: __typename, a34: __typename, a35: __typename, a36: __typename, a37: __typename, a38: __typename, a39: __typename, a40: __typename, a41: __typename, a42: __typename, a43: __typename, a44: __typename, a45: __typename, a46: __typename, a47: __typename, a48: __typename, a49: __typename, a50: __typename, a51: __typename, a52: __typename, a53: __typename, a54: __typename, a55: __typename, a56: __typename, a57: __typename, a58: __typename, a59: __typename, a60: __typename, a61: __typename, a62: __typename, a63: __typename, a64: __typename, a65: __typename, a66: __typename, a67: __typename, a68: __typename, a69: __typename, a70: __typename, a71: __typename, a72: __typename, a73: __typename, a74: __typename, a75: __typename, a76: __typename, a77: __typename, a78: __typename, a79: __typename, a80: __typename, a81: __typename, a82: __typename, a83: __typename, a84: __typename, a85: __typename, a86: __typename, a87: __typename, a88: __typename, a89: __typename, a90: __typename, a91: __typename, a92: __typename, a93: __typename, a94: __typename, a95: __typename, a96: __typename, a97: __typename, a98: __typename, a99: __typename }</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{
+  "data": null,
+  "errors": [
+    "Syntax Error: Unexpected Name 'queryAliases'.\n\nGraphQL request:1:1\n1 | queryAliases { a0: __typename, a1: __typename, a2: __typename, a3: __typename, a\n  | ^\n  | 4: __typename, a5: __typename, a6: __typename, a7: __typename, a8: __typename, a"
+  ]
+}</div></div>
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-vulnerable">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Batch Queries</div>
+                        <div><span class="badge vulnerable">VULNERABLE</span></div>
+                        <div class="severity-badge severity-medium (dos)">Medium (DoS)</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Server supports batch queries (Array of operations).</p>
+                        
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Attackers can bypass rate limits or Brute Force credentials efficiently.</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Disable query batching (array of queries) if not needed.</div></div>
+                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>[{'query': 'query { __typename }'}, {'query': 'query { __typename }'}, {'query': 'query { __typename }'}, {'query': 'query { __typename }'}, {'query': 'query { __typename }'}, {'query': 'query { __typename }'}, {'query': 'query { __typename }'}, {'query': 'query { __typename }'}, {'query': 'query { __typename }'}, {'query': 'query { __typename }'}]</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>[{'data': {'__typename': 'Query'}}, {'data': {'__typename': 'Query'}}, {'data': {'__typename': 'Query'}}, {'data': {'__typename': 'Query'}}, {'data': {'__typename': 'Query'}}, {'data': {'__typename': 'Query'}}, {'data': {'__typename': 'Query'}}, {'data': {'__typename': 'Query'}}, {'data': {'__typename': 'Query'}}, {'data': {'__typename': 'Query'}}]</div></div>
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-warning">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Field Duplication</div>
+                        <div><span class="badge warning">WARNING</span></div>
+                        <div class="severity-badge severity-low (dos)">Low (DoS)</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Server accepted 500 duplicate fields.</p>
+                        
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Optimizers might be bypassed, leading to DoS via resource exhaustion.</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Reject queries with duplicate fields/arguments.</div></div>
+                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>query { __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename __typename  }</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{
+  "data": {
+    "__typename": "Query"
+  }
+}</div></div>
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-warning">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Directives Overloading</div>
+                        <div><span class="badge warning">WARNING</span></div>
+                        <div class="severity-badge severity-low (dos)">Low (DoS)</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Server processed 50 directives on a single field.</p>
+                        
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Excessive directives can increase processing time significantly (DoS).</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Limit the number of directives allowed per field/query.</div></div>
+                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false)  }</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{
+  "data": null,
+  "errors": [
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:37\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                                     ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:54\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                                                      ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:71\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                                                                       ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:88\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  |        ^\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) ",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:105\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  |                         ^\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) ",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:122\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  |                                          ^\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) ",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:139\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  |                                                           ^\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) ",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:156\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  |                                                                            ^\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) ",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:173\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  |             ^\n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:190\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  |                              ^\n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:207\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  |                                               ^\n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:224\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  |                                                                ^\n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:241\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | ^\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:258\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  |                  ^\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:275\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  |                                   ^\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:292\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  |                                                    ^\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:309\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  |                                                                     ^\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:326\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  |      ^\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:343\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  |                       ^\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:360\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  |                                        ^\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:377\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  |                                                         ^\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:394\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  |                                                                          ^\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:411\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s\n  |           ^\n  | kip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fals",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:428\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s\n  |                            ^\n  | kip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fals",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:445\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s\n  |                                             ^\n  | kip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fals",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:462\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s\n  |                                                              ^\n  | kip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fals",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:479\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s\n  |                                                                               ^\n  | kip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fals",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:496\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s\n  | kip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fals\n  |                ^\n  | e) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if:",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:513\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s\n  | kip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fals\n  |                                 ^\n  | e) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if:",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:530\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s\n  | kip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fals\n  |                                                  ^\n  | e) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if:",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:547\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s\n  | kip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fals\n  |                                                                   ^\n  | e) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if:",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:564\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s\n  | kip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fals\n  | e) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if:\n  |    ^\n  |  false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @ski",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:581\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s\n  | kip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fals\n  | e) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if:\n  |                     ^\n  |  false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @ski",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:598\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s\n  | kip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fals\n  | e) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if:\n  |                                      ^\n  |  false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @ski",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:615\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s\n  | kip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fals\n  | e) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if:\n  |                                                       ^\n  |  false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @ski",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:632\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s\n  | kip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fals\n  | e) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if:\n  |                                                                        ^\n  |  false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @ski",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:649\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s\n  | kip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fals\n  | e) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if:\n  |  false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @ski\n  |         ^\n  | p(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false)",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:666\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s\n  | kip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fals\n  | e) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if:\n  |  false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @ski\n  |                          ^\n  | p(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false)",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:683\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s\n  | kip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fals\n  | e) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if:\n  |  false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @ski\n  |                                           ^\n  | p(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false)",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:700\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s\n  | kip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fals\n  | e) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if:\n  |  false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @ski\n  |                                                            ^\n  | p(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false)",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:717\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s\n  | kip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fals\n  | e) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if:\n  |  false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @ski\n  |                                                                             ^\n  | p(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false)",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:734\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s\n  | kip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fals\n  | e) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if:\n  |  false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @ski\n  | p(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false)\n  |              ^\n  |  @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false)  }",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:751\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s\n  | kip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fals\n  | e) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if:\n  |  false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @ski\n  | p(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false)\n  |                               ^\n  |  @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false)  }",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:768\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s\n  | kip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fals\n  | e) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if:\n  |  false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @ski\n  | p(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false)\n  |                                                ^\n  |  @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false)  }",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:785\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s\n  | kip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fals\n  | e) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if:\n  |  false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @ski\n  | p(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false)\n  |                                                                 ^\n  |  @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false)  }",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:802\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s\n  | kip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fals\n  | e) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if:\n  |  false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @ski\n  | p(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false)\n  |  @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false)  }\n  |  ^",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:819\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s\n  | kip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fals\n  | e) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if:\n  |  false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @ski\n  | p(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false)\n  |  @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false)  }\n  |                   ^",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:836\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s\n  | kip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fals\n  | e) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if:\n  |  false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @ski\n  | p(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false)\n  |  @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false)  }\n  |                                    ^",
+    "The directive '@skip' can only be used once at this location.\n\nGraphQL request:1:20\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  |                    ^\n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n\nGraphQL request:1:853\n1 | query { __typename @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: \n  | false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip\n  | (if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) \n  | @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fa\n  | lse) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(i\n  | f: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @s\n  | kip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: fals\n  | e) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if:\n  |  false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @ski\n  | p(if: false) @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false)\n  |  @skip(if: false) @skip(if: false) @skip(if: false) @skip(if: false)  }\n  |                                                     ^"
+  ]
+}</div></div>
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-safe">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Circular Fragments</div>
+                        <div><span class="badge safe">SAFE</span></div>
+                        <div class="severity-badge severity-info">-</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Server detected and blocked circular fragments.</p>
+                        
+                        
+                        <div class="detail-grid">
+                            
+                            
+                            
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-warning">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">GET Method Support</div>
+                        <div><span class="badge warning">WARNING</span></div>
+                        <div class="severity-badge severity-low (potential csrf)">Low (Potential CSRF)</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Server accepts GraphQL queries via GET. Verify if mutations are also allowed via GET.</p>
+                        
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Unknown</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Review manually.</div></div>
+                            
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-vulnerable">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">POST urlencoded Support</div>
+                        <div><span class="badge vulnerable">VULNERABLE</span></div>
+                        <div class="severity-badge severity-high (csrf)">High (CSRF)</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Server accepts x-www-form-urlencoded. This allows CSRF attacks from simple HTML forms.</p>
+                        
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Unknown</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Review manually.</div></div>
+                            
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-safe">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Tracing/Debug Enabled</div>
+                        <div><span class="badge safe">SAFE</span></div>
+                        <div class="severity-badge severity-info">-</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Tracing info not found.</p>
+                        
+                        
+                        <div class="detail-grid">
+                            
+                            
+                            
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-safe">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Field Suggestions</div>
+                        <div><span class="badge safe">SAFE</span></div>
+                        <div class="severity-badge severity-info">-</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> No suggestions found in errors.</p>
+                        
+                        
+                        <div class="detail-grid">
+                            
+                            
+                            
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-safe">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">GraphiQL/Playground Exposed</div>
+                        <div><span class="badge safe">SAFE</span></div>
+                        <div class="severity-badge severity-info">-</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> No common specific UI endpoints found.</p>
+                        
+                        
+                        <div class="detail-grid">
+                            
+                            
+                            
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-warning">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error) - Low Confidence</div>
+                        <div><span class="badge warning">WARNING</span></div>
+                        <div class="severity-badge severity-high">High</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Field 'createUser' arg 'name' type 'String' triggered error with payload: "</p>
+                        
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Use Parameterized Queries / ORM. Validate and sanitize all input arguments.</div></div>
+                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>mutation { createUser(name: """) { __typename } }</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{
+  "data": null,
+  "errors": [
+    "Syntax Error: Unterminated string.\n\nGraphQL request:1:50\n1 | mutation { createUser(name: \"\"\") { __typename } }\n  |                                                  ^"
+  ]
+}</div></div>
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-warning">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error) - Low Confidence</div>
+                        <div><span class="badge warning">WARNING</span></div>
+                        <div class="severity-badge severity-high">High</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Field 'createUser' arg 'name' type 'String' triggered error with payload: " OR "1"="1</p>
+                        
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Use Parameterized Queries / ORM. Validate and sanitize all input arguments.</div></div>
+                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>mutation { createUser(name: "" OR "1"="1") { __typename } }</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{
+  "data": null,
+  "errors": [
+    "Syntax Error: Expected ':', found String '1'.\n\nGraphQL request:1:35\n1 | mutation { createUser(name: \"\" OR \"1\"=\"1\") { __typename } }\n  |                                   ^"
+  ]
+}</div></div>
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-warning">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error) - Low Confidence</div>
+                        <div><span class="badge warning">WARNING</span></div>
+                        <div class="severity-badge severity-high">High</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Field 'createUser' arg 'name' type 'String' triggered error with payload: {"$ne": null}</p>
+                        
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Use Parameterized Queries / ORM. Validate and sanitize all input arguments.</div></div>
+                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>mutation { createUser(name: "{"$ne": null}") { __typename } }</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{
+  "data": null,
+  "errors": [
+    "Syntax Error: Expected Name, found '$'.\n\nGraphQL request:1:32\n1 | mutation { createUser(name: \"{\"$ne\": null}\") { __typename } }\n  |                                ^"
+  ]
+}</div></div>
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-warning">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error) - Low Confidence</div>
+                        <div><span class="badge warning">WARNING</span></div>
+                        <div class="severity-badge severity-high">High</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Field 'createUser' arg 'name' type 'String' triggered error with payload: {"$gt": ""}</p>
+                        
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Use Parameterized Queries / ORM. Validate and sanitize all input arguments.</div></div>
+                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>mutation { createUser(name: "{"$gt": ""}") { __typename } }</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{
+  "data": null,
+  "errors": [
+    "Syntax Error: Expected Name, found '$'.\n\nGraphQL request:1:32\n1 | mutation { createUser(name: \"{\"$gt\": \"\"}\") { __typename } }\n  |                                ^"
+  ]
+}</div></div>
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-warning">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error) - Low Confidence</div>
+                        <div><span class="badge warning">WARNING</span></div>
+                        <div class="severity-badge severity-high">High</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Field 'createUser' arg 'id' type 'String' triggered error with payload: "</p>
+                        
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Use Parameterized Queries / ORM. Validate and sanitize all input arguments.</div></div>
+                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>mutation { createUser(id: """) { __typename } }</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{
+  "data": null,
+  "errors": [
+    "Syntax Error: Unterminated string.\n\nGraphQL request:1:48\n1 | mutation { createUser(id: \"\"\") { __typename } }\n  |                                                ^"
+  ]
+}</div></div>
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-warning">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error) - Low Confidence</div>
+                        <div><span class="badge warning">WARNING</span></div>
+                        <div class="severity-badge severity-high">High</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Field 'createUser' arg 'id' type 'String' triggered error with payload: " OR "1"="1</p>
+                        
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Use Parameterized Queries / ORM. Validate and sanitize all input arguments.</div></div>
+                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>mutation { createUser(id: "" OR "1"="1") { __typename } }</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{
+  "data": null,
+  "errors": [
+    "Syntax Error: Expected ':', found String '1'.\n\nGraphQL request:1:33\n1 | mutation { createUser(id: \"\" OR \"1\"=\"1\") { __typename } }\n  |                                 ^"
+  ]
+}</div></div>
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-warning">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error) - Low Confidence</div>
+                        <div><span class="badge warning">WARNING</span></div>
+                        <div class="severity-badge severity-high">High</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Field 'createUser' arg 'id' type 'String' triggered error with payload: {"$ne": null}</p>
+                        
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Use Parameterized Queries / ORM. Validate and sanitize all input arguments.</div></div>
+                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>mutation { createUser(id: "{"$ne": null}") { __typename } }</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{
+  "data": null,
+  "errors": [
+    "Syntax Error: Expected Name, found '$'.\n\nGraphQL request:1:30\n1 | mutation { createUser(id: \"{\"$ne\": null}\") { __typename } }\n  |                              ^"
+  ]
+}</div></div>
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-warning">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error) - Low Confidence</div>
+                        <div><span class="badge warning">WARNING</span></div>
+                        <div class="severity-badge severity-high">High</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Field 'createUser' arg 'id' type 'String' triggered error with payload: {"$gt": ""}</p>
+                        
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Use Parameterized Queries / ORM. Validate and sanitize all input arguments.</div></div>
+                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>mutation { createUser(id: "{"$gt": ""}") { __typename } }</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{
+  "data": null,
+  "errors": [
+    "Syntax Error: Expected Name, found '$'.\n\nGraphQL request:1:30\n1 | mutation { createUser(id: \"{\"$gt\": \"\"}\") { __typename } }\n  |                              ^"
+  ]
+}</div></div>
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-warning">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error) - Low Confidence</div>
+                        <div><span class="badge warning">WARNING</span></div>
+                        <div class="severity-badge severity-high">High</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Field 'hello' arg 'name' type 'String' triggered error with payload: "</p>
+                        
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Use Parameterized Queries / ORM. Validate and sanitize all input arguments.</div></div>
+                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>query { hello(name: """) { __typename } }</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{
+  "data": null,
+  "errors": [
+    "Syntax Error: Unterminated string.\n\nGraphQL request:1:42\n1 | query { hello(name: \"\"\") { __typename } }\n  |                                          ^"
+  ]
+}</div></div>
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-warning">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error) - Low Confidence</div>
+                        <div><span class="badge warning">WARNING</span></div>
+                        <div class="severity-badge severity-high">High</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Field 'hello' arg 'name' type 'String' triggered error with payload: " OR "1"="1</p>
+                        
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Use Parameterized Queries / ORM. Validate and sanitize all input arguments.</div></div>
+                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>query { hello(name: "" OR "1"="1") { __typename } }</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{
+  "data": null,
+  "errors": [
+    "Syntax Error: Expected ':', found String '1'.\n\nGraphQL request:1:27\n1 | query { hello(name: \"\" OR \"1\"=\"1\") { __typename } }\n  |                           ^"
+  ]
+}</div></div>
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-warning">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error) - Low Confidence</div>
+                        <div><span class="badge warning">WARNING</span></div>
+                        <div class="severity-badge severity-high">High</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Field 'hello' arg 'name' type 'String' triggered error with payload: {"$ne": null}</p>
+                        
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Use Parameterized Queries / ORM. Validate and sanitize all input arguments.</div></div>
+                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>query { hello(name: "{"$ne": null}") { __typename } }</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{
+  "data": null,
+  "errors": [
+    "Syntax Error: Expected Name, found '$'.\n\nGraphQL request:1:24\n1 | query { hello(name: \"{\"$ne\": null}\") { __typename } }\n  |                        ^"
+  ]
+}</div></div>
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-warning">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error) - Low Confidence</div>
+                        <div><span class="badge warning">WARNING</span></div>
+                        <div class="severity-badge severity-high">High</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Field 'hello' arg 'name' type 'String' triggered error with payload: {"$gt": ""}</p>
+                        
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Use Parameterized Queries / ORM. Validate and sanitize all input arguments.</div></div>
+                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>query { hello(name: "{"$gt": ""}") { __typename } }</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{
+  "data": null,
+  "errors": [
+    "Syntax Error: Expected Name, found '$'.\n\nGraphQL request:1:24\n1 | query { hello(name: \"{\"$gt\": \"\"}\") { __typename } }\n  |                        ^"
+  ]
+}</div></div>
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-vulnerable">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Injection/Fuzzing (SQL syntax)</div>
+                        <div><span class="badge vulnerable">VULNERABLE</span></div>
+                        <div class="severity-badge severity-high">High</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Field 'user' arg 'id' type 'String' triggered error with payload: '</p>
+                        
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Use Parameterized Queries / ORM. Validate and sanitize all input arguments.</div></div>
+                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>query { user(id: "'") { __typename } }</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{
+  "data": {
+    "user": null
+  },
+  "errors": [
+    "SQL syntax error: syntax error at or near \"'\"\n\nGraphQL request:1:9\n1 | query { user(id: \"'\") { __typename } }\n  |         ^"
+  ]
+}</div></div>
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-vulnerable">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Injection/Fuzzing (SQL syntax)</div>
+                        <div><span class="badge vulnerable">VULNERABLE</span></div>
+                        <div class="severity-badge severity-high">High</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Field 'user' arg 'id' type 'String' triggered error with payload: ' OR '1'='1</p>
+                        
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Use Parameterized Queries / ORM. Validate and sanitize all input arguments.</div></div>
+                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>query { user(id: "' OR '1'='1") { __typename } }</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{
+  "data": {
+    "user": null
+  },
+  "errors": [
+    "SQL syntax error: syntax error at or near \"'\"\n\nGraphQL request:1:9\n1 | query { user(id: \"' OR '1'='1\") { __typename } }\n  |         ^"
+  ]
+}</div></div>
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-vulnerable">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error)</div>
+                        <div><span class="badge vulnerable">VULNERABLE</span></div>
+                        <div class="severity-badge severity-high">High</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Field 'user' arg 'id' type 'String' triggered error with payload: "</p>
+                        
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Use Parameterized Queries / ORM. Validate and sanitize all input arguments.</div></div>
+                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>query { user(id: """) { __typename } }</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{
+  "data": null,
+  "errors": [
+    "Syntax Error: Unterminated string.\n\nGraphQL request:1:39\n1 | query { user(id: \"\"\") { __typename } }\n  |                                       ^"
+  ]
+}</div></div>
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-vulnerable">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error)</div>
+                        <div><span class="badge vulnerable">VULNERABLE</span></div>
+                        <div class="severity-badge severity-high">High</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Field 'user' arg 'id' type 'String' triggered error with payload: " OR "1"="1</p>
+                        
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Use Parameterized Queries / ORM. Validate and sanitize all input arguments.</div></div>
+                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>query { user(id: "" OR "1"="1") { __typename } }</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{
+  "data": null,
+  "errors": [
+    "Syntax Error: Expected ':', found String '1'.\n\nGraphQL request:1:24\n1 | query { user(id: \"\" OR \"1\"=\"1\") { __typename } }\n  |                        ^"
+  ]
+}</div></div>
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-vulnerable">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Injection/Fuzzing (SQL syntax)</div>
+                        <div><span class="badge vulnerable">VULNERABLE</span></div>
+                        <div class="severity-badge severity-high">High</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Field 'user' arg 'id' type 'String' triggered error with payload: '; --</p>
+                        
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Use Parameterized Queries / ORM. Validate and sanitize all input arguments.</div></div>
+                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>query { user(id: "'; --") { __typename } }</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{
+  "data": {
+    "user": null
+  },
+  "errors": [
+    "SQL syntax error: syntax error at or near \"'\"\n\nGraphQL request:1:9\n1 | query { user(id: \"'; --\") { __typename } }\n  |         ^"
+  ]
+}</div></div>
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-vulnerable">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Injection/Fuzzing (SQL syntax)</div>
+                        <div><span class="badge vulnerable">VULNERABLE</span></div>
+                        <div class="severity-badge severity-high">High</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Field 'user' arg 'id' type 'String' triggered error with payload: ) OR ('1'='1</p>
+                        
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Use Parameterized Queries / ORM. Validate and sanitize all input arguments.</div></div>
+                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>query { user(id: ") OR ('1'='1") { __typename } }</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{
+  "data": {
+    "user": null
+  },
+  "errors": [
+    "SQL syntax error: syntax error at or near \"'\"\n\nGraphQL request:1:9\n1 | query { user(id: \") OR ('1'='1\") { __typename } }\n  |         ^"
+  ]
+}</div></div>
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-vulnerable">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Injection/Fuzzing (SQL syntax)</div>
+                        <div><span class="badge vulnerable">VULNERABLE</span></div>
+                        <div class="severity-badge severity-high">High</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Field 'user' arg 'id' type 'String' triggered error with payload: admin' --</p>
+                        
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Use Parameterized Queries / ORM. Validate and sanitize all input arguments.</div></div>
+                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>query { user(id: "admin' --") { __typename } }</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{
+  "data": {
+    "user": null
+  },
+  "errors": [
+    "SQL syntax error: syntax error at or near \"'\"\n\nGraphQL request:1:9\n1 | query { user(id: \"admin' --\") { __typename } }\n  |         ^"
+  ]
+}</div></div>
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-vulnerable">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error)</div>
+                        <div><span class="badge vulnerable">VULNERABLE</span></div>
+                        <div class="severity-badge severity-high">High</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Field 'user' arg 'id' type 'String' triggered error with payload: {"$ne": null}</p>
+                        
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Use Parameterized Queries / ORM. Validate and sanitize all input arguments.</div></div>
+                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>query { user(id: "{"$ne": null}") { __typename } }</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{
+  "data": null,
+  "errors": [
+    "Syntax Error: Expected Name, found '$'.\n\nGraphQL request:1:21\n1 | query { user(id: \"{\"$ne\": null}\") { __typename } }\n  |                     ^"
+  ]
+}</div></div>
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-vulnerable">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Injection/Fuzzing (Syntax error)</div>
+                        <div><span class="badge vulnerable">VULNERABLE</span></div>
+                        <div class="severity-badge severity-high">High</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Field 'user' arg 'id' type 'String' triggered error with payload: {"$gt": ""}</p>
+                        
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Critial: Attackers can extract data, modify database, or execute arbitrary code (RCE).</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Use Parameterized Queries / ORM. Validate and sanitize all input arguments.</div></div>
+                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>query { user(id: "{"$gt": ""}") { __typename } }</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{
+  "data": null,
+  "errors": [
+    "Syntax Error: Expected Name, found '$'.\n\nGraphQL request:1:21\n1 | query { user(id: \"{\"$gt\": \"\"}\") { __typename } }\n  |                     ^"
+  ]
+}</div></div>
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-vulnerable">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Stack Trace Leakage</div>
+                        <div><span class="badge vulnerable">VULNERABLE</span></div>
+                        <div class="severity-badge severity-low (info leak)">Low (Info Leak)</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Server reveals stack traces on syntax errors.</p>
+                        
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Leaks internal file paths, library versions, and logic, aiding further attacks.</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Disable debug mode in production. Catch exceptions and return generic error messages.</div></div>
+                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>query { invalid syntax }</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{
+  "errors": [
+    {
+      "extensions": {
+        "exception": {
+          "stacktrace": [
+            "Traceback (most recent call last)",
+            "File \"app.py\", line 100",
+            "ZeroDivisionError"
+          ]
+        }
+      },
+      "message": "Syntax Error"
+    }
+  ]
+}</div></div>
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-safe">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Large Payload</div>
+                        <div><span class="badge safe">SAFE</span></div>
+                        <div class="severity-badge severity-info">-</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Server handled large payload query.</p>
+                        
+                        
+                        <div class="detail-grid">
+                            
+                            
+                            
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-vulnerable">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Hidden Directive Found: @admin</div>
+                        <div><span class="badge vulnerable">VULNERABLE</span></div>
+                        <div class="severity-badge severity-medium (logic)">Medium (Logic)</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Server accepted directive @admin without error.</p>
+                        
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Excessive directives can increase processing time significantly (DoS).</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Limit the number of directives allowed per field/query.</div></div>
+                            
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-vulnerable">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Hidden Directive Found: @deprecated</div>
+                        <div><span class="badge vulnerable">VULNERABLE</span></div>
+                        <div class="severity-badge severity-medium (logic)">Medium (Logic)</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Directive @deprecated exists but location was wrong.</p>
+                        <div class='detail-box full-width'><div class='meta-title'>Details</div><pre>["Directive '@deprecated' may not be used on field.\n\nGraphQL request:1:20\n1 | query { __typename </pre></div>
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Excessive directives can increase processing time significantly (DoS).</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Limit the number of directives allowed per field/query.</div></div>
+                            
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-warning">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Type Leakage via Interface</div>
+                        <div><span class="badge warning">WARNING</span></div>
+                        <div class="severity-badge severity-low (info leak)">Low (Info Leak)</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Found sensitive types implementing public interfaces: AdminUser implements Character</p>
+                        
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>Might leak the existence of hidden/admin types if they implement public interfaces.</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Ensure internal types do not implement public interfaces or are completely hidden from the schema.</div></div>
+                            
+                        </div>
+                    </div>
+                </details>
+        
+                <details class="vulnerability-item status-vulnerable">
+                    <summary class="vulnerability-summary">
+                        <div class="vulnerability-title">Potential IDOR / Access Control</div>
+                        <div><span class="badge vulnerable">VULNERABLE</span></div>
+                        <div class="severity-badge severity-high">High</div>
+                        <div style="text-align: right; color: #999;">▼</div>
+                    </summary>
+                    
+                    <div class="expanded-details">
+                        <p class="description"><strong>Description:</strong> Field 'user' (id: 1) was accessible by Secondary User (Client B).</p>
+                        <div class='detail-box full-width'><div class='meta-title'>Details</div><pre>Response data: {'user': {'__typename': 'User'}}...</pre></div>
+                        
+                        <div class="detail-grid">
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>High: Users can access private data belonging to others.</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>Implement robust Access Control checks in every resolver. verify requestor owns the resource.</div></div>
+                            <div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>query { user(id: "1") { __typename } }</div></div><div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{
+  "data": {
+    "user": {
+      "__typename": "User"
+    }
+  }
+}</div></div>
+                        </div>
+                    </div>
+                </details>
+        
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+    

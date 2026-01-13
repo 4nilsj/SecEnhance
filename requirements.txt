@@ -4,4 +4,5 @@ rich
 flask
 graphql-core
 graphene
+httpx
 

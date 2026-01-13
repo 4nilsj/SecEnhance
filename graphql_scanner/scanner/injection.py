@@ -1,153 +1,125 @@
-from typing import Dict, Any, List, Optional
+import asyncio
+from typing import Dict, Any, List, Optional, Union
 from graphql_scanner.core.client import GraphQLClient
 
 # Common SQL/NoSQL Injection payloads
-PAYLOADS = [
-    "'", 
-    "' OR '1'='1", 
-    "\"", 
-    "\" OR \"1\"=\"1", 
-    "1 OR 1=1", 
-    "sleep(5)",
-    "'; --",
-    ") OR ('1'='1",
-    "admin' --",
-    # NoSQL
-    "{" + "\"$ne\": null" + "}", 
-    "{" + "\"$gt\": \"\"" + "}", 
-    "|| 1==1"
-]
+SQL_PAYLOADS = ["'", "' OR '1'='1", "\"", "\" OR \"1\"=\"1", "1 OR 1=1", "sleep(5)", "'; --", ") OR ('1'='1", "admin' --"]
+NOSQL_PAYLOADS = ["{\"$ne\": null}", "{\"$gt\": \"\"}", "|| 1==1"]
+
+# Type-aware payloads (Advanced Fuzzing)
+TYPE_PAYLOADS = {
+    "Int": [999999999, 0, -1, 2147483648, -2147483649], # Overflows and boundary values
+    "Float": [0.0, -1.0, 1e37, "3.14"], # Scientific notation and string representation
+    "Boolean": [None, "true", "0", 1],
+    "String": SQL_PAYLOADS + NOSQL_PAYLOADS
+}
 
 ERROR_SIGNATURES = [
-    "SQL syntax",
-    "mysql_fetch",
-    "Syntax error",
-    "Unclosed quotation mark",
-    "ORA-",
-    "PostgreSQL query",
-    "MongoError",
-    "sqlite3.OperationalError",
-    "quoted string",
+    "SQL syntax", "mysql_fetch", "Syntax error", "Unclosed quotation mark", "ORA-", 
+    "PostgreSQL query", "MongoError", "sqlite3.OperationalError", "quoted string",
+    "Integer Overflow", "out of range", "too large for column"
 ]
 
-def check_injection(client: GraphQLClient, schema: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    print("[-] Checking for Injection Vulnerabilities (SQL/NoSQL)...")
+PAYLOADS = SQL_PAYLOADS + NOSQL_PAYLOADS
+
+async def check_injection(client: GraphQLClient, schema: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    print("[-] Checking for Injection & Advanced Fuzzing (Async)...")
     results = []
     
     if not schema:
-         return [{
-            "vulnerability": "Injection Checks",
-            "status": "SKIPPED",
-            "description": "Schema not available (Introspection disabled or failed). Cannot fuzz fields."
-        }]
+         return [{"vulnerability": "Injection Checks", "status": "SKIPPED", "description": "Schema not available."}]
 
-    # 1. Identify query fields with arguments
-    # We iterate over Query type fields
     try:
-        query_type_name = schema.get("__schema", {}).get("queryType", {}).get("name", "Query")
         types = schema.get("__schema", {}).get("types", [])
-        query_type = next((t for t in types if t["name"] == query_type_name), None)
-        
-        if not query_type:
-             return [{"vulnerability": "Injection Checks", "status": "SKIPPED", "description": "Could not find Query type."}]
-
+        query_type_name = schema.get("__schema", {}).get("queryType", {}).get("name", "Query")
         mutation_type_name = schema.get("__schema", {}).get("mutationType", {}).get("name", "Mutation")
+        
+        query_type = next((t for t in types if t["name"] == query_type_name), None)
         mutation_type = next((t for t in types if t["name"] == mutation_type_name), None)
 
         fields_to_test = []
-        
-        # Add Query Fields
-        for field in query_type.get("fields", []):
-            if field.get("args"):
-                fields_to_test.append(field)
-                
-        # Add Mutation Fields
-        if mutation_type:
-            for field in mutation_type.get("fields", []):
-                if field.get("args"):
-                    # Mark as mutation for context (optional, but good for logging)
-                    field["_is_mutation"] = True 
-                    fields_to_test.append(field)
-        
-        if not fields_to_test:
-             return [{"vulnerability": "Injection Checks", "status": "SAFE", "description": "No fields with arguments found to test."}]
-             
-        # Limit testing to avoid massive scans in this demo
-        # We prioritize mutations if available as they are critical
-        fields_to_test = sorted(fields_to_test, key=lambda x: x.get("_is_mutation", False), reverse=True)[:5] 
-        
-        detected = False
-        
-        for field in fields_to_test:
-            field_name = field["name"]
-            # Construct a basic query. We need to know subfields if it returns an object.
-            # Simplified: just ask for __typename
-            
-            for arg in field["args"]:
-                arg_name = arg["name"]
-                
-                # Fuzz this argument
-                for payload in PAYLOADS:
-                    # Construct query: queryOrMutation { field(arg: "payload") { __typename } }
-                    operation_type = "mutation" if field.get("_is_mutation") else "query"
-                    # Note: We assume string args for simplicity in this scanner
-                    query = f'{operation_type} {{ {field_name}({arg_name}: "{payload}") {{ __typename }} }}'
-                    
-                    try:
-                        result = client.query(query)
-                        if "errors" in result:
-                            error_str = str(result["errors"])
-                            # Check for DB errors
-                            for sig in ERROR_SIGNATURES:
-                                if sig.lower() in error_str.lower():
-                                    is_false_positive = False
-                                    # Differential Analysis
-                                    safe_payload = "safe_string"
-                                    safe_query = f'{operation_type} {{ {field_name}({arg_name}: "{safe_payload}") {{ __typename }} }}'
-                                    try:
-                                        safe_result = client.query(safe_query)
-                                        if isinstance(safe_result, dict) and "errors" in safe_result:
-                                             is_false_positive = True
-                                    except Exception:
-                                        pass
+        if query_type: fields_to_test.extend([(f, "query") for f in query_type.get("fields", []) if f.get("args")])
+        if mutation_type: fields_to_test.extend([(f, "mutation") for f in mutation_type.get("fields", []) if f.get("args")])
 
-                                    if is_false_positive:
-                                        results.append({
-                                            "vulnerability": f"Injection ({sig}) - Low Confidence",
-                                            "severity": "High",
-                                            "status": "WARNING",
-                                            "description": f"Field '{field_name}' arg '{arg_name}' triggered error, but SAFE payload also failed.",
-                                            "details": error_str[:100] + "...",
-                                            "query": query,
-                                            "response": result
-                                        })
-                                    else:
-                                        results.append({
-                                            "vulnerability": f"Injection ({sig})",
-                                            "severity": "High",
-                                            "status": "VULNERABLE",
-                                            "description": f"Field '{field_name}' arg '{arg_name}' triggered DB error with payload: {payload}",
-                                            "details": error_str[:100] + "...",
-                                            "query": query,
-                                            "response": result
-                                        })
-                                    detected = True
-                                    break
-                    except Exception:
-                        pass
-                    
-                # if detected: break # Removed to scan all payloads
-            # if detected: break # Removed to scan all args
-        # if detected: break # Removed to scan all fields
+        # Limit for demo, prioritizing mutations
+        fields_to_test = sorted(fields_to_test, key=lambda x: x[1] == "mutation", reverse=True)[:10]
+
+        async def fuzz_field_arg(field, op_type, arg):
+            arg_name = arg["name"]
+            arg_type_info = arg["type"]
             
-        if not detected:
-             results.append({
-                "vulnerability": "Injection Checks",
-                "status": "SAFE", 
-                "description": "No specific DB errors triggered by injection payloads."
-            })
+            # Extract base type name
+            base_type = _get_base_type_name(arg_type_info)
+            payloads = TYPE_PAYLOADS.get(base_type, SQL_PAYLOADS + NOSQL_PAYLOADS)
             
+            field_results = []
+            for payload in payloads:
+                # Format payload based on type
+                formatted_payload = payload
+                if base_type == "String" and isinstance(payload, str):
+                    formatted_payload = f'"{payload}"'
+                elif payload is None:
+                    formatted_payload = "null"
+                elif isinstance(payload, bool):
+                    formatted_payload = str(payload).lower()
+                
+                query = f'{op_type} {{ {field["name"]}({arg_name}: {formatted_payload}) {{ __typename }} }}'
+                
+                try:
+                    res = await client.query(query)
+                    if isinstance(res, dict) and "errors" in res:
+                        error_str = str(res["errors"])
+                        for sig in ERROR_SIGNATURES:
+                            if sig.lower() in error_str.lower():
+                                # Differential check
+                                is_fp = await _is_false_positive(client, field, op_type, arg_name, base_type)
+                                
+                                field_results.append({
+                                    "vulnerability": f"Injection/Fuzzing ({sig})" + (" - Low Confidence" if is_fp else ""),
+                                    "severity": "High",
+                                    "status": "WARNING" if is_fp else "VULNERABLE",
+                                    "description": f"Field '{field['name']}' arg '{arg_name}' type '{base_type}' triggered error with payload: {payload}",
+                                    "query": query,
+                                    "response": res
+                                })
+                                break # Found a signature, move to next payload for this arg
+                except:
+                    pass
+            return field_results
+
+        tasks = []
+        for field, op_type in fields_to_test:
+            for arg in field["args"]:
+                tasks.append(fuzz_field_arg(field, op_type, arg))
+
+        # Run all fuzzing tasks in parallel!
+        batch_results = await asyncio.gather(*tasks)
+        for r_list in batch_results:
+            results.extend(r_list)
+
+        if not results:
+            results.append({"vulnerability": "Injection/Fuzzing Checks", "status": "SAFE", "description": "No vulnerabilities found."})
+
     except Exception as e:
-         results.append({"vulnerability": "Injection Checks", "status": "ERROR", "description": str(e)})
+        results.append({"vulnerability": "Injection Checks", "status": "ERROR", "description": str(e)})
 
     return results
+
+def _get_base_type_name(type_info: Dict[str, Any]) -> str:
+    """Recursively find the base type name (e.g., String, Int)."""
+    if type_info.get("name"):
+        return type_info["name"]
+    if type_info.get("ofType"):
+        return _get_base_type_name(type_info["ofType"])
+    return "String"
+
+async def _is_false_positive(client, field, op_type, arg_name, base_type) -> bool:
+    """Perform differential analysis to check for false positives."""
+    safe_values = {"Int": 1, "Float": 1.0, "Boolean": True, "String": '"safe_val"'}
+    safe_val = safe_values.get(base_type, '"safe_val"')
+    query = f'{op_type} {{ {field["name"]}({arg_name}: {safe_val}) {{ __typename }} }}'
+    try:
+        res = await client.query(query)
+        return isinstance(res, dict) and "errors" in res
+    except:
+        return True

@@ -2,7 +2,7 @@ from typing import Dict, Any, Optional
 from graphql_scanner.core.client import GraphQLClient
 from graphql_scanner.introspection.fetcher import fetch_schema
 
-def check_introspection(client: GraphQLClient) -> Dict[str, Any]:
+async def check_introspection(client: GraphQLClient) -> Dict[str, Any]:
     """
     Checks if introspection is enabled and returns the result.
     
@@ -13,7 +13,7 @@ def check_introspection(client: GraphQLClient) -> Dict[str, Any]:
         Dict containing status and details.
     """
     print("[-] Checking if Introspection is enabled...")
-    schema = fetch_schema(client)
+    schema = await fetch_schema(client)
     
     if schema:
         return {

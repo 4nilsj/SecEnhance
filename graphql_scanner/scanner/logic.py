@@ -1,7 +1,7 @@
 from typing import Dict, Any, List, Optional
 from graphql_scanner.core.client import GraphQLClient
 
-def check_interface_leaks(client: GraphQLClient, schema: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
+async def check_interface_leaks(client: GraphQLClient, schema: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
     print("[-] Checking for Interface/Union Implementation Leaks...")
     results = []
     

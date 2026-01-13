@@ -75,16 +75,37 @@ def get_kb_entry(vuln_name):
 def generate_html_report(results: List[Dict[str, Any]], target_url: str) -> str:
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
+    # Group results by vulnerability type
+    groups = {}
+    for res in results:
+        v_name = res.get("vulnerability", "Other")
+        if v_name not in groups:
+            groups[v_name] = []
+        groups[v_name].append(res)
+
+    # Sort groups by severity (highest severity in group wins)
+    severity_order = {"High": 1, "Medium": 2, "Low": 3, "Info": 4}
+    def get_group_severity_weight(vname):
+        res_list = groups[vname]
+        min_w = 5
+        for r in res_list:
+            sev = r.get("severity", "Info")
+            for k, w in severity_order.items():
+                if k.lower() in sev.lower():
+                    min_w = min(min_w, w)
+        return min_w
+
+    sorted_group_names = sorted(groups.keys(), key=get_group_severity_weight)
+    
     # Calculate Stats
     stats = {"High": 0, "Medium": 0, "Low": 0, "Info": 0}
     for res in results:
         sev = res.get("severity", "Info")
-        # Normalize severity strings
         if "high" in sev.lower(): stats["High"] += 1
         elif "medium" in sev.lower(): stats["Medium"] += 1
         elif "low" in sev.lower(): stats["Low"] += 1
         else: stats["Info"] += 1
-        
+
     html = f"""
     <!DOCTYPE html>
     <html lang="en">
@@ -172,8 +193,14 @@ def generate_html_report(results: List[Dict[str, Any]], target_url: str) -> str:
             
             h4 {{ margin: 0 0 10px 0; font-size: 0.85rem; text-transform: uppercase; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }}
             
-            .code-block {{ background: #2D3436; color: #DFE6E9; padding: 12px; border-radius: 6px; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 0.85rem; overflow-x: auto; white-space: pre-wrap; }}
-            .description {{ color: var(--text); font-size: 0.95rem; }}
+            .code-block {{ background: #2D3436; color: #DFE6E9; padding: 15px; border-radius: 8px; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 0.85rem; overflow-x: auto; white-space: pre-wrap; word-break: break-all; border-left: 4px solid var(--primary); margin-top: 5px; }}
+            .description {{ color: var(--text); font-size: 0.95rem; margin-bottom: 20px; }}
+            .meta-title {{ font-weight: 700; font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 5px; display: flex; align-items: center; gap: 5px; }}
+            .meta-title::before {{ content: '•'; color: var(--primary); }}
+            .meta-content {{ font-size: 0.9rem; }}
+            pre {{ margin: 0; }}
+            
+            .instance-header {{ font-weight: 700; font-size: 0.8rem; background: #EEE; padding: 5px 10px; margin-top: 20px; border-radius: 4px; color: #555; }}
         </style>
     </head>
     <body>
@@ -203,7 +230,7 @@ def generate_html_report(results: List[Dict[str, Any]], target_url: str) -> str:
                 </div>
                 <div class="card info">
                     <h3>Info / Safe</h3>
-                    <div class="count">{stats['Info'] + stats.get('Safe', 0)}</div> 
+                    <div class="count">{stats['Info']}</div> 
                 </div> 
             </div>
             
@@ -215,50 +242,70 @@ def generate_html_report(results: List[Dict[str, Any]], target_url: str) -> str:
                 <div class="vulnerability-list">
     """
     
-    for res in results:
-        status_slug = res['status'].lower()
-        severity_slug = res.get('severity', 'info').lower()
+    for vname in sorted_group_names:
+        res_list = groups[vname]
+        main_res = res_list[0]
+        kb = get_kb_entry(vname)
         
+        # Determine aggregate status and max severity
+        best_status = "SAFE"
+        for r in res_list:
+            if r["status"] == "VULNERABLE":
+                best_status = "VULNERABLE"
+                break
+            if r["status"] == "WARNING":
+                best_status = "WARNING"
+        
+        status_slug = best_status.lower()
+        badge_class = status_slug
         status_class = f"status-{status_slug}"
-        badge_class = status_slug 
         
-        kb = get_kb_entry(res.get('vulnerability', ''))
+        # Max severity
+        max_sev = main_res.get("severity") or "-"
+        min_w = 5
+        for r in res_list:
+             sev = r.get("severity") or "Info"
+             for k, w in severity_order.items():
+                if k.lower() in sev.lower():
+                    if w < min_w:
+                        min_w = w
+                        max_sev = r.get("severity") or "Info"
         
-        impact_html = ""
-        mitigation_html = ""
-        poc_html = ""
-        
-        if res.get("status") != "SAFE":
-            impact_html = f"<div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>{kb['impact']}</div></div>"
-            mitigation_html = f"<div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>{kb['mitigation']}</div></div>"
-            
-            if res.get("query"):
-                 poc_html += f"<div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>{res['query']}</div></div>"
-            if res.get("response"):
-                 import json
-                 resp_str = json.dumps(res['response'], indent=2) if isinstance(res['response'], dict) else str(res['response'])
-                 poc_html += f"<div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{resp_str}</div></div>"
+        severity_slug = max_sev.lower() if max_sev and max_sev != "-" else "info"
 
-        # Safe items might just show description
-        
         html += f"""
                 <details class="vulnerability-item {status_class}">
                     <summary class="vulnerability-summary">
-                        <div class="vulnerability-title">{res.get('vulnerability')}</div>
-                        <div><span class="badge {badge_class}">{res.get('status')}</span></div>
-                        <div class="severity-badge severity-{severity_slug}">{res.get('severity', '-')}</div>
+                        <div class="vulnerability-title">{vname} ({len(res_list)} instances)</div>
+                        <div><span class="badge {badge_class}">{best_status}</span></div>
+                        <div class="severity-badge severity-{severity_slug}">{max_sev}</div>
                         <div style="text-align: right; color: #999;">▼</div>
                     </summary>
                     
                     <div class="expanded-details">
-                        <p class="description"><strong>Description:</strong> {res.get('description')}</p>
-                        {f"<div class='detail-box full-width'><div class='meta-title'>Details</div><pre>{res['details']}</pre></div>" if res.get('details') else ""}
-                        
                         <div class="detail-grid">
-                            {impact_html}
-                            {mitigation_html}
-                            {poc_html}
+                            <div class='detail-box'><div class='meta-title'>Impact</div><div class='meta-content'>{kb['impact']}</div></div>
+                            <div class='detail-box'><div class='meta-title'>Remediation</div><div class='meta-content'>{kb['mitigation']}</div></div>
                         </div>
+        """
+        
+        for idx, inst in enumerate(res_list):
+            html += f"<div class='instance-header'>Instance {idx+1}: {inst.get('description', 'Finding')}</div>"
+            if inst.get('details'):
+                html += f"<div class='detail-box full-width'><div class='meta-title'>Details</div><div class='meta-content' style='font-family: monospace; white-space: pre-wrap;'>{inst['details']}</div></div>"
+            
+            poc_html = ""
+            if inst.get("query"):
+                 poc_html += f"<div class='detail-box full-width'><div class='meta-title'>Request Payload</div><div class='code-block'>{inst['query']}</div></div>"
+            if inst.get("response"):
+                 import json
+                 resp_str = json.dumps(inst['response'], indent=2) if isinstance(inst['response'], dict) else str(inst['response'])
+                 poc_html += f"<div class='detail-box full-width'><div class='meta-title'>Server Response</div><div class='code-block'>{resp_str}</div></div>"
+            
+            if poc_html:
+                html += f"<div class='detail-grid'>{poc_html}</div>"
+
+        html += """
                     </div>
                 </details>
         """

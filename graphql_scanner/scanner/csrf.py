@@ -1,12 +1,12 @@
 from typing import Dict, Any
 from graphql_scanner.core.client import GraphQLClient
 
-def check_get_method_support(client: GraphQLClient) -> Dict[str, Any]:
+async def check_get_method_support(client: GraphQLClient) -> Dict[str, Any]:
     print("[-] Checking for GET Method Support (CSRF Potential)...")
     # 1. Check if we can execute a query via GET
     query = "{ __typename }"
     try:
-        result = client.query(query, method="GET")
+        result = await client.query(query, method="GET")
         
         # If success, check if it's a mutation-capable endpoint
         # We can't easily test mutation via GET without a known mutation.
@@ -30,14 +30,14 @@ def check_get_method_support(client: GraphQLClient) -> Dict[str, Any]:
         "description": "Server does not accept queries via GET."
     }
 
-def check_post_urlencoded(client: GraphQLClient) -> Dict[str, Any]:
+async def check_post_urlencoded(client: GraphQLClient) -> Dict[str, Any]:
     print("[-] Checking for POST x-www-form-urlencoded Support...")
     data = "query={ __typename }"
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
     
     try:
         # We use send_request to control body and headers precisely
-        result = client.send_request(data=data, headers=headers, method="POST")
+        result = await client.send_request(data=data, headers=headers, method="POST")
         
         if isinstance(result, dict) and "data" in result:
              return {
@@ -54,3 +54,4 @@ def check_post_urlencoded(client: GraphQLClient) -> Dict[str, Any]:
         "status": "SAFE",
         "description": "Server does not accept x-www-form-urlencoded."
     }
+

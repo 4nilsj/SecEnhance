@@ -27,7 +27,6 @@ from graphql_scanner.scanner.errors import check_stack_trace
 from graphql_scanner.scanner.validation import check_input_validation, check_large_payload
 from graphql_scanner.scanner.directives import check_custom_directives
 from graphql_scanner.scanner.logic import check_interface_leaks
-from graphql_scanner.scanner.logic import check_interface_leaks
 from graphql_scanner.scanner.fuzzer import check_custom_query_fuzzing
 from graphql_scanner.scanner.idor import check_idor
 from graphql_scanner.report_generator import generate_html_report
@@ -51,6 +50,8 @@ def scan(
     """
     Scan a GraphQL endpoint for security vulnerabilities.
     """
+    import asyncio
+
     # Header Parsing
     custom_headers = {}
     if headers:
@@ -59,13 +60,10 @@ def scan(
                 key, val = h.split(":", 1)
                 custom_headers[key.strip()] = val.strip()
 
-    custom_query_string = None 
-    
-    # Priority: CLI > cURL
-    if data:
-        custom_query_string = data
-        fuzz_query = True
-        console.print("[bold blue]Custom query provided via --data. Enabling fuzzing.[/bold blue]")
+    target_url = url
+    target_cookies = cookies
+    custom_query_string = data
+    target_fuzz_query = fuzz_query
 
     # cURL Parsing logic
     if curl:
@@ -73,8 +71,8 @@ def scan(
             console.print("[bold yellow]Parsing cURL command...[/bold yellow]")
             curl_data = parse_curl(curl)
             
-            if not url: url = curl_data["url"]
-            if not cookies: cookies = curl_data["cookies"]
+            if not target_url: target_url = curl_data["url"]
+            if not target_cookies: target_cookies = curl_data["cookies"]
             
             curl_headers = curl_data.get("headers", {})
             curl_headers.update(custom_headers)
@@ -83,82 +81,43 @@ def scan(
             # Check for data (query) in cURL
             if curl_data.get("data") and not custom_query_string:
                  custom_query_string = curl_data["data"]
-                 console.print("[bold blue]Detected custom query in cURL data. Will use for Mutation/Fuzzing checks if enabled.[/bold blue]")
-                 fuzz_query = True
+                 target_fuzz_query = True
             
         except Exception as e:
             console.print(f"[bold red]Failed to parse cURL command: {e}[/bold red]")
             raise typer.Exit(code=1)
 
-    if not url:
+    if not target_url:
         console.print("[bold red]Error: Missing --url or --curl argument.[/bold red]")
         raise typer.Exit(code=1)
     
-    console.print(f"[bold green]Starting scan against {url}[/bold green]")
+    console.print(f"[bold green]Starting scan against {target_url}[/bold green]")
     
-    try:
-        client = GraphQLClient(url, cookies, headers=custom_headers)
-        client_b = None
-        if cookie_b:
-             client_b = GraphQLClient(url, cookie_b, headers=custom_headers)
-             console.print(f"[bold blue]Secondary Client initialized for IDOR testing.[/bold blue]")
-    except Exception as e:
-        console.print(f"[bold red]Failed to initialize client: {e}[/bold red]")
-        raise typer.Exit(code=1)
+    async def run_all():
+        results = []
+        schema = None
+        try:
+            async with GraphQLClient(target_url, target_cookies, headers=custom_headers) as client:
+                client_b = None
+                if cookie_b:
+                    client_b = GraphQLClient(target_url, cookie_b, headers=custom_headers)
+                    console.print("[bold blue]Secondary Client initialized for IDOR testing.[/bold blue]")
+                    await client_b.__aenter__()
 
-    results = []
+                try:
+                    results = await run_scan(client, client_b, schema, target_fuzz_query, custom_query_string, depth)
+                finally:
+                    if client_b:
+                        await client_b.__aexit__(None, None, None)
+        except Exception as e:
+            console.print(f"[bold red]Scan failed: {e}[/bold red]")
+            import traceback
+            traceback.print_exc()
+            raise typer.Exit(code=1)
+        return results
 
-    # 0. Custom Query Fuzzing (if provided)
-    if fuzz_query and custom_query_string:
-         results.extend(check_custom_query_fuzzing(client, custom_query_string))
-    
-    # 1. Introspection (Fetch Schema first as it's needed for Injection)
-    console.print("[-] Fetching Schema for Analysis...")
-    schema = fetch_schema(client) # Reuse check_introspection internal logic or just call check and reuse
-    
-    # We run check_introspection to get the report
-    results.append(check_introspection(client))
-    
-    # 2. Complexity
-    results.append(check_complexity(client, max_depth=depth))
-    
-    # 3. DoS Checks
-    results.append(check_alias_overloading(client))
-    results.append(check_batch_queries(client))
-    results.append(check_field_duplication(client))
-    results.append(check_directive_overloading(client))
-    results.append(check_circular_fragments(client))
-    
-    # 4. CSRF Checks
-    results.append(check_get_method_support(client))
-    results.append(check_post_urlencoded(client))
-    
-    # 5. Info Leak Checks
-    results.append(check_tracing_enabled(client))
-    results.append(check_field_suggestions(client))
-    results.append(check_graphiql(client))
-    
-    # 6. Injection Checks
-    injection_results = check_injection(client, schema)
-    results.extend(injection_results)
-    
-    # 7. Error Checks
-    results.append(check_stack_trace(client))
+    results = asyncio.run(run_all())
 
-    # 8. Input Validation Checks
-    results.extend(check_input_validation(client, schema))
-    results.append(check_large_payload(client))
-
-    # 9. Directives Checks
-    results.extend(check_custom_directives(client))
-
-    # 10. Logic Checks
-    results.extend(check_interface_leaks(client, schema))
-    
-    # 11. IDOR Checks
-    if client_b:
-        results.extend(check_idor(client, client_b, schema))
-    
     # Display Results
     table = Table(title="Scan Results")
     table.add_column("Vulnerability", style="cyan")
@@ -184,7 +143,7 @@ def scan(
                      json.dump(results, f, indent=4)
                  console.print(f"[bold green]Results saved to {output}[/bold green]")
             elif output.endswith(".html"):
-                 html_content = generate_html_report(results, url)
+                 html_content = generate_html_report(results, target_url)
                  with open(output, "w") as f:
                      f.write(html_content)
                  console.print(f"[bold green]HTML Report saved to {output}[/bold green]")
@@ -205,5 +164,63 @@ def scan(
         except Exception as e:
             console.print(f"[bold red]Failed to save output to file: {e}[/bold red]")
 
+async def run_scan(client, client_b, schema, fuzz_query, custom_query_string, depth):
+    results = []
+    # 0. Custom Query Fuzzing (if provided)
+    if fuzz_query and custom_query_string:
+         results.extend(await check_custom_query_fuzzing(client, custom_query_string))
+    
+    # 1. Introspection (Fetch Schema first as it's needed for Injection)
+    console.print("[-] Fetching Schema for Analysis...")
+    if not schema:
+        schema = await fetch_schema(client)
+    
+    # We run check_introspection to get the report
+    results.append(await check_introspection(client))
+    
+    # 2. Complexity
+    results.append(await check_complexity(client, max_depth=depth))
+    
+    # 3. DoS Checks
+    results.append(await check_alias_overloading(client))
+    results.append(await check_batch_queries(client))
+    results.append(await check_field_duplication(client))
+    results.append(await check_directive_overloading(client))
+    results.append(await check_circular_fragments(client))
+    
+    # 4. CSRF Checks
+    results.append(await check_get_method_support(client))
+    results.append(await check_post_urlencoded(client))
+    
+    # 5. Info Leak Checks
+    results.append(await check_tracing_enabled(client))
+    results.append(await check_field_suggestions(client))
+    results.append(await check_graphiql(client))
+    
+    # 6. Injection Checks
+    injection_results = await check_injection(client, schema)
+    results.extend(injection_results)
+    
+    # 7. Error Checks
+    results.append(await check_stack_trace(client))
+
+    # 8. Input Validation Checks
+    results.extend(await check_input_validation(client, schema))
+    results.append(await check_large_payload(client))
+
+    # 9. Directives Checks
+    results.extend(await check_custom_directives(client))
+
+    # 10. Logic Checks
+    results.extend(await check_interface_leaks(client, schema))
+    
+    # 11. IDOR Checks
+    if client_b:
+        results.extend(await check_idor(client, client_b, schema))
+    
+    return results
+
 if __name__ == "__main__":
     app()
+
+

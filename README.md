@@ -4,11 +4,14 @@ A comprehensive, Python-based security testing tool designed to detect vulnerabi
 
 ## Features
 
-- **Injection Scanning**: automated fuzzing for SQL, NoSQL, and Command Injection vulnerabilities.
-- **Access Control (IDOR) Testing**: Differential analysis using secondary session cookies to detect unauthorized access to resources.
-- **Information Leakage**: Detects Stack Traces, Introspection, and Type Leaking via Interfaces.
-- **Denial of Service (DoS)**: Checks for Query Depth, Cyclic Fragments, Batching, and Alias Overloading.
-- **Reporting**: Generates visually attractive **HTML Reports** with PoC (Proof of Concept) and Remediation advice, as well as JSON/Text output.
+- **Injection Scanning**: Advanced type-aware fuzzing for SQL, NoSQL, and Command Injection with parallel execution for maximum speed.
+- **Access Control (IDOR) Testing**: Multi-session analysis using primary and secondary cookies to detect unauthorized data access.
+- **High-Performance Async Engine**: Built on `httpx` and `asyncio` for non-blocking I/O and efficient concurrent scanning.
+- **Actionable Reporting**: Generates interactive **HTML Reports** featuring:
+    - **Request/Response Snippets**: Exact PoC payloads and server responses for every finding.
+    - **Vulnerability Grouping**: Aggregates similar issues (e.g., multiple injection points) for cleaner results.
+    - **Severity Sorting**: Findings prioritized by risk level (High > Medium > Low).
+- **DoS & Logic Coverage**: Detects Query Depth, Cyclic Fragments, Batching, and Alias Overloading.
 - **Customization**: Supports custom headers, cookies, query fuzzing, and cURL command importing.
 
 ## Installation
@@ -109,9 +112,9 @@ A **Mock Server** is included to test the scanner's capabilities safely.
     ```bash
     python tests/mock_server.py
     ```
-    (Runs on `http://127.0.0.1:5000/graphql`)
+    (Runs on `http://127.0.0.1:5020/graphql`)
 
 2.  Run the scanner against it:
     ```bash
-    python -m graphql_scanner.cli --url http://127.0.0.1:5000/graphql --output report.html
+    python -m graphql_scanner.cli --url http://127.0.0.1:5020/graphql --output report.html
     ```

@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Optional
 from graphql_scanner.core.client import GraphQLClient
 
-def check_idor(client_a: GraphQLClient, client_b: Optional[GraphQLClient], schema: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
+async def check_idor(client_a: GraphQLClient, client_b: Optional[GraphQLClient], schema: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
     print("[-] Checking for IDOR / Broken Access Control...")
     results = []
     
@@ -45,28 +45,31 @@ def check_idor(client_a: GraphQLClient, client_b: Optional[GraphQLClient], schem
         
         try:
             # A's response (Baseline)
-            # res_a = client_a.query(query) 
+            # res_a = await client_a.query(query) 
             # Ideally we check if A can access it.
             
             # B's response (Attacker)
-            res_b = client_b.query(query)
+            res_b = await client_b.query(query)
             
             # Analyze B's access
-            if "errors" in res_b:
-                # B got error -> Good Access Control (potentially)
-                pass 
-            elif "data" in res_b and res_b["data"].get(field_name):
-                 # B got data!
-                 # Vulnerability: resource accessible by secondary user.
-                 # Caveat: Maybe it's public data?
-                 # We flag as Warning/Potential IDOR.
-                 results.append({
-                    "vulnerability": "Potential IDOR / Access Control",
-                    "severity": "High",
-                    "status": "VULNERABLE",
-                    "description": f"Field '{field_name}' (id: {test_id}) was accessible by Secondary User (Client B).",
-                    "details": f"Response data: {str(res_b['data'])[:50]}..."
-                })
+            if isinstance(res_b, dict):
+                if "errors" in res_b:
+                    # B got error -> Good Access Control (potentially)
+                    pass 
+                elif "data" in res_b and res_b["data"].get(field_name):
+                     # B got data!
+                     # Vulnerability: resource accessible by secondary user.
+                     # Caveat: Maybe it's public data?
+                     # We flag as Warning/Potential IDOR.
+                     results.append({
+                        "vulnerability": "Potential IDOR / Access Control",
+                        "severity": "High",
+                        "status": "VULNERABLE",
+                        "description": f"Field '{field_name}' (id: {test_id}) was accessible by Secondary User (Client B).",
+                        "details": f"Response data: {str(res_b['data'])[:50]}...",
+                        "query": query,
+                        "response": res_b
+                    })
                  
         except Exception:
             pass
@@ -79,3 +82,4 @@ def check_idor(client_a: GraphQLClient, client_b: Optional[GraphQLClient], schem
         })
 
     return results
+

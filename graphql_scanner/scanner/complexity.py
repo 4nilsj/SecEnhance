@@ -8,24 +8,12 @@ def generate_nested_query(depth: int) -> str:
         query = f"__typename {{ {query} }}"
     return f"query DeepNesting {{ {query} }}"
 
-def check_complexity(client: GraphQLClient, max_depth: int = 100) -> Dict[str, Any]:
-    """
-    Checks if the server handles deeply nested queries.
-    
-    Args:
-        client: The GraphQLClient.
-        max_depth: Depth to test.
-        
-    Returns:
-        Dict containing vulnerability details.
-    """
-    print(f"[-] Checking for Query Complexity/Depth Limit (Depth: {max_depth})...")
+async def check_complexity(client: GraphQLClient, max_depth: int = 100) -> Dict[str, Any]:
+    # ...
     query = generate_nested_query(max_depth)
     
     try:
-        # We expect a failure or timeout if vulnerable (or correct error if protected)
-        # But for this simple check, if it returns success with data, it might be vulnerable to DOS
-        result = client.query(query)
+        result = await client.query(query)
         
         if "errors" in result:
              # Check if error message mentions depth or complexity
