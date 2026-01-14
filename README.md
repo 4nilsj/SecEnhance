@@ -85,6 +85,32 @@ python -m graphql_scanner.cli --url http://target.com/graphql --output report.ht
   python -m graphql_scanner.cli --url ... --data 'mutation { login(username:"test") { token } }' --fuzz-query
   ```
 
+## Running with Docker (Plug & Play)
+
+You can run the scanner without installing Python locally by using Docker.
+
+### 1. Build the Image
+```bash
+docker build -t graphql-scanner .
+```
+
+### 2. Run a Scan
+To save reports to your local machine, mount a volume to `/app/reports`.
+```bash
+# Create a local reports directory
+mkdir -p reports
+
+# Run the scan
+docker run --rm -v $(pwd)/reports:/app/reports \
+  graphql-scanner --url http://target.com/graphql --output /app/reports/scan.html
+```
+
+> [!TIP]
+> If testing against a server running on your localhost (like our mock server), use `host.docker.internal` (Mac/Windows) as the host in the URL instead of `127.0.0.1`.
+> ```bash
+> --url http://host.docker.internal:5020/graphql
+> ```
+
 ## Troubleshooting
 
 ### 1. "Connection Refused" or "Failed to connect"

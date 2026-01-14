@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# Reports and logs
+*.html
+*.json
+*.txt
+reports/
+
+# IDE and OS
+.vscode/
+.idea/
+.DS_Store
+
+# Git
+.git/
+.gitignore
